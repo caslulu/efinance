@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    Int                   @id @default(autoincrement())
+  username              String
+  password              String
+  wallets               Wallet[]
+  wishlists             Wishlist[]
+  transactionCategories TransactionCategory[]
+}
+
+model Wallet {
+  id           Int           @id @default(autoincrement())
+  user_id      Int
+  user         User          @relation(fields: [user_id], references: [id])
+  actual_cash  Decimal       @db.Decimal(10, 2)
+  name         String
+  type         String
+  transactions Transaction[]
+  investments  Investment[]
+}
+
+model Transaction {
+  id                  Int                 @id @default(autoincrement())
+  transaction_date    DateTime
+  wallet_id           Int
+  wallet              Wallet              @relation(fields: [wallet_id], references: [id])
+  transaction_type    String
+  is_recurring        Boolean
+  value               Decimal             @db.Decimal(10, 2)
+  installment_id      Int?
+  installment_total   Int?
+  installment_number  Int?
+  category_id         Int
+  TransactionCategory TransactionCategory @relation(fields: [category_id], references: [id])
+}
+
+model TransactionCategory {
+  id           Int           @id @default(autoincrement())
+  user         User          @relation(fields: [user_id], references: [id])
+  user_id      Int
+  name         String
+  transactions Transaction[]
+}
+
+model Investment {
+  start_date              DateTime
+  maturity_date           DateTime?
+  id                      Int                @id @default(autoincrement())
+  wallet_id               Int
+  wallet                  Wallet             @relation(fields: [wallet_id], references: [id])
+  investment_category     Int
+  typeInvestment          TypeInvestment     @relation(fields: [investment_category], references: [investment_category])
+  investment_amount       Decimal            @db.Decimal(10, 2)
+  current_amount          Decimal            @db.Decimal(10, 2)
+  name                    String
+  indicator_id            Int?
+  economicIndicator       EconomicIndicator? @relation(fields: [indicator_id], references: [id])
+  percentage_of_indicator Decimal?           @db.Decimal(10, 2)
+  fix_rate                Decimal?           @db.Decimal(10, 2)
+}
+
+model EconomicIndicator {
+  id           Int          @id @default(autoincrement())
+  name         String
+  current_rate Decimal      @db.Decimal(10, 2)
+  last_update  DateTime
+  investments  Investment[]
+}
+
+model TypeInvestment {
+  investment_category Int          @id @default(autoincrement())
+  name                String
+  investments         Investment[]
+}
+
+model Wishlist {
+  id       Int               @id @default(autoincrement())
+  user     User              @relation(fields: [user_id], references: [id])
+  user_id  Int
+  name     String
+  products WishlistProduct[]
+}
+
+model WishlistProduct {
+  id           Int      @id @default(autoincrement())
+  id_wishlist  Int
+  wishlist     Wishlist @relation(fields: [id_wishlist], references: [id])
+  name_product String
+  price        Decimal  @db.Decimal(10, 2)
+}
