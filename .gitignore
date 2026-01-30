@@ -31,4 +31,4 @@ lazy-lock.json
 *.db
 *.sqlite
 *.sqlite-journal
-
+GEMINI.md
