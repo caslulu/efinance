@@ -29,7 +29,6 @@ export class SubscriptionsService {
   async triggerCheck() {
     const today = new Date();
     
-    // Find all ACTIVE subscriptions due today or in the past
     const dueSubscriptions = await this.prisma.subscription.findMany({
       where: {
         status: SubscriptionStatus.ACTIVE,
@@ -42,17 +41,14 @@ export class SubscriptionsService {
     const results = [];
 
     for (const sub of dueSubscriptions) {
-      // 1. Create Transaction
       await this.transactionsService.create(sub.user_id, {
         transaction_date: sub.next_billing_date.toISOString(),
         wallet_id: sub.wallet_id,
         category_id: sub.category_id,
-        transaction_type: 'EXPENSE', // Subscriptions are expenses
         value: Number(sub.value),
         is_recurring: true,
       });
 
-      // 2. Calculate Next Date
       const nextDate = new Date(sub.next_billing_date);
       switch (sub.frequency) {
         case Frequency.WEEKLY:
@@ -69,7 +65,6 @@ export class SubscriptionsService {
           break;
       }
 
-      // 3. Update Subscription
       await this.prisma.subscription.update({
         where: { id: sub.id },
         data: { next_billing_date: nextDate },
