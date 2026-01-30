@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '../../../api/api';
 
 interface AddTransactionModalProps {
@@ -11,7 +11,18 @@ interface AddTransactionModalProps {
 
 export const AddTransactionModal = ({ isOpen, type, walletId, onClose, onSuccess }: AddTransactionModalProps) => {
   const [amount, setAmount] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      api.get('/categories').then(res => {
+        if (Array.isArray(res.data)) setCategories(res.data);
+      });
+    }
+  }, [isOpen]);
 
   if (!isOpen || !type || !walletId) return null;
 
@@ -19,16 +30,17 @@ export const AddTransactionModal = ({ isOpen, type, walletId, onClose, onSuccess
     e.preventDefault();
     setLoading(true);
     try {
-      const endpoint = type === 'INCOME' 
-        ? `/wallets/${walletId}/add-incoming`
-        : `/wallets/${walletId}/add-expense`;
-        
-      await api.patch(endpoint, {
-        amount: Number(amount),
+      await api.post('/transactions', {
+        wallet_id: walletId,
+        value: Number(amount),
+        category_id: Number(categoryId),
+        transaction_date: new Date(date).toISOString(),
+        is_recurring: false,
       });
       onSuccess();
       onClose();
       setAmount('');
+      setCategoryId('');
     } catch (error) {
       alert('Failed to process transaction');
     } finally {
@@ -43,7 +55,7 @@ export const AddTransactionModal = ({ isOpen, type, walletId, onClose, onSuccess
           {type === 'INCOME' ? 'Add Funds' : 'Record Expense'}
         </h2>
         <form onSubmit={handleSubmit}>
-          <div className="mb-6">
+          <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700">Amount</label>
             <input
               type="number"
@@ -54,6 +66,30 @@ export const AddTransactionModal = ({ isOpen, type, walletId, onClose, onSuccess
               required
               min="0.01"
             />
+          </div>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700">Date</label>
+            <input
+              type="date"
+              className="mt-1 block w-full rounded border p-2"
+              value={date}
+              onChange={e => setDate(e.target.value)}
+              required
+            />
+          </div>
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700">Category</label>
+            <select
+              className="mt-1 block w-full rounded border p-2"
+              value={categoryId}
+              onChange={e => setCategoryId(e.target.value)}
+              required
+            >
+              <option value="">Select Category</option>
+              {categories.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
           </div>
           <div className="flex justify-end gap-2">
             <button
