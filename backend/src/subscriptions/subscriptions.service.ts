@@ -38,7 +38,7 @@ export class SubscriptionsService {
       },
     });
 
-    const results = [];
+    const results: string[] = [];
 
     for (const sub of dueSubscriptions) {
       await this.transactionsService.create(sub.user_id, {
@@ -92,7 +92,7 @@ export class SubscriptionsService {
     await this.findOne(id, userId);
     return this.prisma.subscription.update({
       where: { id },
-      data: updateSubscriptionDto,
+      data: updateSubscriptionDto as any,
     });
   }
 

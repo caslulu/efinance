@@ -46,7 +46,7 @@ export class TransactionsService {
     const PREDICTION_MONTHS = 12;
     const monthlyValue = dto.value;
     const groupId = crypto.randomUUID();
-    const transactionsData = [];
+    const transactionsData: any[] = [];
 
     const startDate = new Date(dto.transaction_date);
 
@@ -93,7 +93,7 @@ export class TransactionsService {
     const totalInstallments = dto.installment_total || 1;
     const installmentValue = Number((dto.value / totalInstallments).toFixed(2));
     const installmentId = crypto.randomUUID();
-    const transactionsData = [];
+    const transactionsData: any[] = [];
 
     const startDate = new Date(dto.transaction_date);
 
