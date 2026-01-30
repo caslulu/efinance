@@ -35,7 +35,7 @@ model Transaction {
   transaction_type    String
   is_recurring        Boolean
   value               Decimal             @db.Decimal(10, 2)
-  installment_id      Int?
+  installment_id      String?
   installment_total   Int?
   installment_number  Int?
   category_id         Int
