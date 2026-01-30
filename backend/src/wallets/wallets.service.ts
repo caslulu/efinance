@@ -28,7 +28,6 @@ export class WalletsService {
       where: { id },
     });
     
-    // Check existence AND ownership
     if (!wallet || wallet.user_id !== userId) {
       throw new NotFoundException(`Wallet #${id} not found`);
     }
@@ -41,7 +40,6 @@ export class WalletsService {
       throw new BadRequestException('Amount must be positive');
     }
     
-    // Check if wallet exists and belongs to user
     await this.findOne(id, userId);
 
     return this.prisma.wallet.update({
@@ -59,7 +57,6 @@ export class WalletsService {
       throw new BadRequestException('Amount must be positive');
     }
 
-    // Check ownership
     const wallet = await this.findOne(id, userId);
     const currentBalance = new Decimal(wallet.actual_cash);
     const expenseAmount = new Decimal(amount);
@@ -79,7 +76,7 @@ export class WalletsService {
   }
 
   async update(id: number, userId: number, updateWalletDto: UpdateWalletDto) {
-    await this.findOne(id, userId); // Verify ownership
+    await this.findOne(id, userId);
     return this.prisma.wallet.update({
       where: { id },
       data: updateWalletDto,
@@ -87,7 +84,7 @@ export class WalletsService {
   }
 
   async remove(id: number, userId: number) {
-    await this.findOne(id, userId); // Verify ownership
+    await this.findOne(id, userId);
     return this.prisma.wallet.delete({ where: { id } });
   }
 }

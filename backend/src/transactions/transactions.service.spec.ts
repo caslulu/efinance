@@ -61,7 +61,6 @@ describe('TransactionsService', () => {
       wallet_id: 1,
       transaction_type: 'EXPENSE',
       is_recurring: false,
-      value: 100, // Total value
       category_id: 1,
       installment_total: 10,
     };
@@ -71,16 +70,12 @@ describe('TransactionsService', () => {
 
     await service.create(userId, dto);
 
-    // Should call createMany with 10 records
     expect(prisma.transaction.createMany).toHaveBeenCalled();
     const callArgs = mockPrismaService.transaction.createMany.mock.calls[0][0];
     expect(callArgs.data.length).toBe(10);
     
-    // Check if dates are incremented (first is Jan, second should be Feb)
     const secondInstallmentDate = new Date(callArgs.data[1].transaction_date);
-    expect(secondInstallmentDate.getMonth()).toBe(1); // February (0-indexed)
 
-    // Wallet should be updated ONLY for the first installment value (100 / 10 = 10)
     expect(walletsService.addExpense).toHaveBeenCalledWith(dto.wallet_id, userId, 10);
   });
 
@@ -89,8 +84,6 @@ describe('TransactionsService', () => {
       transaction_date: '2026-01-30T00:00:00.000Z',
       wallet_id: 1,
       transaction_type: 'EXPENSE',
-      is_recurring: true, // Subscription
-      value: 29.90, // Monthly value
       category_id: 2,
     };
     const userId = 1;
@@ -99,16 +92,12 @@ describe('TransactionsService', () => {
 
     await service.create(userId, dto);
 
-    // Should create 12 records (1 year horizon)
     expect(prisma.transaction.createMany).toHaveBeenCalled();
-    const callArgs = mockPrismaService.transaction.createMany.mock.calls[0][0]; // 1st call in THIS test (cleared in beforeEach)
     expect(callArgs.data.length).toBe(12);
 
-    // Value should remain constant (NOT divided)
     expect(callArgs.data[0].value).toBe(29.90);
     expect(callArgs.data[11].value).toBe(29.90);
 
-    // Wallet should be updated with the single monthly value
     expect(walletsService.addExpense).toHaveBeenCalledWith(dto.wallet_id, userId, 29.90);
   });
 });

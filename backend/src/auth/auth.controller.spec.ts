@@ -55,7 +55,6 @@ describe('AuthController', () => {
   describe('register', () => {
     it('should create a new user', async () => {
       const createUserDto = { username: 'newuser', password: 'password123' };
-      const result = { id: 1, ...createUserDto }; // Simplified mock result
 
       jest.spyOn(authService, 'register').mockResolvedValue(result as any);
 

@@ -4,7 +4,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Decimal } from '@prisma/client/runtime/library';
 
-// Mock Prisma Service
 const mockPrismaService = {
   wallet: {
     create: jest.fn(),
@@ -146,7 +145,6 @@ describe('WalletsService', () => {
 
     it('should throw BadRequestException if expense > current balance (Insufficient Funds)', async () => {
       const walletId = 1;
-      const amount = 200.00; // More than 100
       const currentWallet = {
         id: walletId,
         user_id: userId,
@@ -156,7 +154,6 @@ describe('WalletsService', () => {
       mockPrismaService.wallet.findUnique.mockResolvedValue(currentWallet);
 
       await expect(service.addExpense(walletId, userId, amount)).rejects.toThrow(BadRequestException);
-      // Ensure update is NOT called
       expect(prisma.wallet.update).not.toHaveBeenCalled();
     });
 
