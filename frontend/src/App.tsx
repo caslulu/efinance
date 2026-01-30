@@ -1,8 +1,9 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoginPage } from './features/auth/pages/LoginPage';
 import { RegisterPage } from './features/auth/pages/RegisterPage';
 import { WalletsPage } from './features/wallets/pages/WalletsPage';
+import { TransactionsPage } from './features/transactions/pages/TransactionsPage';
 
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const { isAuthenticated } = useAuth();
@@ -15,8 +16,12 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white shadow-sm">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center">
+          <div className="flex items-center gap-8">
             <span className="text-xl font-bold text-blue-600">FinanceApp</span>
+            <div className="hidden md:flex gap-4">
+              <Link to="/" className="text-gray-600 hover:text-gray-900">Wallets</Link>
+              <Link to="/transactions" className="text-gray-600 hover:text-gray-900">Transactions</Link>
+            </div>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-700">Hi, {user?.username}</span>
@@ -49,6 +54,16 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <WalletsPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/transactions"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <TransactionsPage />
                 </Layout>
               </ProtectedRoute>
             }
