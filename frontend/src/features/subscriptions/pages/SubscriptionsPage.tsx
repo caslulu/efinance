@@ -12,7 +12,11 @@ export const SubscriptionsPage = () => {
   const fetchSubscriptions = async () => {
     try {
       const res = await api.get('/subscriptions');
-      setSubscriptions(res.data);
+      if (Array.isArray(res.data)) {
+        setSubscriptions(res.data);
+      } else {
+        setSubscriptions([]);
+      }
     } catch (error) {
       console.error('Failed to fetch subscriptions');
     } finally {

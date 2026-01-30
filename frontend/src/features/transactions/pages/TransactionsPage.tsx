@@ -11,7 +11,11 @@ export const TransactionsPage = () => {
     const fetchTransactions = async () => {
       try {
         const res = await api.get('/transactions');
-        setTransactions(res.data);
+        if (Array.isArray(res.data)) {
+          setTransactions(res.data);
+        } else {
+          setTransactions([]);
+        }
       } catch (error) {
         console.error('Failed to fetch transactions');
       } finally {

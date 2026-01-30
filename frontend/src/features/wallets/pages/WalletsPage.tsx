@@ -17,7 +17,12 @@ export const WalletsPage = () => {
   const fetchWallets = async () => {
     try {
       const res = await api.get('/wallets');
-      setWallets(res.data);
+      if (Array.isArray(res.data)) {
+        setWallets(res.data);
+      } else {
+        console.error('Invalid wallets data format', res.data);
+        setWallets([]);
+      }
     } catch (error) {
       console.error('Failed to fetch wallets');
     }
