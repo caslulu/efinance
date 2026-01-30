@@ -7,6 +7,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Frequency {
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAUSED
+  CANCELLED
+}
+
 model User {
   id                    Int                   @id @default(autoincrement())
   username              String
@@ -14,6 +27,7 @@ model User {
   wallets               Wallet[]
   wishlists             Wishlist[]
   transactionCategories TransactionCategory[]
+  subscriptions         Subscription[]
 }
 
 model Wallet {
@@ -25,6 +39,7 @@ model Wallet {
   type         String
   transactions Transaction[]
   investments  Investment[]
+  subscriptions Subscription[]
 }
 
 model Transaction {
@@ -40,6 +55,27 @@ model Transaction {
   installment_number  Int?
   category_id         Int
   TransactionCategory TransactionCategory @relation(fields: [category_id], references: [id])
+  subscription_id     Int?
+  subscription        Subscription?       @relation("SubscriptionTransactions", fields: [subscription_id], references: [id])
+}
+
+model Subscription {
+  id                Int                @id @default(autoincrement())
+  user_id           Int
+  user              User               @relation(fields: [user_id], references: [id])
+  wallet_id         Int
+  wallet            Wallet             @relation(fields: [wallet_id], references: [id])
+  category_id       Int
+  category          TransactionCategory @relation(fields: [category_id], references: [id])
+  
+  name              String
+  value             Decimal            @db.Decimal(10, 2)
+  frequency         Frequency
+  status            SubscriptionStatus @default(ACTIVE)
+  start_date        DateTime
+  next_billing_date DateTime
+  
+  transactions      Transaction[]      @relation("SubscriptionTransactions")
 }
 
 model TransactionCategory {
@@ -48,6 +84,7 @@ model TransactionCategory {
   user_id      Int
   name         String
   transactions Transaction[]
+  subscriptions Subscription[]
 }
 
 model Investment {

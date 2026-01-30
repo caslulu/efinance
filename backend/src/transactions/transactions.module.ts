@@ -8,5 +8,6 @@ import { WalletsModule } from '../wallets/wallets.module';
   imports: [PrismaModule, WalletsModule],
   controllers: [TransactionsController],
   providers: [TransactionsService],
+  exports: [TransactionsService],
 })
 export class TransactionsModule {}
