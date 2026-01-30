@@ -10,12 +10,14 @@ const mockPrismaService = {
     create: jest.fn(),
     findUnique: jest.fn(),
     update: jest.fn(),
+    findMany: jest.fn(),
   },
 };
 
 describe('WalletsService', () => {
   let service: WalletsService;
   let prisma: PrismaService;
+  const userId = 1;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -43,21 +45,26 @@ describe('WalletsService', () => {
       const createDto = {
         name: 'Main Stash',
         type: 'BANK',
-        user_id: 1,
         actual_cash: 100.00,
       };
 
       const expectedWallet = {
         id: 1,
         ...createDto,
+        user_id: userId,
         actual_cash: new Decimal(100.00),
       };
 
       mockPrismaService.wallet.create.mockResolvedValue(expectedWallet);
 
-      const result = await service.create(createDto);
+      const result = await service.create(userId, createDto);
       expect(result).toEqual(expectedWallet);
-      expect(prisma.wallet.create).toHaveBeenCalledWith({ data: createDto });
+      expect(prisma.wallet.create).toHaveBeenCalledWith({
+        data: {
+          ...createDto,
+          user_id: userId,
+        },
+      });
     });
   });
 
@@ -67,18 +74,20 @@ describe('WalletsService', () => {
       const amount = 50.00;
       const currentWallet = {
         id: walletId,
+        user_id: userId,
         actual_cash: new Decimal(100.00),
       };
       
       const updatedWallet = {
         id: walletId,
+        user_id: userId,
         actual_cash: new Decimal(150.00),
       };
 
       mockPrismaService.wallet.findUnique.mockResolvedValue(currentWallet);
       mockPrismaService.wallet.update.mockResolvedValue(updatedWallet);
 
-      const result = await service.addIncoming(walletId, amount);
+      const result = await service.addIncoming(walletId, userId, amount);
       
       expect(result.actual_cash).toEqual(new Decimal(150.00));
       expect(prisma.wallet.update).toHaveBeenCalledWith({
@@ -89,12 +98,25 @@ describe('WalletsService', () => {
 
     it('should throw NotFoundException if wallet does not exist', async () => {
       mockPrismaService.wallet.findUnique.mockResolvedValue(null);
-      await expect(service.addIncoming(99, 50)).rejects.toThrow(NotFoundException);
+      await expect(service.addIncoming(99, userId, 50)).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw NotFoundException if wallet belongs to another user', async () => {
+      const walletId = 1;
+      const otherUserId = 2;
+      const wallet = {
+        id: walletId,
+        user_id: otherUserId,
+        actual_cash: new Decimal(100.00),
+      };
+
+      mockPrismaService.wallet.findUnique.mockResolvedValue(wallet);
+      await expect(service.addIncoming(walletId, userId, 50)).rejects.toThrow(NotFoundException);
     });
 
     it('should throw BadRequestException if amount is negative or zero', async () => {
-      await expect(service.addIncoming(1, -10)).rejects.toThrow(BadRequestException);
-      await expect(service.addIncoming(1, 0)).rejects.toThrow(BadRequestException);
+      await expect(service.addIncoming(1, userId, -10)).rejects.toThrow(BadRequestException);
+      await expect(service.addIncoming(1, userId, 0)).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -104,22 +126,22 @@ describe('WalletsService', () => {
       const amount = 40.00;
       const currentWallet = {
         id: walletId,
+        user_id: userId,
         actual_cash: new Decimal(100.00),
       };
       
       const updatedWallet = {
         id: walletId,
+        user_id: userId,
         actual_cash: new Decimal(60.00),
       };
 
       mockPrismaService.wallet.findUnique.mockResolvedValue(currentWallet);
       mockPrismaService.wallet.update.mockResolvedValue(updatedWallet);
 
-      const result = await service.addExpense(walletId, amount);
+      const result = await service.addExpense(walletId, userId, amount);
 
       expect(result.actual_cash).toEqual(new Decimal(60.00));
-      // Note: In implementation we might use logic check before update, or database constraints.
-      // Testing the logic flow here.
     });
 
     it('should throw BadRequestException if expense > current balance (Insufficient Funds)', async () => {
@@ -127,19 +149,20 @@ describe('WalletsService', () => {
       const amount = 200.00; // More than 100
       const currentWallet = {
         id: walletId,
+        user_id: userId,
         actual_cash: new Decimal(100.00),
       };
 
       mockPrismaService.wallet.findUnique.mockResolvedValue(currentWallet);
 
-      await expect(service.addExpense(walletId, amount)).rejects.toThrow(BadRequestException);
+      await expect(service.addExpense(walletId, userId, amount)).rejects.toThrow(BadRequestException);
       // Ensure update is NOT called
       expect(prisma.wallet.update).not.toHaveBeenCalled();
     });
 
     it('should throw BadRequestException if amount is negative or zero', async () => {
-      await expect(service.addExpense(1, -10)).rejects.toThrow(BadRequestException);
-      await expect(service.addExpense(1, 0)).rejects.toThrow(BadRequestException);
+      await expect(service.addExpense(1, userId, -10)).rejects.toThrow(BadRequestException);
+      await expect(service.addExpense(1, userId, 0)).rejects.toThrow(BadRequestException);
     });
   });
 });

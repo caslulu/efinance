@@ -13,7 +13,4 @@ export class CreateWalletDto {
   @IsNumber()
   @Min(0)
   actual_cash: number;
-
-  @IsNumber()
-  user_id: number;
 }
