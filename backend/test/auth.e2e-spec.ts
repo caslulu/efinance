@@ -44,5 +44,26 @@ describe('AuthController (e2e)', () => {
               expect(res.body.message).toContain('Username must be at least 3 characters long');
           });
       });
+
+    it('should reject usernames with symbols', () => {
+      return request(app.getHttpServer())
+        .post('/auth/register')
+        .send({ username: 'user@name', password: 'validPassword' })
+        .expect(400)
+        .expect((res) => {
+            expect(res.body.message).toContain('Username can only contain letters, numbers, and underscores');
+        });
+    });
+
+    it('should reject long usernames (>32 chars)', () => {
+      const longUsername = 'a'.repeat(33);
+      return request(app.getHttpServer())
+        .post('/auth/register')
+        .send({ username: longUsername, password: 'validPassword' })
+        .expect(400)
+        .expect((res) => {
+            expect(res.body.message).toContain('Username must be at most 32 characters long');
+        });
+    });
   });
 });
