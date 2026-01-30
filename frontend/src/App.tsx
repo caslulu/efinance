@@ -5,6 +5,7 @@ import { RegisterPage } from './features/auth/pages/RegisterPage';
 import { WalletsPage } from './features/wallets/pages/WalletsPage';
 import { TransactionsPage } from './features/transactions/pages/TransactionsPage';
 import { SubscriptionsPage } from './features/subscriptions/pages/SubscriptionsPage';
+import { CategoriesPage } from './features/categories/pages/CategoriesPage';
 
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const { isAuthenticated } = useAuth();
@@ -23,6 +24,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               <Link to="/" className="text-gray-600 hover:text-gray-900">Wallets</Link>
               <Link to="/transactions" className="text-gray-600 hover:text-gray-900">Transactions</Link>
               <Link to="/subscriptions" className="text-gray-600 hover:text-gray-900">Subscriptions</Link>
+              <Link to="/categories" className="text-gray-600 hover:text-gray-900">Categories</Link>
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -76,6 +78,16 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <SubscriptionsPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/categories"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <CategoriesPage />
                 </Layout>
               </ProtectedRoute>
             }
