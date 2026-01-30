@@ -41,10 +41,12 @@ export class SubscriptionsService {
     const results: string[] = [];
 
     for (const sub of dueSubscriptions) {
+      // 1. Create Transaction
       await this.transactionsService.create(sub.user_id, {
         transaction_date: sub.next_billing_date.toISOString(),
         wallet_id: sub.wallet_id,
         category_id: sub.category_id,
+        transaction_type: 'EXPENSE',
         value: Number(sub.value),
         is_recurring: true,
       });

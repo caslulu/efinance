@@ -1,0 +1,78 @@
+import { useEffect, useState } from 'react';
+import { api } from '../../../api/api';
+import type { Wallet } from '../../../types/Wallet';
+import { WalletCard } from '../components/WalletCard';
+import { CreateWalletModal } from '../components/CreateWalletModal';
+import { AddTransactionModal } from '../components/AddTransactionModal';
+
+export const WalletsPage = () => {
+  const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [transactionModal, setTransactionModal] = useState<{
+    isOpen: boolean;
+    type: 'INCOME' | 'EXPENSE' | null;
+    walletId: number | null;
+  }>({ isOpen: false, type: null, walletId: null });
+
+  const fetchWallets = async () => {
+    try {
+      const res = await api.get('/wallets');
+      setWallets(res.data);
+    } catch (error) {
+      console.error('Failed to fetch wallets');
+    }
+  };
+
+  useEffect(() => {
+    fetchWallets();
+  }, []);
+
+  const openTransaction = (walletId: number, type: 'INCOME' | 'EXPENSE') => {
+    setTransactionModal({ isOpen: true, type, walletId });
+  };
+
+  return (
+    <div className="p-8">
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">My Wallets</h1>
+        <button
+          onClick={() => setIsCreateOpen(true)}
+          className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white shadow-sm hover:bg-blue-700"
+        >
+          + New Wallet
+        </button>
+      </div>
+
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {wallets.map((wallet) => (
+          <WalletCard
+            key={wallet.id}
+            wallet={wallet}
+            onAddFunds={(id) => openTransaction(id, 'INCOME')}
+            onAddExpense={(id) => openTransaction(id, 'EXPENSE')}
+          />
+        ))}
+      </div>
+
+      {wallets.length === 0 && (
+        <div className="mt-10 text-center text-gray-500">
+          No wallets found. Create one to get started!
+        </div>
+      )}
+
+      <CreateWalletModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        onSuccess={fetchWallets}
+      />
+
+      <AddTransactionModal
+        isOpen={transactionModal.isOpen}
+        type={transactionModal.type}
+        walletId={transactionModal.walletId}
+        onClose={() => setTransactionModal({ ...transactionModal, isOpen: false })}
+        onSuccess={fetchWallets}
+      />
+    </div>
+  );
+};
