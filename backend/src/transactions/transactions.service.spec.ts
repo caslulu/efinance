@@ -83,4 +83,32 @@ describe('TransactionsService', () => {
     // Wallet should be updated ONLY for the first installment value (100 / 10 = 10)
     expect(walletsService.addExpense).toHaveBeenCalledWith(dto.wallet_id, userId, 10);
   });
+
+  it('should create a Subscription (12 months view) when is_recurring is true', async () => {
+    const dto = {
+      transaction_date: '2026-01-30T00:00:00.000Z',
+      wallet_id: 1,
+      transaction_type: 'EXPENSE',
+      is_recurring: true, // Subscription
+      value: 29.90, // Monthly value
+      category_id: 2,
+    };
+    const userId = 1;
+
+    mockPrismaService.transaction.createMany.mockResolvedValue({ count: 12 });
+
+    await service.create(userId, dto);
+
+    // Should create 12 records (1 year horizon)
+    expect(prisma.transaction.createMany).toHaveBeenCalled();
+    const callArgs = mockPrismaService.transaction.createMany.mock.calls[0][0]; // 1st call in THIS test (cleared in beforeEach)
+    expect(callArgs.data.length).toBe(12);
+
+    // Value should remain constant (NOT divided)
+    expect(callArgs.data[0].value).toBe(29.90);
+    expect(callArgs.data[11].value).toBe(29.90);
+
+    // Wallet should be updated with the single monthly value
+    expect(walletsService.addExpense).toHaveBeenCalledWith(dto.wallet_id, userId, 29.90);
+  });
 });

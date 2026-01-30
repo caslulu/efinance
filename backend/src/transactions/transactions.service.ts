@@ -13,16 +13,25 @@ export class TransactionsService {
   ) {}
 
   async create(userId: number, createTransactionDto: CreateTransactionDto) {
-    const { installment_total, ...data } = createTransactionDto;
+    const { installment_total, is_recurring, ...data } = createTransactionDto;
 
+    // Case 1: Fixed Installments (e.g., 10x)
     if (installment_total && installment_total > 1) {
       return this.createInstallments(userId, createTransactionDto);
     }
 
-    // Single Transaction
+    // Case 2: Subscription (Recurring infinite) -> Create 12 months view
+    if (is_recurring && !installment_total) {
+      return this.createSubscription(userId, createTransactionDto);
+    }
+
+    // Case 3: Single Transaction
     const transaction = await this.prisma.transaction.create({
       data: {
         ...data,
+        is_recurring: is_recurring || false,
+        installment_total: 1,
+        installment_number: 1,
         transaction_date: new Date(data.transaction_date),
       },
     });
@@ -35,6 +44,54 @@ export class TransactionsService {
     }
 
     return transaction;
+  }
+
+  private async createSubscription(userId: number, dto: CreateTransactionDto) {
+    const PREDICTION_MONTHS = 12; // 1 Year Visibility
+    const monthlyValue = dto.value; // Value is per month, NOT total
+    const groupId = crypto.randomUUID();
+    const transactionsData = [];
+
+    const startDate = new Date(dto.transaction_date);
+
+    for (let i = 0; i < PREDICTION_MONTHS; i++) {
+      const transactionDate = new Date(startDate);
+      const targetMonth = startDate.getMonth() + i;
+      transactionDate.setMonth(targetMonth);
+      
+      if (transactionDate.getMonth() !== targetMonth % 12) {
+        transactionDate.setDate(0);
+      }
+
+      transactionsData.push({
+        transaction_date: transactionDate,
+        wallet_id: dto.wallet_id,
+        transaction_type: dto.transaction_type,
+        is_recurring: true,
+        value: monthlyValue,
+        category_id: dto.category_id,
+        installment_id: groupId, // Use this to group the subscription
+        installment_total: null, // Null indicates "Infinite" / Subscription
+        installment_number: i + 1, // Just for ordering in the view
+      });
+    }
+
+    const created = await this.prisma.transaction.createMany({
+      data: transactionsData,
+    });
+
+    // Update Wallet Balance only for the CURRENT month (first record)
+    if (dto.transaction_type === 'EXPENSE') {
+      await this.walletsService.addExpense(dto.wallet_id, userId, monthlyValue);
+    } else {
+      await this.walletsService.addIncoming(dto.wallet_id, userId, monthlyValue);
+    }
+
+    return {
+      message: `Subscription created (12 months visibility)`,
+      subscription_group_id: groupId,
+      count: created.count,
+    };
   }
 
   private async createInstallments(userId: number, dto: CreateTransactionDto) {
