@@ -34,13 +34,18 @@ export const AddTransactionModal = ({ isOpen, type, walletId, onClose, onSuccess
     }
     setLoading(true);
     try {
-      await api.post('/transactions', {
+      const payload = {
         wallet_id: walletId,
         value: Number(amount),
+        transaction_type: type, // INCOME or EXPENSE
         category_id: Number(categoryId),
         transaction_date: new Date(date).toISOString(),
         is_recurring: false,
-      });
+      };
+      console.log('Sending Transaction:', payload);
+      
+      // Use Transactions Endpoint to ensure record + balance update
+      await api.post('/transactions', payload);
       onSuccess();
       onClose();
       setAmount('');
