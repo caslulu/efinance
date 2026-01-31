@@ -9,6 +9,7 @@ export const RegisterPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isCapsLockOn, setIsCapsLockOn] = useState(false);
+  const [isPasswordFocused, setIsPasswordFocused] = useState(false);
   const navigate = useNavigate();
 
   const handleCapsLock = (e: React.KeyboardEvent) => {
@@ -50,6 +51,8 @@ export const RegisterPage = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyDown={handleCapsLock}
                 onKeyUp={handleCapsLock}
+                onFocus={() => setIsPasswordFocused(true)}
+                onBlur={() => setIsPasswordFocused(false)}
                 className="w-full rounded border px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
@@ -61,7 +64,7 @@ export const RegisterPage = () => {
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
-            {isCapsLockOn && (
+            {isCapsLockOn && isPasswordFocused && (
               <p className="absolute -bottom-5 left-0 text-xs font-semibold text-orange-600">
                 Caps Lock is ON
               </p>
