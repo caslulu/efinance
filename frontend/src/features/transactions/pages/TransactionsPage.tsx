@@ -29,11 +29,11 @@ export const TransactionsPage = () => {
   return (
     <div className="p-8">
       <div className="mb-8 flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Transactions</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Transações</h1>
       </div>
 
       {loading ? (
-        <div>Loading...</div>
+        <div>Carregando...</div>
       ) : (
         <TransactionList transactions={transactions} />
       )}

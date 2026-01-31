@@ -39,12 +39,12 @@ export const WalletsPage = () => {
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">My Wallets</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Minhas Carteiras</h1>
         <button
           onClick={() => setIsCreateOpen(true)}
           className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white shadow-sm hover:bg-blue-700"
         >
-          + New Wallet
+          + Nova Carteira
         </button>
       </div>
 
@@ -61,7 +61,7 @@ export const WalletsPage = () => {
 
       {wallets.length === 0 && (
         <div className="mt-10 text-center text-gray-500">
-          No wallets found. Create one to get started!
+          Nenhuma carteira encontrada. Crie uma para começar!
         </div>
       )}
 

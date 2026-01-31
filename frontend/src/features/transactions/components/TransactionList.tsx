@@ -20,11 +20,11 @@ export const TransactionList = ({ transactions }: TransactionListProps) => {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Date</TableHead>
-            <TableHead>Category</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Installment</TableHead>
-            <TableHead className="text-right">Value</TableHead>
+            <TableHead>Data</TableHead>
+            <TableHead>Categoria</TableHead>
+            <TableHead>Tipo</TableHead>
+            <TableHead>Parcela</TableHead>
+            <TableHead className="text-right">Valor</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -34,7 +34,7 @@ export const TransactionList = ({ transactions }: TransactionListProps) => {
                 {new Date(tx.transaction_date).toLocaleDateString()}
               </TableCell>
               <TableCell className="font-medium">
-                {tx.TransactionCategory?.name || 'Uncategorized'}
+                {tx.TransactionCategory?.name || 'Sem Categoria'}
               </TableCell>
               <TableCell>
                 <Badge 
@@ -45,7 +45,7 @@ export const TransactionList = ({ transactions }: TransactionListProps) => {
                       : 'border-red-500 text-red-600 bg-red-50'
                   )}
                 >
-                  {tx.transaction_type}
+                  {tx.transaction_type === 'INCOME' ? 'RECEITA' : 'DESPESA'}
                 </Badge>
               </TableCell>
               <TableCell>
@@ -62,7 +62,7 @@ export const TransactionList = ({ transactions }: TransactionListProps) => {
           {transactions.length === 0 && (
             <TableRow>
               <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                No transactions found.
+                Nenhuma transação encontrada.
               </TableCell>
             </TableRow>
           )}

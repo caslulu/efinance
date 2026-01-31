@@ -38,10 +38,10 @@ export const SubscriptionsPage = () => {
   const triggerCheck = async () => {
     try {
       await api.post('/subscriptions/trigger');
-      alert('Subscription check triggered successfully');
+      alert('Verificação de recorrência disparada com sucesso');
       fetchSubscriptions();
     } catch (error) {
-      alert('Failed to trigger check');
+      alert('Falha ao disparar verificação');
     }
   };
 
@@ -52,13 +52,13 @@ export const SubscriptionsPage = () => {
   return (
     <div className="p-8 space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Recurring</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Recorrências</h1>
         <div className="flex gap-4">
           <Button variant="outline" onClick={triggerCheck}>
-            <Play className="mr-2 h-4 w-4" /> Process Pending
+            <Play className="mr-2 h-4 w-4" /> Processar Pendentes
           </Button>
           <Button onClick={() => setIsCreateOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" /> New Recurring
+            <Plus className="mr-2 h-4 w-4" /> Novo Recorrente
           </Button>
         </div>
       </div>
@@ -67,11 +67,11 @@ export const SubscriptionsPage = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Value</TableHead>
-              <TableHead>Frequency</TableHead>
+              <TableHead>Nome</TableHead>
+              <TableHead>Valor</TableHead>
+              <TableHead>Frequência</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Next Billing</TableHead>
+              <TableHead>Próx. Cobrança</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -98,7 +98,7 @@ export const SubscriptionsPage = () => {
             {subscriptions.length === 0 && !loading && (
               <TableRow>
                 <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                  No subscriptions found.
+                  Nenhuma recorrência encontrada.
                 </TableCell>
               </TableRow>
             )}

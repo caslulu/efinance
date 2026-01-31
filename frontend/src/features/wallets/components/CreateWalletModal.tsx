@@ -38,7 +38,7 @@ export const CreateWalletModal = ({ isOpen, onClose, onSuccess }: CreateWalletMo
       setName('');
       setBalance('');
     } catch (error) {
-      alert('Failed to create wallet');
+      alert('Falha ao criar carteira');
     } finally {
       setLoading(false);
     }
@@ -48,11 +48,11 @@ export const CreateWalletModal = ({ isOpen, onClose, onSuccess }: CreateWalletMo
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>New Wallet</DialogTitle>
+          <DialogTitle>Nova Carteira</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-4 py-4">
           <div className="grid gap-2">
-            <Label htmlFor="name">Name</Label>
+            <Label htmlFor="name">Nome</Label>
             <Input
               id="name"
               value={name}
@@ -61,21 +61,21 @@ export const CreateWalletModal = ({ isOpen, onClose, onSuccess }: CreateWalletMo
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="type">Type</Label>
+            <Label htmlFor="type">Tipo</Label>
             <Select value={type} onValueChange={setType}>
               <SelectTrigger id="type">
-                <SelectValue placeholder="Select wallet type" />
+                <SelectValue placeholder="Selecione o tipo" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="BANK">Bank Account</SelectItem>
-                <SelectItem value="PHYSICAL">Physical Cash</SelectItem>
-                <SelectItem value="MEAL_VOUCHER">Meal Voucher</SelectItem>
-                <SelectItem value="INVESTMENT">Investment</SelectItem>
+                <SelectItem value="BANK">Conta Bancária</SelectItem>
+                <SelectItem value="PHYSICAL">Dinheiro Físico</SelectItem>
+                <SelectItem value="MEAL_VOUCHER">Vale Refeição</SelectItem>
+                <SelectItem value="INVESTMENT">Investimento</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="balance">Initial Balance</Label>
+            <Label htmlFor="balance">Saldo Inicial</Label>
             <Input
               id="balance"
               type="number"
@@ -86,9 +86,9 @@ export const CreateWalletModal = ({ isOpen, onClose, onSuccess }: CreateWalletMo
             />
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
             <Button type="submit" disabled={loading}>
-              {loading ? 'Creating...' : 'Create'}
+              {loading ? 'Criando...' : 'Criar'}
             </Button>
           </DialogFooter>
         </form>

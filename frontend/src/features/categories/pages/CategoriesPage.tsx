@@ -27,7 +27,7 @@ export const CategoriesPage = () => {
         setCategories([]);
       }
     } catch (error) {
-      console.error('Failed to fetch categories');
+      console.error('Falha ao buscar categorias');
     } finally {
       setLoading(false);
     }
@@ -38,21 +38,21 @@ export const CategoriesPage = () => {
   }, []);
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure? This might affect transactions.')) return;
+    if (!confirm('Tem certeza? Isso pode afetar transações existentes.')) return;
     try {
       await api.delete(`/categories/${id}`);
       fetchCategories();
     } catch (error) {
-      alert('Failed to delete category');
+      alert('Falha ao excluir categoria');
     }
   };
 
   return (
     <div className="p-8 space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Categories</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Categorias</h1>
         <Button onClick={() => setIsCreateOpen(true)}>
-          + New Category
+          + Nova Categoria
         </Button>
       </div>
 
@@ -60,8 +60,8 @@ export const CategoriesPage = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>Nome</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -83,7 +83,7 @@ export const CategoriesPage = () => {
             {categories.length === 0 && !loading && (
               <TableRow>
                 <TableCell colSpan={2} className="h-24 text-center text-muted-foreground">
-                  No categories found.
+                  Nenhuma categoria encontrada.
                 </TableCell>
               </TableRow>
             )}

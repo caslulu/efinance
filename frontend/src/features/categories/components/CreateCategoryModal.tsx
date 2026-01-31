@@ -24,7 +24,7 @@ export const CreateCategoryModal = ({ isOpen, onClose, onSuccess }: CreateCatego
       onClose();
       setName('');
     } catch (error) {
-      alert('Failed to create category');
+      alert('Falha ao criar categoria');
     } finally {
       setLoading(false);
     }
@@ -34,23 +34,23 @@ export const CreateCategoryModal = ({ isOpen, onClose, onSuccess }: CreateCatego
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>New Category</DialogTitle>
+          <DialogTitle>Nova Categoria</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-4 py-4">
           <div className="grid gap-2">
-            <Label htmlFor="name">Name</Label>
+            <Label htmlFor="name">Nome</Label>
             <Input
               id="name"
               value={name}
               onChange={e => setName(e.target.value)}
               required
-              placeholder="e.g. Food, Transport"
+              placeholder="ex: Alimentação, Transporte"
             />
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
             <Button type="submit" disabled={loading}>
-              {loading ? 'Creating...' : 'Create'}
+              {loading ? 'Criando...' : 'Criar'}
             </Button>
           </DialogFooter>
         </form>

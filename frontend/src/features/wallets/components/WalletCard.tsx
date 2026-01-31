@@ -39,14 +39,14 @@ export const WalletCard = ({ wallet, onAddFunds, onAddExpense }: WalletCardProps
           className="flex-1 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
           onClick={() => onAddFunds(wallet.id)}
         >
-          <Plus className="mr-2 h-4 w-4" /> Add Funds
+          <Plus className="mr-2 h-4 w-4" /> Adicionar
         </Button>
         <Button 
           variant="outline" 
           className="flex-1 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
           onClick={() => onAddExpense(wallet.id)}
         >
-          <Minus className="mr-2 h-4 w-4" /> Expense
+          <Minus className="mr-2 h-4 w-4" /> Despesa
         </Button>
       </CardFooter>
     </Card>

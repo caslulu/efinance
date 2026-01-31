@@ -41,7 +41,7 @@ export const AddTransactionModal = ({ isOpen, type, walletId, onClose, onSuccess
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!categoryId || !amount) {
-      setError('Please fill all fields');
+      setError('Por favor preencha todos os campos');
       return;
     }
     setLoading(true);
@@ -69,7 +69,7 @@ export const AddTransactionModal = ({ isOpen, type, walletId, onClose, onSuccess
       if (msg === 'Insufficient funds in wallet') {
         setError('Você não tem saldo suficiente.');
       } else {
-        setError(Array.isArray(msg) ? msg.join(', ') : msg || 'Failed to process transaction');
+        setError(Array.isArray(msg) ? msg.join(', ') : msg || 'Falha ao processar transação');
       }
     } finally {
       setLoading(false);
@@ -81,13 +81,13 @@ export const AddTransactionModal = ({ isOpen, type, walletId, onClose, onSuccess
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>
-            {type === 'INCOME' ? 'Add Funds' : 'Record Expense'}
+            {type === 'INCOME' ? 'Adicionar Saldo' : 'Registrar Despesa'}
           </DialogTitle>
         </DialogHeader>
         {error && <div className="mb-2 rounded bg-red-100 p-2 text-sm text-red-600">{error}</div>}
         <form onSubmit={handleSubmit} className="grid gap-4 py-4">
           <div className="grid gap-2">
-            <Label htmlFor="amount">Amount</Label>
+            <Label htmlFor="amount">Valor</Label>
             <Input
               id="amount"
               type="number"
@@ -99,7 +99,7 @@ export const AddTransactionModal = ({ isOpen, type, walletId, onClose, onSuccess
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="date">Date</Label>
+            <Label htmlFor="date">Data</Label>
             <Input
               id="date"
               type="date"
@@ -109,10 +109,10 @@ export const AddTransactionModal = ({ isOpen, type, walletId, onClose, onSuccess
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="category">Category</Label>
+            <Label htmlFor="category">Categoria</Label>
             <Select value={categoryId} onValueChange={setCategoryId}>
               <SelectTrigger id="category">
-                <SelectValue placeholder="Select Category" />
+                <SelectValue placeholder="Selecione a Categoria" />
               </SelectTrigger>
               <SelectContent>
                 {categories.map(c => (
@@ -124,22 +124,22 @@ export const AddTransactionModal = ({ isOpen, type, walletId, onClose, onSuccess
           
           {type === 'EXPENSE' && (
             <div className="grid gap-2">
-              <Label htmlFor="installments">Installments (Optional)</Label>
+              <Label htmlFor="installments">Parcelas (Opcional)</Label>
               <Input
                 id="installments"
                 type="number"
                 value={installments}
                 onChange={e => setInstallments(e.target.value)}
-                placeholder="1 (Single)"
+                placeholder="1 (À vista)"
                 min="1"
               />
             </div>
           )}
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
             <Button type="submit" disabled={loading}>
-              {loading ? 'Processing...' : 'Confirm'}
+              {loading ? 'Processando...' : 'Confirmar'}
             </Button>
           </DialogFooter>
         </form>

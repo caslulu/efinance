@@ -57,7 +57,7 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
       setName('');
       setValue('');
     } catch (error) {
-      alert('Failed to create subscription');
+      alert('Falha ao criar item recorrente');
     } finally {
       setLoading(false);
     }
@@ -67,54 +67,54 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>New Recurring Item</DialogTitle>
+          <DialogTitle>Novo Item Recorrente</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-4 py-4">
           <div className="grid gap-2">
-            <Label htmlFor="name">Name</Label>
+            <Label htmlFor="name">Nome</Label>
             <Input id="name" value={name} onChange={e => setName(e.target.value)} required />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="type">Type</Label>
+            <Label htmlFor="type">Tipo</Label>
             <Select value={type} onValueChange={setType}>
               <SelectTrigger id="type">
-                <SelectValue placeholder="Select type" />
+                <SelectValue placeholder="Selecione o tipo" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="EXPENSE">Expense</SelectItem>
-                <SelectItem value="INCOME">Income (Salary)</SelectItem>
+                <SelectItem value="EXPENSE">Despesa</SelectItem>
+                <SelectItem value="INCOME">Receita (Salário)</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="value">Value</Label>
+              <Label htmlFor="value">Valor</Label>
               <Input id="value" type="number" step="0.01" value={value} onChange={e => setValue(e.target.value)} required />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="frequency">Frequency</Label>
+              <Label htmlFor="frequency">Frequência</Label>
               <Select value={frequency} onValueChange={setFrequency}>
                 <SelectTrigger id="frequency">
-                  <SelectValue placeholder="Select frequency" />
+                  <SelectValue placeholder="Selecione a frequência" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="WEEKLY">Weekly</SelectItem>
-                  <SelectItem value="MONTHLY">Monthly</SelectItem>
-                  <SelectItem value="QUARTERLY">Quarterly</SelectItem>
-                  <SelectItem value="YEARLY">Yearly</SelectItem>
+                  <SelectItem value="WEEKLY">Semanal</SelectItem>
+                  <SelectItem value="MONTHLY">Mensal</SelectItem>
+                  <SelectItem value="QUARTERLY">Trimestral</SelectItem>
+                  <SelectItem value="YEARLY">Anual</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="startDate">Start Date</Label>
+            <Label htmlFor="startDate">Data de Início</Label>
             <Input id="startDate" type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="wallet">Wallet</Label>
+            <Label htmlFor="wallet">Carteira</Label>
             <Select value={walletId} onValueChange={setWalletId}>
               <SelectTrigger id="wallet">
-                <SelectValue placeholder="Select Wallet" />
+                <SelectValue placeholder="Selecione a Carteira" />
               </SelectTrigger>
               <SelectContent>
                 {wallets.map(w => <SelectItem key={w.id} value={String(w.id)}>{w.name}</SelectItem>)}
@@ -122,10 +122,10 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
             </Select>
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="category">Category</Label>
+            <Label htmlFor="category">Categoria</Label>
             <Select value={categoryId} onValueChange={setCategoryId}>
               <SelectTrigger id="category">
-                <SelectValue placeholder="Select Category" />
+                <SelectValue placeholder="Selecione a Categoria" />
               </SelectTrigger>
               <SelectContent>
                 {categories.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
@@ -133,8 +133,8 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
             </Select>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-            <Button type="submit" disabled={loading}>{loading ? 'Creating...' : 'Create'}</Button>
+            <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+            <Button type="submit" disabled={loading}>{loading ? 'Criando...' : 'Criar'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

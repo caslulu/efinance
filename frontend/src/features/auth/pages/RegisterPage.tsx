@@ -26,7 +26,7 @@ export const RegisterPage = () => {
       await api.post('/auth/register', { username, password });
       navigate('/login');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Registration failed');
+      setError('Falha no cadastro. Tente novamente.');
     }
   };
 
@@ -34,13 +34,13 @@ export const RegisterPage = () => {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-center text-2xl font-bold">Register</CardTitle>
+          <CardTitle className="text-center text-2xl font-bold">Cadastro</CardTitle>
         </CardHeader>
         <CardContent>
           {error && <div className="mb-4 rounded bg-red-100 p-2 text-sm text-red-600">{error}</div>}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="username">Usuário</Label>
               <Input
                 id="username"
                 type="text"
@@ -50,7 +50,7 @@ export const RegisterPage = () => {
               />
             </div>
             <div className="space-y-2 relative">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Senha</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -74,20 +74,20 @@ export const RegisterPage = () => {
               </div>
               {isCapsLockOn && isPasswordFocused && (
                 <p className="absolute -bottom-5 left-0 text-xs font-semibold text-orange-600">
-                  Caps Lock is ON
+                  Caps Lock ativado
                 </p>
               )}
             </div>
             <Button type="submit" className="w-full">
-              Create Account
+              Criar Conta
             </Button>
           </form>
         </CardContent>
         <CardFooter className="justify-center">
           <p className="text-sm text-gray-600">
-            Already have an account?{' '}
+            Já tem uma conta?{' '}
             <Link to="/login" className="text-blue-600 hover:underline">
-              Login
+              Entrar
             </Link>
           </p>
         </CardFooter>
