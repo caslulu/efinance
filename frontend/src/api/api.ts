@@ -1,7 +1,6 @@
 import axios from 'axios';
 
 export const api = axios.create({
-  baseURL: 'http://127.0.0.1:3000',
 });
 
 api.interceptors.request.use((config) => {
@@ -15,7 +14,8 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('API Error:', error.response?.status, error.response?.data || error.message);
+    const message = error.response?.data?.message;
+    console.error('API Error:', Array.isArray(message) ? message.join(', ') : message || error.message);
     return Promise.reject(error);
   }
 );

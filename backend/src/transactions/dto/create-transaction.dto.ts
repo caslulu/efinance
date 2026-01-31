@@ -5,6 +5,7 @@ export class CreateTransactionDto {
   transaction_date: string;
 
   @IsNumber()
+  @Min(1)
   wallet_id: number;
 
   @IsEnum(['INCOME', 'EXPENSE'])
@@ -18,6 +19,7 @@ export class CreateTransactionDto {
   value: number;
 
   @IsNumber()
+  @Min(1)
   category_id: number;
 
   @IsOptional()

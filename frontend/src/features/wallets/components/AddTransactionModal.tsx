@@ -28,6 +28,10 @@ export const AddTransactionModal = ({ isOpen, type, walletId, onClose, onSuccess
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!categoryId || !amount) {
+      alert('Please fill all fields');
+      return;
+    }
     setLoading(true);
     try {
       await api.post('/transactions', {
