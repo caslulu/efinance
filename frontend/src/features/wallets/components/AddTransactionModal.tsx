@@ -27,9 +27,11 @@ export const AddTransactionModal = ({ isOpen, type, walletId, onClose, onSuccess
   const [installments, setInstallments] = useState('');
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (isOpen) {
+      setError('');
       api.get('/categories').then(res => {
         if (Array.isArray(res.data)) setCategories(res.data);
       });
@@ -39,10 +41,12 @@ export const AddTransactionModal = ({ isOpen, type, walletId, onClose, onSuccess
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!categoryId || !amount) {
-      alert('Please fill all fields');
+      setError('Please fill all fields');
       return;
     }
     setLoading(true);
+    setError('');
+    
     try {
       const payload = {
         wallet_id: walletId,
@@ -60,8 +64,13 @@ export const AddTransactionModal = ({ isOpen, type, walletId, onClose, onSuccess
       setAmount('');
       setCategoryId('');
       setInstallments('');
-    } catch (error) {
-      alert('Failed to process transaction');
+    } catch (err: any) {
+      const msg = err.response?.data?.message;
+      if (msg === 'Insufficient funds in wallet') {
+        setError('Você não tem saldo suficiente.');
+      } else {
+        setError(Array.isArray(msg) ? msg.join(', ') : msg || 'Failed to process transaction');
+      }
     } finally {
       setLoading(false);
     }
@@ -75,6 +84,7 @@ export const AddTransactionModal = ({ isOpen, type, walletId, onClose, onSuccess
             {type === 'INCOME' ? 'Add Funds' : 'Record Expense'}
           </DialogTitle>
         </DialogHeader>
+        {error && <div className="mb-2 rounded bg-red-100 p-2 text-sm text-red-600">{error}</div>}
         <form onSubmit={handleSubmit} className="grid gap-4 py-4">
           <div className="grid gap-2">
             <Label htmlFor="amount">Amount</Label>
