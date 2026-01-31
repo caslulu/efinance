@@ -6,7 +6,12 @@ export const RegisterPage = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isCapsLockOn, setIsCapsLockOn] = useState(false);
   const navigate = useNavigate();
+
+  const handleCapsLock = (e: React.KeyboardEvent) => {
+    setIsCapsLockOn(e.getModifierState('CapsLock'));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,15 +39,22 @@ export const RegisterPage = () => {
               required
             />
           </div>
-          <div className="mb-6">
+          <div className="mb-6 relative">
             <label className="mb-2 block text-sm font-bold text-gray-700">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={handleCapsLock}
+              onKeyUp={handleCapsLock}
               className="w-full rounded border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
+            {isCapsLockOn && (
+              <p className="absolute -bottom-5 left-0 text-xs font-semibold text-orange-600">
+                Caps Lock is ON
+              </p>
+            )}
           </div>
           <button
             type="submit"
