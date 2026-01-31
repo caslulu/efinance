@@ -9,6 +9,9 @@ export class CreateSubscriptionDto {
   @Min(0.01)
   value: number;
 
+  @IsEnum(['INCOME', 'EXPENSE'])
+  transaction_type: string;
+
   @IsEnum(['WEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY'])
   frequency: string;
 

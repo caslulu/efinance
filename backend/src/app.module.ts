@@ -8,9 +8,10 @@ import { WalletsModule } from './wallets/wallets.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { CategoriesModule } from './categories/categories.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+import { InvestmentsModule } from './investments/investments.module';
 
 @Module({
-  imports: [PrismaModule, UsersModule, AuthModule, WalletsModule, TransactionsModule, CategoriesModule, SubscriptionsModule],
+  imports: [PrismaModule, UsersModule, AuthModule, WalletsModule, TransactionsModule, CategoriesModule, SubscriptionsModule, InvestmentsModule],
   controllers: [AppController],
   providers: [AppService],
 })

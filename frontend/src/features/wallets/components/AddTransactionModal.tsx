@@ -13,6 +13,7 @@ export const AddTransactionModal = ({ isOpen, type, walletId, onClose, onSuccess
   const [amount, setAmount] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [installments, setInstallments] = useState('');
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -40,6 +41,7 @@ export const AddTransactionModal = ({ isOpen, type, walletId, onClose, onSuccess
         category_id: Number(categoryId),
         transaction_date: new Date(date).toISOString(),
         is_recurring: false,
+        installment_total: installments ? Number(installments) : undefined,
       };
       
       await api.post('/transactions', payload);

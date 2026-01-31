@@ -11,6 +11,7 @@ interface CreateSubscriptionModalProps {
 export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSubscriptionModalProps) => {
   const [name, setName] = useState('');
   const [value, setValue] = useState('');
+  const [type, setType] = useState('EXPENSE');
   const [frequency, setFrequency] = useState('MONTHLY');
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [walletId, setWalletId] = useState('');
@@ -36,6 +37,7 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
       await api.post('/subscriptions', {
         name,
         value: Number(value),
+        transaction_type: type,
         frequency,
         start_date: new Date(startDate).toISOString(),
         wallet_id: Number(walletId),
@@ -55,11 +57,18 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
       <div className="bg-white rounded-lg p-6 w-full max-w-md">
-        <h2 className="text-xl font-bold mb-4">New Subscription</h2>
+        <h2 className="text-xl font-bold mb-4">New Recurring Item</h2>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700">Name</label>
             <input className="mt-1 block w-full rounded border p-2" value={name} onChange={e => setName(e.target.value)} required />
+          </div>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700">Type</label>
+            <select className="mt-1 block w-full rounded border p-2" value={type} onChange={e => setType(e.target.value)}>
+              <option value="EXPENSE">Expense</option>
+              <option value="INCOME">Income (Salary)</option>
+            </select>
           </div>
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>

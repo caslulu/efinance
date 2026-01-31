@@ -23,7 +23,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             <div className="hidden md:flex gap-4">
               <Link to="/" className="text-gray-600 hover:text-gray-900">Wallets</Link>
               <Link to="/transactions" className="text-gray-600 hover:text-gray-900">Transactions</Link>
-              <Link to="/subscriptions" className="text-gray-600 hover:text-gray-900">Subscriptions</Link>
+              <Link to="/subscriptions" className="text-gray-600 hover:text-gray-900">Recurring</Link>
               <Link to="/categories" className="text-gray-600 hover:text-gray-900">Categories</Link>
             </div>
           </div>

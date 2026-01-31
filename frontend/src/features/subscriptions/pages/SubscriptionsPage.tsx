@@ -41,19 +41,19 @@ export const SubscriptionsPage = () => {
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Subscriptions</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Recurring</h1>
         <div className="flex gap-4">
           <button
             onClick={triggerCheck}
             className="rounded-lg bg-gray-100 px-4 py-2 font-medium text-gray-700 hover:bg-gray-200"
           >
-            Trigger Check
+            Process Pending
           </button>
           <button
             onClick={() => setIsCreateOpen(true)}
             className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white shadow-sm hover:bg-blue-700"
           >
-            + New Subscription
+            + New Recurring
           </button>
         </div>
       </div>

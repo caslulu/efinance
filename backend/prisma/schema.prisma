@@ -70,6 +70,7 @@ model Subscription {
   
   name              String
   value             Decimal            @db.Decimal(10, 2)
+  transaction_type  String             @default("EXPENSE")
   frequency         Frequency
   status            SubscriptionStatus @default(ACTIVE)
   start_date        DateTime
