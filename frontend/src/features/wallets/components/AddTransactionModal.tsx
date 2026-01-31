@@ -37,19 +37,17 @@ export const AddTransactionModal = ({ isOpen, type, walletId, onClose, onSuccess
       const payload = {
         wallet_id: walletId,
         value: Number(amount),
-        transaction_type: type, // INCOME or EXPENSE
         category_id: Number(categoryId),
         transaction_date: new Date(date).toISOString(),
         is_recurring: false,
       };
-      console.log('Sending Transaction:', payload);
       
-      // Use Transactions Endpoint to ensure record + balance update
       await api.post('/transactions', payload);
       onSuccess();
       onClose();
       setAmount('');
       setCategoryId('');
+      setInstallments('');
     } catch (error) {
       alert('Failed to process transaction');
     } finally {
@@ -86,7 +84,7 @@ export const AddTransactionModal = ({ isOpen, type, walletId, onClose, onSuccess
               required
             />
           </div>
-          <div className="mb-6">
+          <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700">Category</label>
             <select
               className="mt-1 block w-full rounded border p-2"
@@ -100,6 +98,21 @@ export const AddTransactionModal = ({ isOpen, type, walletId, onClose, onSuccess
               ))}
             </select>
           </div>
+          
+          {type === 'EXPENSE' && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700">Installments (Optional)</label>
+              <input
+                type="number"
+                className="mt-1 block w-full rounded border p-2"
+                value={installments}
+                onChange={e => setInstallments(e.target.value)}
+                placeholder="1 (Single)"
+                min="1"
+              />
+            </div>
+          )}
+
           <div className="flex justify-end gap-2">
             <button
               type="button"
