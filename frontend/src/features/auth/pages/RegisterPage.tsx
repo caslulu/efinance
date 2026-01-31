@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { api } from '../../../api/api';
 import { useNavigate, Link } from 'react-router-dom';
-import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import { Eye, EyeOff } from 'lucide-react';
 
 export const RegisterPage = () => {
   const [username, setUsername] = useState('');
@@ -58,7 +58,7 @@ export const RegisterPage = () => {
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700 focus:outline-none"
               >
-                {showPassword ? <FaEyeSlash className="w-5 h-5" /> : <FaEye className="w-5 h-5" />}
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
             {isCapsLockOn && (
