@@ -1,5 +1,16 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../../api/api';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface AddTransactionModalProps {
   isOpen: boolean;
@@ -25,8 +36,6 @@ export const AddTransactionModal = ({ isOpen, type, walletId, onClose, onSuccess
     }
   }, [isOpen]);
 
-  if (!isOpen || !type || !walletId) return null;
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!categoryId || !amount) {
@@ -38,6 +47,7 @@ export const AddTransactionModal = ({ isOpen, type, walletId, onClose, onSuccess
       const payload = {
         wallet_id: walletId,
         value: Number(amount),
+        transaction_type: type,
         category_id: Number(categoryId),
         transaction_date: new Date(date).toISOString(),
         is_recurring: false,
@@ -58,55 +68,56 @@ export const AddTransactionModal = ({ isOpen, type, walletId, onClose, onSuccess
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-sm">
-        <h2 className="text-xl font-bold mb-4">
-          {type === 'INCOME' ? 'Add Funds' : 'Record Expense'}
-        </h2>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700">Amount</label>
-            <input
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>
+            {type === 'INCOME' ? 'Add Funds' : 'Record Expense'}
+          </DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+          <div className="grid gap-2">
+            <Label htmlFor="amount">Amount</Label>
+            <Input
+              id="amount"
               type="number"
               step="0.01"
-              className="mt-1 block w-full rounded border p-2"
               value={amount}
               onChange={e => setAmount(e.target.value)}
               required
               min="0.01"
             />
           </div>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700">Date</label>
-            <input
+          <div className="grid gap-2">
+            <Label htmlFor="date">Date</Label>
+            <Input
+              id="date"
               type="date"
-              className="mt-1 block w-full rounded border p-2"
               value={date}
               onChange={e => setDate(e.target.value)}
               required
             />
           </div>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700">Category</label>
-            <select
-              className="mt-1 block w-full rounded border p-2"
-              value={categoryId}
-              onChange={e => setCategoryId(e.target.value)}
-              required
-            >
-              <option value="">Select Category</option>
-              {categories.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
+          <div className="grid gap-2">
+            <Label htmlFor="category">Category</Label>
+            <Select value={categoryId} onValueChange={setCategoryId}>
+              <SelectTrigger id="category">
+                <SelectValue placeholder="Select Category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map(c => (
+                  <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           
           {type === 'EXPENSE' && (
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700">Installments (Optional)</label>
-              <input
+            <div className="grid gap-2">
+              <Label htmlFor="installments">Installments (Optional)</Label>
+              <Input
+                id="installments"
                 type="number"
-                className="mt-1 block w-full rounded border p-2"
                 value={installments}
                 onChange={e => setInstallments(e.target.value)}
                 placeholder="1 (Single)"
@@ -115,26 +126,14 @@ export const AddTransactionModal = ({ isOpen, type, walletId, onClose, onSuccess
             </div>
           )}
 
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded px-4 py-2 text-gray-600 hover:bg-gray-100"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className={`rounded px-4 py-2 text-white disabled:opacity-50 ${
-                type === 'INCOME' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'
-              }`}
-            >
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+            <Button type="submit" disabled={loading}>
               {loading ? 'Processing...' : 'Confirm'}
-            </button>
-          </div>
+            </Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };

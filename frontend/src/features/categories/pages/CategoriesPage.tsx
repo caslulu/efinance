@@ -2,6 +2,16 @@ import { useEffect, useState } from 'react';
 import { api } from '../../../api/api';
 import type { Category } from '../../../types/Category';
 import { CreateCategoryModal } from '../components/CreateCategoryModal';
+import { Button } from '@/components/ui/button';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Trash2 } from 'lucide-react';
 
 export const CategoriesPage = () => {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -38,34 +48,47 @@ export const CategoriesPage = () => {
   };
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Categories</h1>
-        <button
-          onClick={() => setIsCreateOpen(true)}
-          className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white shadow-sm hover:bg-blue-700"
-        >
+    <div className="p-8 space-y-8">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold tracking-tight">Categories</h1>
+        <Button onClick={() => setIsCreateOpen(true)}>
           + New Category
-        </button>
+        </Button>
       </div>
 
-      <div className="overflow-hidden rounded-lg border bg-white shadow max-w-2xl">
-        <ul className="divide-y divide-gray-200">
-          {categories.map((category) => (
-            <li key={category.id} className="flex items-center justify-between p-4 hover:bg-gray-50">
-              <span className="text-sm font-medium text-gray-900">{category.name}</span>
-              <button
-                onClick={() => handleDelete(category.id)}
-                className="text-sm font-medium text-red-600 hover:text-red-900"
-              >
-                Delete
-              </button>
-            </li>
-          ))}
-        </ul>
-        {categories.length === 0 && !loading && (
-          <div className="p-6 text-center text-gray-500">No categories found.</div>
-        )}
+      <div className="rounded-md border max-w-2xl bg-white">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {categories.map((category) => (
+              <TableRow key={category.id}>
+                <TableCell className="font-medium">{category.name}</TableCell>
+                <TableCell className="text-right">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    onClick={() => handleDelete(category.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+            {categories.length === 0 && !loading && (
+              <TableRow>
+                <TableCell colSpan={2} className="h-24 text-center text-muted-foreground">
+                  No categories found.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </div>
 
       <CreateCategoryModal

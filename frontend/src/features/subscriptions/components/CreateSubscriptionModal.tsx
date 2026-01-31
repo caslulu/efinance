@@ -1,6 +1,17 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../../api/api';
 import type { Wallet } from '../../../types/Wallet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface CreateSubscriptionModalProps {
   isOpen: boolean;
@@ -28,8 +39,6 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -55,62 +64,80 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
-        <h2 className="text-xl font-bold mb-4">New Recurring Item</h2>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700">Name</label>
-            <input className="mt-1 block w-full rounded border p-2" value={name} onChange={e => setName(e.target.value)} required />
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>New Recurring Item</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+          <div className="grid gap-2">
+            <Label htmlFor="name">Name</Label>
+            <Input id="name" value={name} onChange={e => setName(e.target.value)} required />
           </div>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700">Type</label>
-            <select className="mt-1 block w-full rounded border p-2" value={type} onChange={e => setType(e.target.value)}>
-              <option value="EXPENSE">Expense</option>
-              <option value="INCOME">Income (Salary)</option>
-            </select>
+          <div className="grid gap-2">
+            <Label htmlFor="type">Type</Label>
+            <Select value={type} onValueChange={setType}>
+              <SelectTrigger id="type">
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="EXPENSE">Expense</SelectItem>
+                <SelectItem value="INCOME">Income (Salary)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Value (Monthly)</label>
-              <input type="number" step="0.01" className="mt-1 block w-full rounded border p-2" value={value} onChange={e => setValue(e.target.value)} required />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="value">Value</Label>
+              <Input id="value" type="number" step="0.01" value={value} onChange={e => setValue(e.target.value)} required />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Frequency</label>
-              <select className="mt-1 block w-full rounded border p-2" value={frequency} onChange={e => setFrequency(e.target.value)}>
-                <option value="WEEKLY">Weekly</option>
-                <option value="MONTHLY">Monthly</option>
-                <option value="QUARTERLY">Quarterly</option>
-                <option value="YEARLY">Yearly</option>
-              </select>
+            <div className="grid gap-2">
+              <Label htmlFor="frequency">Frequency</Label>
+              <Select value={frequency} onValueChange={setFrequency}>
+                <SelectTrigger id="frequency">
+                  <SelectValue placeholder="Select frequency" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="WEEKLY">Weekly</SelectItem>
+                  <SelectItem value="MONTHLY">Monthly</SelectItem>
+                  <SelectItem value="QUARTERLY">Quarterly</SelectItem>
+                  <SelectItem value="YEARLY">Yearly</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700">Start Date</label>
-            <input type="date" className="mt-1 block w-full rounded border p-2" value={startDate} onChange={e => setStartDate(e.target.value)} required />
+          <div className="grid gap-2">
+            <Label htmlFor="startDate">Start Date</Label>
+            <Input id="startDate" type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required />
           </div>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700">Wallet</label>
-            <select className="mt-1 block w-full rounded border p-2" value={walletId} onChange={e => setWalletId(e.target.value)} required>
-              <option value="">Select Wallet</option>
-              {wallets.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-            </select>
+          <div className="grid gap-2">
+            <Label htmlFor="wallet">Wallet</Label>
+            <Select value={walletId} onValueChange={setWalletId}>
+              <SelectTrigger id="wallet">
+                <SelectValue placeholder="Select Wallet" />
+              </SelectTrigger>
+              <SelectContent>
+                {wallets.map(w => <SelectItem key={w.id} value={String(w.id)}>{w.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700">Category</label>
-            <select className="mt-1 block w-full rounded border p-2" value={categoryId} onChange={e => setCategoryId(e.target.value)} required>
-              <option value="">Select Category</option>
-              {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+          <div className="grid gap-2">
+            <Label htmlFor="category">Category</Label>
+            <Select value={categoryId} onValueChange={setCategoryId}>
+              <SelectTrigger id="category">
+                <SelectValue placeholder="Select Category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={onClose} className="rounded px-4 py-2 text-gray-600 hover:bg-gray-100">Cancel</button>
-            <button type="submit" disabled={loading} className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50">
-              {loading ? 'Creating...' : 'Create'}
-            </button>
-          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+            <Button type="submit" disabled={loading}>{loading ? 'Creating...' : 'Create'}</Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
