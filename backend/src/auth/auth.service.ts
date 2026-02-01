@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
+import { MailerService } from '@nestjs-modules/mailer';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from './dto/create-user.dto';
 import { randomBytes } from 'crypto';
@@ -10,6 +11,7 @@ export class AuthService {
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
+    private mailerService: MailerService,
   ) {}
 
   async validateUser(username: string, pass: string): Promise<any> {
@@ -45,12 +47,32 @@ export class AuthService {
     }
 
     const resetToken = randomBytes(32).toString('hex');
+    const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour
 
     await this.usersService.setResetToken(user.id, resetToken, resetTokenExpiry);
 
-    console.log(`[EMAIL SIMULATION] Reset Link for ${email}: ${resetLink}`);
+    const resetLink = `http://localhost:5173/reset-password?token=${resetToken}`;
+    
+    // Send Real Email (Simulated if ENV not set, but code is ready)
+    try {
+      await this.mailerService.sendMail({
+        to: email,
+        subject: 'Recuperação de Senha - FinanceApp',
+        html: `
+          <h3>Recuperação de Senha</h3>
+          <p>Você solicitou a redefinição de sua senha.</p>
+          <p>Clique no link abaixo para criar uma nova senha:</p>
+          <a href="${resetLink}">Redefinir Senha</a>
+          <p>Este link expira em 1 hora.</p>
+        `,
+      });
+    } catch (error) {
+      console.error('Failed to send email:', error);
+      // Fallback for dev without SMTP
+      console.log(`[DEV FALLBACK] Reset Link: ${resetLink}`);
+    }
 
-    return { message: 'Email de recuperação enviado (simulado no console do servidor).' };
+    return { message: 'Se o email existir, um link de recuperação foi enviado.' };
   }
 
   async resetPassword(token: string, newPassword: string) {

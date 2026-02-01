@@ -6,7 +6,6 @@ test.describe('Authentication Flow', () => {
   const password = 'password123';
 
   test('should register, login, and access dashboard', async ({ page }) => {
-    page.on('console', msg => console.log('Browser Log:', msg.text()));
 
     await page.goto('/register');
     await page.fill('input[type="text"]', username);
@@ -15,7 +14,6 @@ test.describe('Authentication Flow', () => {
 
     const errorMsgLocator = page.locator('.text-red-600');
     if (await errorMsgLocator.isVisible()) {
-      console.log('Registration Error:', await errorMsgLocator.textContent());
     }
 
     await expect(page).toHaveURL(/.*\/login/);

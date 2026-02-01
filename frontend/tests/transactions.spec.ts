@@ -8,7 +8,6 @@ test.describe('Transactions Flow', () => {
   test.beforeEach(async ({ page }) => {
     page.on('console', msg => {
       if (msg.type() === 'error') {
-        console.error(`Browser Error: ${msg.text()}`);
       }
     });
 
