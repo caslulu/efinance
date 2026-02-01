@@ -46,6 +46,7 @@ export class SubscriptionsService {
         wallet_id: sub.wallet_id,
         category_id: sub.category_id,
         value: Number(sub.value),
+        transaction_type: sub.transaction_type,
         is_recurring: true,
       });
 

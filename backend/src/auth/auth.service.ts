@@ -49,7 +49,6 @@ export class AuthService {
     const resetToken = randomBytes(32).toString('hex');
 
     await this.usersService.setResetToken(user.id, resetToken, resetTokenExpiry);
-
     
     try {
       await this.mailerService.sendMail({
