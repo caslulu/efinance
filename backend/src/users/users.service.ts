@@ -13,9 +13,14 @@ export class UsersService {
     });
   }
 
-  async findByUsername(username: string) {
+  async findByUsername(identifier: string) {
     return this.prisma.user.findFirst({
-      where: { username },
+      where: {
+        OR: [
+          { username: identifier },
+          { email: identifier },
+        ],
+      },
     });
   }
 

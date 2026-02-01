@@ -1,16 +1,23 @@
-import { IsString, IsNotEmpty, MinLength, MaxLength, Matches } from 'class-validator';
+import { IsString, IsNotEmpty, MinLength, MaxLength, Matches, IsEmail } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class CreateUserDto {
   @IsString()
-  @IsNotEmpty()
-  @MinLength(3, { message: 'Username must be at least 3 characters long' })
-  @MaxLength(32, { message: 'Username must be at most 32 characters long' })
-  @Matches(/^[a-zA-Z0-9_]+$/, { message: 'Username can only contain letters, numbers, and underscores' })
+  @IsNotEmpty({ message: 'O nome de usuário é obrigatório.' })
+  @MinLength(3, { message: 'O nome de usuário deve ter pelo menos 3 caracteres.' })
+  @MaxLength(32, { message: 'O nome de usuário deve ter no máximo 32 caracteres.' })
+  @Matches(/^[a-zA-Z0-9_]+$/, { message: 'O nome de usuário deve conter apenas letras, números e sublinhados (_).' })
+  @Transform(({ value }) => value.toLowerCase())
   username: string;
 
+  @IsEmail({}, { message: 'Endereço de email inválido.' })
+  @IsNotEmpty({ message: 'O email é obrigatório.' })
+  @Transform(({ value }) => value.toLowerCase())
+  email: string;
+
   @IsString()
-  @IsNotEmpty()
-  @MinLength(6, { message: 'Password must be at least 6 characters long' })
-  @MaxLength(32, { message: 'Password must be at most 32 characters long' })
+  @IsNotEmpty({ message: 'A senha é obrigatória.' })
+  @MinLength(6, { message: 'A senha deve ter pelo menos 6 caracteres.' })
+  @MaxLength(32, { message: 'A senha deve ter no máximo 32 caracteres.' })
   password: string;
 }

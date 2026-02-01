@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 
 export const RegisterPage = () => {
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -23,10 +24,15 @@ export const RegisterPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post('/auth/register', { username, password });
-      navigate('/login');
+      await api.post('/auth/register', { username, email, password });
+      navigate('/login', { 
+        state: { 
+          message: `O usuário ${username} foi criado com sucesso! Faça login para continuar.` 
+        } 
+      });
     } catch (err: any) {
-      setError('Falha no cadastro. Tente novamente.');
+      const msg = err.response?.data?.message;
+      setError(Array.isArray(msg) ? msg.join(', ') : msg || 'Falha no cadastro. Tente novamente.');
     }
   };
 
@@ -46,6 +52,16 @@ export const RegisterPage = () => {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </div>
