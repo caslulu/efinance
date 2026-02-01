@@ -119,6 +119,11 @@ export const LoginPage = () => {
               Entrar
             </Button>
           </form>
+          <div className="mt-4 text-center">
+            <Link to="/forgot-password" size="sm" className="text-sm text-blue-600 hover:underline">
+              Esqueci minha senha
+            </Link>
+          </div>
         </CardContent>
         <CardFooter className="justify-center">
           <p className="text-sm text-gray-600">

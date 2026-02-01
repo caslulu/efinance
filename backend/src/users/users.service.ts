@@ -24,6 +24,38 @@ export class UsersService {
     });
   }
 
+  async findByResetToken(token: string) {
+    return this.prisma.user.findFirst({
+      where: {
+        resetToken: token,
+        resetTokenExpiry: {
+          gt: new Date(),
+        },
+      },
+    });
+  }
+
+  async setResetToken(id: number, token: string, expiry: Date) {
+    return this.prisma.user.update({
+      where: { id },
+      data: {
+        resetToken: token,
+        resetTokenExpiry: expiry,
+      },
+    });
+  }
+
+  async updatePassword(id: number, password: string) {
+    return this.prisma.user.update({
+      where: { id },
+      data: {
+        password,
+        resetToken: null,
+        resetTokenExpiry: null,
+      },
+    });
+  }
+
   findAll() {
     return `This action returns all users`;
   }

@@ -25,6 +25,8 @@ model User {
   username              String
   email                 String                @unique
   password              String
+  resetToken            String?
+  resetTokenExpiry      DateTime?
   wallets               Wallet[]
   wishlists             Wishlist[]
   transactionCategories TransactionCategory[]
