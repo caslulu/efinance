@@ -7,10 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export const LoginPage = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -42,7 +44,7 @@ export const LoginPage = () => {
     setError('');
     setSuccess('');
     try {
-      const res = await api.post('/auth/login', { username, password });
+      const res = await api.post('/auth/login', { username, password, rememberMe });
       login(res.data.access_token, { username });
     } catch (err: any) {
       setError('Falha no login. Verifique suas credenciais.');
@@ -98,6 +100,21 @@ export const LoginPage = () => {
                 </p>
               )}
             </div>
+            
+            <div className="flex items-center space-x-2 py-2">
+              <Checkbox 
+                id="rememberMe" 
+                checked={rememberMe} 
+                onCheckedChange={(checked) => setRememberMe(!!checked)} 
+              />
+              <label
+                htmlFor="rememberMe"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+              >
+                Lembrar-me
+              </label>
+            </div>
+
             <Button type="submit" className="w-full">
               Entrar
             </Button>

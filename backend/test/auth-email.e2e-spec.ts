@@ -55,7 +55,6 @@ describe('Auth Controller (Email Support)', () => {
   it('/auth/login (POST) should login with EMAIL', () => {
     return request(app.getHttpServer())
       .post('/auth/login')
-      .send({ username: userData.email, password: userData.password }) // DTO field is 'username' but accepts identifier
       .expect(201)
       .expect((res) => {
           expect(res.body.access_token).toBeDefined();
