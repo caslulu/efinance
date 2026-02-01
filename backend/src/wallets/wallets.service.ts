@@ -79,7 +79,7 @@ export class WalletsService {
     await this.findOne(id, userId);
     return this.prisma.wallet.update({
       where: { id },
-      data: updateWalletDto,
+      data: updateWalletDto as any,
     });
   }
 

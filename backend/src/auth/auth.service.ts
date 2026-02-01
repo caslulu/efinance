@@ -47,13 +47,10 @@ export class AuthService {
     }
 
     const resetToken = randomBytes(32).toString('hex');
-    const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour
 
     await this.usersService.setResetToken(user.id, resetToken, resetTokenExpiry);
 
-    const resetLink = `http://localhost:5173/reset-password?token=${resetToken}`;
     
-    // Send Real Email (Simulated if ENV not set, but code is ready)
     try {
       await this.mailerService.sendMail({
         to: email,
@@ -68,7 +65,6 @@ export class AuthService {
       });
     } catch (error) {
       console.error('Failed to send email:', error);
-      // Fallback for dev without SMTP
       console.log(`[DEV FALLBACK] Reset Link: ${resetLink}`);
     }
 
