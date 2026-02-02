@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoginPage } from './features/auth/pages/LoginPage';
@@ -8,6 +9,8 @@ import { WalletsPage } from './features/wallets/pages/WalletsPage';
 import { TransactionsPage } from './features/transactions/pages/TransactionsPage';
 import { SubscriptionsPage } from './features/subscriptions/pages/SubscriptionsPage';
 import { CategoriesPage } from './features/categories/pages/CategoriesPage';
+import { SettingsPage } from './features/settings/pages/SettingsPage';
+import { ChevronDown, LogOut, Settings } from 'lucide-react';
 
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const { isAuthenticated } = useAuth();
@@ -16,27 +19,63 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const { logout, user } = useAuth();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white shadow-sm">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-8">
-            <span className="text-xl font-bold text-blue-600">FinanceApp</span>
+            <Link to="/" className="text-xl font-bold text-blue-600">FinanceApp</Link>
             <div className="hidden md:flex gap-4">
-              <Link to="/" className="text-gray-600 hover:text-gray-900">Wallets</Link>
-              <Link to="/transactions" className="text-gray-600 hover:text-gray-900">Transactions</Link>
-              <Link to="/subscriptions" className="text-gray-600 hover:text-gray-900">Recurring</Link>
-              <Link to="/categories" className="text-gray-600 hover:text-gray-900">Categories</Link>
+              <Link to="/" className="text-gray-600 hover:text-gray-900">Carteiras</Link>
+              <Link to="/transactions" className="text-gray-600 hover:text-gray-900">Transações</Link>
+              <Link to="/subscriptions" className="text-gray-600 hover:text-gray-900">Recorrências</Link>
+              <Link to="/categories" className="text-gray-600 hover:text-gray-900">Categorias</Link>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-700">Hi, {user?.username}</span>
+          
+          <div className="relative" ref={dropdownRef}>
             <button
-              onClick={logout}
-              className="rounded text-sm font-medium text-gray-500 hover:text-red-600"
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none"
             >
-              Logout
+              <span>{user?.username}</span>
+              <ChevronDown size={16} />
             </button>
+
+            {isDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
+                <div className="py-1">
+                  <Link
+                    to="/settings"
+                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    onClick={() => setIsDropdownOpen(false)}
+                  >
+                    <Settings size={16} />
+                    Configurações
+                  </Link>
+                  <button
+                    onClick={logout}
+                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                  >
+                    <LogOut size={16} />
+                    Sair
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </nav>
@@ -92,6 +131,16 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <CategoriesPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <SettingsPage />
                 </Layout>
               </ProtectedRoute>
             }

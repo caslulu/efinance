@@ -56,12 +56,38 @@ export class UsersService {
     });
   }
 
+  async updateTwoFactorSecret(id: number, secret: string) {
+    return this.prisma.user.update({
+      where: { id },
+      data: { twoFactorSecret: secret },
+    });
+  }
+
+  async enableTwoFactor(id: number) {
+    return this.prisma.user.update({
+      where: { id },
+      data: { isTwoFactorEnabled: true },
+    });
+  }
+
+  async disableTwoFactor(id: number) {
+    return this.prisma.user.update({
+      where: { id },
+      data: {
+        isTwoFactorEnabled: false,
+        twoFactorSecret: null,
+      },
+    });
+  }
+
   findAll() {
     return `This action returns all users`;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
+  async findOne(id: number) {
+    return this.prisma.user.findUnique({
+      where: { id },
+    });
   }
 
   update(id: number, updateUserDto: UpdateUserDto) {

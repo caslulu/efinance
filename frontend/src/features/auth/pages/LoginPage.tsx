@@ -12,6 +12,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 export const LoginPage = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [twoFactorToken, setTwoFactorToken] = useState('');
+  const [requires2FA, setRequires2FA] = useState(false);
+  const [userId, setUserId] = useState<number | null>(null);
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -43,9 +46,26 @@ export const LoginPage = () => {
     e.preventDefault();
     setError('');
     setSuccess('');
+    
+    if (requires2FA) {
+      try {
+        const res = await api.post('/auth/2fa/login', { userId, token: twoFactorToken, rememberMe });
+        login(res.data.access_token, { username });
+      } catch (err: any) {
+        setError('Código 2FA inválido.');
+      }
+      return;
+    }
+
     try {
       const res = await api.post('/auth/login', { username, password, rememberMe });
-      login(res.data.access_token, { username });
+      if (res.data.requires2FA) {
+        setRequires2FA(true);
+        setUserId(res.data.id);
+        setSuccess('Autenticação de dois fatores necessária. Digite o código do seu app.');
+      } else {
+        login(res.data.access_token, { username });
+      }
     } catch (err: any) {
       setError('Falha no login. Verifique suas credenciais.');
     }
@@ -55,84 +75,101 @@ export const LoginPage = () => {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-center text-2xl font-bold">Entrar</CardTitle>
+          <CardTitle className="text-center text-2xl font-bold">
+            {requires2FA ? 'Verificação em Duas Etapas' : 'Entrar'}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {success && <div className="mb-4 rounded bg-green-100 p-2 text-sm text-green-700">{success}</div>}
           {error && <div className="mb-4 rounded bg-red-100 p-2 text-sm text-red-600">{error}</div>}
+          
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="username">Usuário ou Email</Label>
-              <Input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2 relative">
-              <Label htmlFor="password">Senha</Label>
-              <div className="relative">
+            {!requires2FA ? (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="username">Usuário ou Email</Label>
+                  <Input
+                    id="username"
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2 relative">
+                  <Label htmlFor="password">Senha</Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      onKeyDown={handleCapsLock}
+                      onKeyUp={handleCapsLock}
+                      onFocus={() => setIsPasswordFocused(true)}
+                      onBlur={() => setIsPasswordFocused(false)}
+                      className="pr-10"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700 focus:outline-none"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                  {isCapsLockOn && isPasswordFocused && (
+                    <p className="absolute -bottom-5 left-0 text-xs font-semibold text-orange-600">
+                      Caps Lock ativado
+                    </p>
+                  )}
+                </div>
+                
+                <div className="flex items-center space-x-2 py-2">
+                  <Checkbox 
+                    id="rememberMe" 
+                    checked={rememberMe} 
+                    onCheckedChange={(checked) => setRememberMe(!!checked)} 
+                  />
+                  <label
+                    htmlFor="rememberMe"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  >
+                    Lembrar-me
+                  </label>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="2fa">Código do Autenticador</Label>
                 <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  onKeyDown={handleCapsLock}
-                  onKeyUp={handleCapsLock}
-                  onFocus={() => setIsPasswordFocused(true)}
-                  onBlur={() => setIsPasswordFocused(false)}
-                  className="pr-10"
+                  id="2fa"
+                  type="text"
+                  value={twoFactorToken}
+                  onChange={(e) => setTwoFactorToken(e.target.value)}
+                  placeholder="000000"
+                  className="text-center text-lg tracking-widest"
+                  maxLength={6}
                   required
+                  autoFocus
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700 focus:outline-none"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
               </div>
-              {isCapsLockOn && isPasswordFocused && (
-                <p className="absolute -bottom-5 left-0 text-xs font-semibold text-orange-600">
-                  Caps Lock ativado
-                </p>
-              )}
-            </div>
-            
-            <div className="flex items-center space-x-2 py-2">
-              <Checkbox 
-                id="rememberMe" 
-                checked={rememberMe} 
-                onCheckedChange={(checked) => setRememberMe(!!checked)} 
-              />
-              <label
-                htmlFor="rememberMe"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-              >
-                Lembrar-me
-              </label>
-            </div>
+            )}
 
             <Button type="submit" className="w-full">
-              Entrar
+              {requires2FA ? 'Verificar' : 'Entrar'}
             </Button>
           </form>
-          <div className="mt-4 text-center">
-            <Link to="/forgot-password" size="sm" className="text-sm text-blue-600 hover:underline">
-              Esqueci minha senha
-            </Link>
-          </div>
+          
+          {!requires2FA && (
+            <div className="mt-4 text-center">
+              <Link to="/forgot-password" size="sm" className="text-sm text-blue-600 hover:underline">
+                Esqueci minha senha
+              </Link>
+            </div>
+          )}
         </CardContent>
-        <CardFooter className="justify-center">
-          <p className="text-sm text-gray-600">
-            Não tem uma conta?{' '}
-            <Link to="/register" className="text-blue-600 hover:underline">
-              Cadastre-se
-            </Link>
-          </p>
-        </CardFooter>
       </Card>
     </div>
   );
