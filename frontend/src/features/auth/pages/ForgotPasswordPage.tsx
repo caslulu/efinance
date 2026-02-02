@@ -20,7 +20,7 @@ export const ForgotPasswordPage = () => {
     
     try {
       await api.post('/auth/forgot-password', { email });
-      setMessage('Se o email existir, você receberá um link de recuperação (Cheque o console do backend).');
+      setMessage('Se o email existir, você receberá um link de recuperação no seu email.');
     } catch (err: any) {
       setError('Falha ao solicitar recuperação. Tente novamente.');
     } finally {
