@@ -4,10 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { MailerService } from '@nestjs-modules/mailer';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from './dto/create-user.dto';
-import { randomBytes } from 'crypto';
-import { toDataURL } from 'qrcode';
-
-const { authenticator } = require('otplib');
+import { randomBytes, randomInt } from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -27,6 +24,7 @@ export class AuthService {
 
   async login(user: any, rememberMe = false) {
     if (user.isTwoFactorEnabled) {
+      await this.sendTwoFactorToken(user);
       return {
         requires2FA: true,
         username: user.username,
@@ -34,6 +32,31 @@ export class AuthService {
       };
     }
 
+    return this.generateJwt(user, rememberMe);
+  }
+
+  async login2fa(userId: number, token: string, rememberMe = false) {
+    const user = await this.usersService.findOne(userId);
+    if (!user) throw new UnauthorizedException('User not found');
+
+    if (!user.twoFactorToken || !user.twoFactorTokenExpiry) {
+      throw new UnauthorizedException('Nenhum código de verificação pendente.');
+    }
+
+    if (new Date() > user.twoFactorTokenExpiry) {
+      throw new UnauthorizedException('O código expirou. Faça login novamente.');
+    }
+
+    if (user.twoFactorToken !== token) {
+      throw new UnauthorizedException('Código incorreto.');
+    }
+
+    await this.usersService.setTwoFactorToken(userId, null, null);
+
+    return this.generateJwt(user, rememberMe);
+  }
+
+  private generateJwt(user: any, rememberMe: boolean) {
     const payload = { username: user.username, sub: user.id };
     return {
       access_token: this.jwtService.sign(payload, {
@@ -42,22 +65,36 @@ export class AuthService {
     };
   }
 
-  async login2fa(userId: number, token: string, rememberMe = false) {
-    const user = await this.usersService.findOne(userId);
-    if (!user) throw new UnauthorizedException('User not found');
+  async sendTwoFactorToken(user: any) {
+    const token = randomInt(100000, 999999).toString();
 
-    const isValid = authenticator.check(token, user.twoFactorSecret);
+    await this.usersService.setTwoFactorToken(user.id, token, expiry);
 
-    if (!isValid) {
-      throw new UnauthorizedException('Invalid 2FA token');
+    try {
+      await this.mailerService.sendMail({
+        to: user.email,
+        subject: 'Código de Verificação - FinanceApp',
+        html: `
+          <h3>Seu código de acesso</h3>
+          <p>Utilize o código abaixo para completar seu login:</p>
+          <h2 style="letter-spacing: 5px; background: #f0f0f0; padding: 10px; display: inline-block;">${token}</h2>
+          <p>Este código expira em 10 minutos.</p>
+        `,
+      });
+    } catch (error) {
+      console.error('Failed to send 2FA email:', error);
+      console.log(`[DEV FALLBACK] 2FA Token: ${token}`);
     }
+  }
 
-    const payload = { username: user.username, sub: user.id };
-    return {
-      access_token: this.jwtService.sign(payload, {
-        expiresIn: rememberMe ? '7d' : '60m',
-      }),
-    };
+  async enableTwoFactor(userId: number) {
+    await this.usersService.enableTwoFactor(userId);
+    return { message: 'Autenticação de dois fatores ativada.' };
+  }
+
+  async disableTwoFactor(userId: number) {
+    await this.usersService.disableTwoFactor(userId);
+    return { message: 'Autenticação de dois fatores desativada.' };
   }
 
   async register(createUserDto: CreateUserDto) {
@@ -75,6 +112,7 @@ export class AuthService {
     }
 
     const resetToken = randomBytes(32).toString('hex');
+    const resetTokenExpiry = new Date(Date.now() + 3600000);
 
     await this.usersService.setResetToken(user.id, resetToken, resetTokenExpiry);
     
@@ -108,32 +146,5 @@ export class AuthService {
     await this.usersService.updatePassword(user.id, hashedPassword);
 
     return { message: 'Senha alterada com sucesso.' };
-  }
-
-  async generateTwoFactorSecret(userId: number, email: string) {
-    const secret = authenticator.generateSecret();
-    const otpauthUrl = authenticator.keyuri(email, 'FinanceApp', secret);
-    await this.usersService.updateTwoFactorSecret(userId, secret);
-    return {
-      secret,
-      otpauthUrl,
-      qrCode: await toDataURL(otpauthUrl),
-    };
-  }
-
-  async enableTwoFactor(userId: number, token: string) {
-    const user = await this.usersService.findOne(userId);
-    if (!user || !user.twoFactorSecret) {
-      throw new BadRequestException('2FA setup not started');
-    }
-    const isValid = authenticator.check(token, user.twoFactorSecret);
-    if (!isValid) throw new BadRequestException('Invalid token');
-    await this.usersService.enableTwoFactor(userId);
-    return { message: '2FA enabled successfully' };
-  }
-
-  async disableTwoFactor(userId: number) {
-    await this.usersService.disableTwoFactor(userId);
-    return { message: '2FA disabled successfully' };
   }
 }

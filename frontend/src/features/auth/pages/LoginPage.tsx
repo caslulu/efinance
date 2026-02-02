@@ -62,7 +62,7 @@ export const LoginPage = () => {
       if (res.data.requires2FA) {
         setRequires2FA(true);
         setUserId(res.data.id);
-        setSuccess('Autenticação de dois fatores necessária. Digite o código do seu app.');
+        setSuccess('Um código de verificação foi enviado para seu email.');
       } else {
         login(res.data.access_token, { username });
       }
@@ -76,7 +76,7 @@ export const LoginPage = () => {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-center text-2xl font-bold">
-            {requires2FA ? 'Verificação em Duas Etapas' : 'Entrar'}
+            {requires2FA ? 'Código de Verificação' : 'Entrar'}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -142,7 +142,7 @@ export const LoginPage = () => {
               </>
             ) : (
               <div className="space-y-2">
-                <Label htmlFor="2fa">Código do Autenticador</Label>
+                <Label htmlFor="2fa">Código Recebido por Email</Label>
                 <Input
                   id="2fa"
                   type="text"

@@ -56,10 +56,13 @@ export class UsersService {
     });
   }
 
-  async updateTwoFactorSecret(id: number, secret: string) {
+  async setTwoFactorToken(id: number, token: string, expiry: Date) {
     return this.prisma.user.update({
       where: { id },
-      data: { twoFactorSecret: secret },
+      data: {
+        twoFactorToken: token,
+        twoFactorTokenExpiry: expiry,
+      },
     });
   }
 
@@ -75,7 +78,8 @@ export class UsersService {
       where: { id },
       data: {
         isTwoFactorEnabled: false,
-        twoFactorSecret: null,
+        twoFactorToken: null,
+        twoFactorTokenExpiry: null,
       },
     });
   }

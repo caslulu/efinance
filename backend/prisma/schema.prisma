@@ -27,7 +27,8 @@ model User {
   password              String
   resetToken            String?
   resetTokenExpiry      DateTime?
-  twoFactorSecret       String?
+  twoFactorToken        String?
+  twoFactorTokenExpiry  DateTime?
   isTwoFactorEnabled    Boolean               @default(false)
   wallets               Wallet[]
   wishlists             Wishlist[]
