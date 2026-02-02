@@ -11,6 +11,34 @@ export default defineConfig({
   },
   server: {
     proxy: {
+      '/auth': {
+        target: 'http://127.0.0.1:3000',
+        changeOrigin: true,
+      },
+      '/users': {
+        target: 'http://127.0.0.1:3000',
+        changeOrigin: true,
+      },
+      '/wallets': {
+        target: 'http://127.0.0.1:3000',
+        changeOrigin: true,
+      },
+      '/transactions': {
+        target: 'http://127.0.0.1:3000',
+        changeOrigin: true,
+      },
+      '/categories': {
+        target: 'http://127.0.0.1:3000',
+        changeOrigin: true,
+      },
+      '/subscriptions': {
+        target: 'http://127.0.0.1:3000',
+        changeOrigin: true,
+      },
+      '/investments': {
+        target: 'http://127.0.0.1:3000',
+        changeOrigin: true,
+      },
     }
   }
 })
