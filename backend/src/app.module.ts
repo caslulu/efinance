@@ -9,24 +9,29 @@ import { TransactionsModule } from './transactions/transactions.module';
 import { CategoriesModule } from './categories/categories.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { InvestmentsModule } from './investments/investments.module';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MailerModule } from '@nestjs-modules/mailer';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    MailerModule.forRoot({
-      transport: {
-        host: process.env.MAIL_HOST,
-        port: Number(process.env.MAIL_PORT) || 587,
-        auth: {
-          user: process.env.MAIL_USER,
-          pass: process.env.MAIL_PASS,
+    MailerModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        transport: {
+          host: configService.get('MAIL_HOST'),
+          port: Number(configService.get('MAIL_PORT')) || 587,
+          secure: false,
+          auth: {
+            user: configService.get('MAIL_USER'),
+            pass: configService.get('MAIL_PASS'),
+          },
         },
-      },
-      defaults: {
-        from: process.env.MAIL_FROM || '"No Reply" <noreply@financeapp.com>',
-      },
+        defaults: {
+          from: configService.get('MAIL_FROM') || '"No Reply" <noreply@financeapp.com>',
+        },
+      }),
+      inject: [ConfigService],
     }),
     PrismaModule, 
     UsersModule, 
