@@ -48,6 +48,7 @@ export class AuthService {
 
     const resetToken = randomBytes(32).toString('hex');
     const resetTokenExpiry = new Date(Date.now() + 3600000);
+    const resetLink = `http://localhost:5173/reset-password?token=${resetToken}`;
 
     await this.usersService.setResetToken(user.id, resetToken, resetTokenExpiry);
     
