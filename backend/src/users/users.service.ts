@@ -84,6 +84,27 @@ export class UsersService {
     });
   }
 
+  async setEmailVerificationToken(id: number, token: string, expiry: Date) {
+    return this.prisma.user.update({
+      where: { id },
+      data: {
+        emailVerificationToken: token,
+        emailVerificationTokenExpiry: expiry,
+      },
+    });
+  }
+
+  async markEmailAsVerified(id: number) {
+    return this.prisma.user.update({
+      where: { id },
+      data: {
+        isEmailVerified: true,
+        emailVerificationToken: null,
+        emailVerificationTokenExpiry: null,
+      },
+    });
+  }
+
   findAll() {
     return `This action returns all users`;
   }

@@ -23,8 +23,11 @@ export class AuthService {
   }
 
   async login(user: any, rememberMe = false) {
+    if (!user.isEmailVerified) {
+      throw new UnauthorizedException('Email não verificado. Por favor, verifique seu email antes de logar.');
+    }
+
     if (user.isTwoFactorEnabled) {
-      // Send in background to allow immediate UI redirect
       this.sendTwoFactorToken(user).catch(err => console.error('Failed to send 2FA email asynchronously', err));
       return {
         requires2FA: true,
@@ -34,15 +37,6 @@ export class AuthService {
     }
 
     return this.generateJwt(user, rememberMe);
-  }
-
-  async resendToken(userId: number) {
-    const user = await this.usersService.findOne(userId);
-    if (!user) throw new NotFoundException('User not found');
-    
-    // We don't need to check expiry for resend, just generate a new one
-    await this.sendTwoFactorToken(user);
-    return { message: 'Novo código enviado.' };
   }
 
   async login2fa(userId: number, token: string, rememberMe = false) {
@@ -66,54 +60,58 @@ export class AuthService {
     return this.generateJwt(user, rememberMe);
   }
 
-  private generateJwt(user: any, rememberMe: boolean) {
-    const payload = { username: user.username, sub: user.id };
-    return {
-      access_token: this.jwtService.sign(payload, {
-        expiresIn: rememberMe ? '7d' : '60m',
-      }),
-    };
-  }
-
-  async sendTwoFactorToken(user: any) {
-    const token = randomInt(100000, 999999).toString();
-    const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-    await this.usersService.setTwoFactorToken(user.id, token, expiry);
-
-    try {
-      await this.mailerService.sendMail({
-        to: user.email,
-        subject: 'Código de Verificação - FinanceApp',
-        html: `
-          <h3>Seu código de acesso</h3>
-          <p>Utilize o código abaixo para completar seu login:</p>
-          <h2 style="letter-spacing: 5px; background: #f0f0f0; padding: 10px; display: inline-block;">${token}</h2>
-          <p>Este código expira em 10 minutos.</p>
-        `,
-      });
-    } catch (error) {
-      console.error('Failed to send 2FA email:', error);
-      console.log(`[DEV FALLBACK] 2FA Token: ${token}`);
-    }
-  }
-
-  async enableTwoFactor(userId: number) {
-    await this.usersService.enableTwoFactor(userId);
-    return { message: 'Autenticação de dois fatores ativada.' };
-  }
-
-  async disableTwoFactor(userId: number) {
-    await this.usersService.disableTwoFactor(userId);
-    return { message: 'Autenticação de dois fatores desativada.' };
-  }
-
   async register(createUserDto: CreateUserDto) {
     const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
-    return this.usersService.create({
+    const user = await this.usersService.create({
       ...createUserDto,
       password: hashedPassword,
     });
+
+    await this.sendVerificationEmail(user);
+
+    return {
+      message: 'Cadastro realizado. Verifique seu email.',
+      requiresEmailVerification: true,
+      userId: user.id,
+      email: user.email
+    };
+  }
+
+  async verifyEmail(userId: number, token: string) {
+    const user = await this.usersService.findOne(userId);
+    if (!user) throw new NotFoundException('User not found');
+
+    if (user.isEmailVerified) {
+      return { message: 'Email já verificado.', verified: true };
+    }
+
+    if (user.emailVerificationToken !== token) {
+      throw new BadRequestException('Código de verificação inválido.');
+    }
+
+    if (user.emailVerificationTokenExpiry && new Date() > user.emailVerificationTokenExpiry) {
+      throw new BadRequestException('Código expirado.');
+    }
+
+    await this.usersService.markEmailAsVerified(userId);
+    return this.generateJwt(user, false);
+  }
+
+  async resendVerificationToken(userId: number) {
+    const user = await this.usersService.findOne(userId);
+    if (!user) throw new NotFoundException('User not found');
+    if (user.isEmailVerified) throw new BadRequestException('Email já verificado.');
+
+    await this.sendVerificationEmail(user);
+    return { message: 'Novo código de verificação enviado.' };
+  }
+
+  async resendToken(userId: number) {
+    const user = await this.usersService.findOne(userId);
+    if (!user) throw new NotFoundException('User not found');
+    
+    await this.sendTwoFactorToken(user);
+    return { message: 'Novo código enviado.' };
   }
 
   async forgotPassword(email: string) {
@@ -158,5 +156,70 @@ export class AuthService {
     await this.usersService.updatePassword(user.id, hashedPassword);
 
     return { message: 'Senha alterada com sucesso.' };
+  }
+
+  async enableTwoFactor(userId: number) {
+    await this.usersService.enableTwoFactor(userId);
+    return { message: 'Autenticação de dois fatores ativada.' };
+  }
+
+  async disableTwoFactor(userId: number) {
+    await this.usersService.disableTwoFactor(userId);
+    return { message: 'Autenticação de dois fatores desativada.' };
+  }
+
+  private generateJwt(user: any, rememberMe: boolean) {
+    const payload = { username: user.username, sub: user.id };
+    return {
+      access_token: this.jwtService.sign(payload, {
+        expiresIn: rememberMe ? '7d' : '60m',
+      }),
+    };
+  }
+
+  private async sendTwoFactorToken(user: any) {
+    const token = randomInt(100000, 999999).toString();
+    const expiry = new Date(Date.now() + 10 * 60 * 1000);
+
+    await this.usersService.setTwoFactorToken(user.id, token, expiry);
+
+    try {
+      await this.mailerService.sendMail({
+        to: user.email,
+        subject: 'Código de Verificação - FinanceApp',
+        html: `
+          <h3>Seu código de acesso</h3>
+          <p>Utilize o código abaixo para completar seu login:</p>
+          <h2 style="letter-spacing: 5px; background: #f0f0f0; padding: 10px; display: inline-block;">${token}</h2>
+          <p>Este código expira em 10 minutos.</p>
+        `,
+      });
+    } catch (error) {
+      console.error('Failed to send 2FA email:', error);
+      console.log(`[DEV FALLBACK] 2FA Token: ${token}`);
+    }
+  }
+
+  private async sendVerificationEmail(user: any) {
+    const token = randomInt(100000, 999999).toString();
+    const expiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await this.usersService.setEmailVerificationToken(user.id, token, expiry);
+
+    try {
+      await this.mailerService.sendMail({
+        to: user.email,
+        subject: 'Verifique seu email - FinanceApp',
+        html: `
+          <h3>Bem-vindo ao FinanceApp!</h3>
+          <p>Para ativar sua conta, utilize o código de verificação abaixo:</p>
+          <h2 style="letter-spacing: 5px; background: #f0f0f0; padding: 10px; display: inline-block;">${token}</h2>
+          <p>Este código expira em 24 horas.</p>
+        `,
+      });
+    } catch (error) {
+      console.error('Failed to send verification email:', error);
+      console.log(`[DEV FALLBACK] Verification Token: ${token}`);
+    }
   }
 }

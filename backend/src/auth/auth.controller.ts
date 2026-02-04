@@ -5,6 +5,7 @@ import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { LoginTwoFactorDto } from './dto/login-2fa.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ResendTokenDto } from './dto/resend-token.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { UsersService } from '../users/users.service';
@@ -15,6 +16,16 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly usersService: UsersService,
   ) {}
+
+  @Post('verify-email')
+  async verifyEmail(@Body() dto: VerifyEmailDto) {
+    return this.authService.verifyEmail(dto.userId, dto.token);
+  }
+
+  @Post('resend-verification')
+  async resendVerification(@Body() dto: ResendTokenDto) {
+    return this.authService.resendVerificationToken(dto.userId);
+  }
 
   @Post('login')
   async login(@Body() loginDto: LoginDto) {
