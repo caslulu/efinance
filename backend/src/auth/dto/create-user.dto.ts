@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, MinLength, MaxLength, Matches, IsEmail } from 'class-validator';
+import { IsString, IsNotEmpty, MinLength, MaxLength, Matches, IsEmail, IsOptional } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class CreateUserDto {
@@ -20,4 +20,8 @@ export class CreateUserDto {
   @MinLength(6, { message: 'A senha deve ter pelo menos 6 caracteres.' })
   @MaxLength(32, { message: 'A senha deve ter no máximo 32 caracteres.' })
   password: string;
+
+  @IsString()
+  @IsOptional()
+  registerToken?: string;
 }

@@ -20,15 +20,22 @@ export class AuthController {
   @Get('google')
   @UseGuards(AuthGuard('google'))
   async googleAuth(@Request() req) {
+    // Initiates the Google OAuth flow
   }
 
   @Get('google/redirect')
   @UseGuards(AuthGuard('google'))
   async googleAuthRedirect(@Request() req, @Res() res) {
-    const loginResult = await this.authService.login(req.user);
+    if (req.user.isNewUser) {
+       return res.redirect(`http://localhost:5173/register?email=${req.user.email}&username=${req.user.firstName}&googleToken=${req.user.registerToken}`);
+    }
+
+    const loginResult: any = await this.authService.login(req.user);
     
     if (loginResult.requires2FA) {
+       res.redirect(`http://localhost:5173/login?userId=${loginResult.id}&requires2FA=true`);
     } else {
+       res.redirect(`http://localhost:5173/login?token=${loginResult.access_token}`);
     }
   }
 

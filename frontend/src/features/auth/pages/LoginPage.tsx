@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { api } from '../../../api/api';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
@@ -27,52 +27,34 @@ export const LoginPage = () => {
   const [resendDelay, setResendDelay] = useState(30);
   const [loading, setLoading] = useState(false);
   
+  // Ref to prevent double processing of the token/params in StrictMode or due to re-renders
+  const processedParams = useRef(false);
+  
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (requires2FA && resendTimer > 0) {
-      interval = setInterval(() => {
-        setResendTimer((prev) => prev - 1);
-      }, 1000);
-    } else if (resendTimer === 0) {
-      setCanResend(true);
-    }
-    return () => clearInterval(interval);
-  }, [requires2FA, resendTimer]);
+    if (isAuthenticated || processedParams.current) return;
 
-  const handleResend = async () => {
-    setCanResend(false);
-    const newDelay = resendDelay + 30;
-    setResendDelay(newDelay);
-    setResendTimer(newDelay);
-    
-    try {
-      await api.post('/auth/2fa/resend', { userId });
-      setSuccess('Novo código enviado.');
-    } catch (err) {
-      setError('Falha ao reenviar código.');
-    }
-  };
-
-  useEffect(() => {
     const params = new URLSearchParams(location.search);
     const token = params.get('token');
     const userIdParam = params.get('userId');
     const requires2FAParam = params.get('requires2FA');
 
     if (token) {
+      processedParams.current = true;
       login(token, { username: 'Usuário' }); 
-      navigate('/');
+      navigate('/', { replace: true });
     } else if (requires2FAParam === 'true' && userIdParam) {
+      processedParams.current = true;
       setRequires2FA(true);
       setUserId(Number(userIdParam));
       setSuccess('Verificação em duas etapas necessária.');
+      // Clean URL without navigating
       window.history.replaceState({}, document.title, location.pathname);
     }
-  }, [location, login, navigate]);
+  }, [location.search, isAuthenticated, login, navigate]);
 
   useEffect(() => {
     if (location.state?.message) {

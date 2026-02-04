@@ -14,22 +14,33 @@ export class AuthService {
     private mailerService: MailerService,
   ) {}
 
+  generateRegisterToken(profile: any) {
+    const payload = { 
+      email: profile.email, 
+      firstName: profile.firstName,
+      isGoogleVerified: true 
+    };
+    return this.jwtService.sign(payload, { expiresIn: '15m' });
+  }
+
   async validateGoogleUser(googleUser: any) {
     let user = await this.usersService.findByUsername(googleUser.email);
     if (!user) {
-      user = await this.usersService.create({
+      // Return temporary token for registration completion
+      const registerToken = this.generateRegisterToken(googleUser);
+      return { 
+        isNewUser: true, 
+        registerToken,
         email: googleUser.email,
-        username: googleUser.firstName || googleUser.email.split('@')[0],
-        password: null, 
-      } as any);
-      await this.usersService.markEmailAsVerified(user.id);
+        firstName: googleUser.firstName 
+      };
     }
     return user;
   }
 
   async validateUser(username: string, pass: string): Promise<any> {
     const user = await this.usersService.findByUsername(username);
-    if (user && (await bcrypt.compare(pass, user.password))) {
+    if (user && user.password && (await bcrypt.compare(pass, user.password))) {
       return user;
     }
     return null;
@@ -74,17 +85,34 @@ export class AuthService {
   }
 
   async register(createUserDto: CreateUserDto) {
+    let isVerified = false;
+
+    if (createUserDto.registerToken) {
+      try {
+        const payload = this.jwtService.verify(createUserDto.registerToken);
+        if (payload.email === createUserDto.email && payload.isGoogleVerified) {
+          isVerified = true;
+        }
+      } catch (e) {
+        console.warn('Invalid registerToken provided');
+      }
+    }
+
     const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
     const user = await this.usersService.create({
       ...createUserDto,
       password: hashedPassword,
     });
 
-    this.sendVerificationEmail(user).catch(err => console.error('Failed to send verification email asynchronously', err));
+    if (isVerified) {
+      await this.usersService.markEmailAsVerified(user.id);
+    } else {
+      this.sendVerificationEmail(user).catch(err => console.error('Failed to send verification email asynchronously', err));
+    }
 
     return {
-      message: 'Cadastro realizado. Verifique seu email.',
-      requiresEmailVerification: true,
+      message: isVerified ? 'Cadastro realizado com sucesso.' : 'Cadastro realizado. Verifique seu email.',
+      requiresEmailVerification: !isVerified,
       userId: user.id,
       email: user.email
     };
@@ -135,6 +163,7 @@ export class AuthService {
 
     const resetToken = randomBytes(32).toString('hex');
     const resetTokenExpiry = new Date(Date.now() + 3600000);
+    const resetLink = `http://localhost:5173/reset-password?token=${resetToken}`;
 
     await this.usersService.setResetToken(user.id, resetToken, resetTokenExpiry);
     

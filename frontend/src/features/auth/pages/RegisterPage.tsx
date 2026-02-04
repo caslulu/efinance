@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '../../../api/api';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -22,9 +22,22 @@ export const RegisterPage = () => {
   const [verificationCode, setVerificationCode] = useState('');
   const [userId, setUserId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+  const [registerToken, setRegisterToken] = useState('');
   
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const emailParam = params.get('email');
+    const nameParam = params.get('username') || params.get('name');
+    const tokenParam = params.get('googleToken');
+
+    if (emailParam) setEmail(emailParam);
+    if (nameParam) setUsername(nameParam);
+    if (tokenParam) setRegisterToken(tokenParam);
+  }, [location]);
 
   const handleCapsLock = (e: React.KeyboardEvent) => {
     setIsCapsLockOn(e.getModifierState('CapsLock'));
@@ -43,9 +56,30 @@ export const RegisterPage = () => {
     setError('');
     
     try {
-      const res = await api.post('/auth/register', { username, email, password });
-      setUserId(res.data.userId);
-      setIsVerifying(true);
+      const payload: any = { username, email, password };
+      if (registerToken) payload.registerToken = registerToken;
+
+      const res = await api.post('/auth/register', payload);
+      
+      if (res.data.requiresEmailVerification === false) {
+        // Log in directly if verified by Google
+        // We need to login user here. Does register return token? No.
+        // We need to auto-login.
+        // If register returns message only, we can't login.
+        // But wait, my register logic in AuthService:
+        // if (isVerified) { markVerified... }
+        // It returns { message, requiresEmailVerification: false, ... }
+        
+        // I should probably change register to return access_token if verified?
+        // Or call login endpoint automatically?
+        // Let's call login endpoint.
+        const loginRes = await api.post('/auth/login', { username, password });
+        login(loginRes.data.access_token, { username });
+        navigate('/', { state: { message: 'Cadastro via Google concluído!' } });
+      } else {
+        setUserId(res.data.userId);
+        setIsVerifying(true);
+      }
     } catch (err: any) {
       const msg = err.response?.data?.message;
       setError(Array.isArray(msg) ? msg.join(', ') : msg || 'Falha no cadastro. Tente novamente.');
