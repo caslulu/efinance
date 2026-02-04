@@ -14,6 +14,19 @@ export class AuthService {
     private mailerService: MailerService,
   ) {}
 
+  async validateGoogleUser(googleUser: any) {
+    let user = await this.usersService.findByUsername(googleUser.email);
+    if (!user) {
+      user = await this.usersService.create({
+        email: googleUser.email,
+        username: googleUser.firstName || googleUser.email.split('@')[0],
+        password: null, 
+      } as any);
+      await this.usersService.markEmailAsVerified(user.id);
+    }
+    return user;
+  }
+
   async validateUser(username: string, pass: string): Promise<any> {
     const user = await this.usersService.findByUsername(username);
     if (user && (await bcrypt.compare(pass, user.password))) {
@@ -122,7 +135,6 @@ export class AuthService {
 
     const resetToken = randomBytes(32).toString('hex');
     const resetTokenExpiry = new Date(Date.now() + 3600000);
-    const resetLink = `http://localhost:5173/reset-password?token=${resetToken}`;
 
     await this.usersService.setResetToken(user.id, resetToken, resetTokenExpiry);
     
