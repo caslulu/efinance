@@ -67,7 +67,7 @@ export class AuthService {
       password: hashedPassword,
     });
 
-    await this.sendVerificationEmail(user);
+    this.sendVerificationEmail(user).catch(err => console.error('Failed to send verification email asynchronously', err));
 
     return {
       message: 'Cadastro realizado. Verifique seu email.',
