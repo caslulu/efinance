@@ -3,7 +3,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { api } from '../../../api/api';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -24,6 +24,7 @@ export const LoginPage = () => {
   const [resendTimer, setResendTimer] = useState(30);
   const [canResend, setCanResend] = useState(false);
   const [resendDelay, setResendDelay] = useState(30);
+  const [loading, setLoading] = useState(false);
   
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -74,8 +75,11 @@ export const LoginPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
+
     setError('');
     setSuccess('');
+    setLoading(true);
     
     if (requires2FA) {
       try {
@@ -83,6 +87,8 @@ export const LoginPage = () => {
         login(res.data.access_token, { username });
       } catch (err: any) {
         setError('Código 2FA inválido.');
+      } finally {
+        setLoading(false);
       }
       return;
     }
@@ -98,6 +104,8 @@ export const LoginPage = () => {
       }
     } catch (err: any) {
       setError('Falha no login. Verifique suas credenciais.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -199,8 +207,8 @@ export const LoginPage = () => {
               </div>
             )}
 
-            <Button type="submit" className="w-full">
-              {requires2FA ? 'Verificar' : 'Entrar'}
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? 'Processando...' : (requires2FA ? 'Verificar' : 'Entrar')}
             </Button>
           </form>
           

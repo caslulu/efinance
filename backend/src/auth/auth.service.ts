@@ -209,12 +209,27 @@ export class AuthService {
     try {
       await this.mailerService.sendMail({
         to: user.email,
-        subject: 'Verifique seu email - FinanceApp',
+        subject: 'Bem-vindo ao FinanceApp - Verifique seu email',
         html: `
-          <h3>Bem-vindo ao FinanceApp!</h3>
-          <p>Para ativar sua conta, utilize o código de verificação abaixo:</p>
-          <h2 style="letter-spacing: 5px; background: #f0f0f0; padding: 10px; display: inline-block;">${token}</h2>
-          <p>Este código expira em 24 horas.</p>
+          <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+            <div style="background-color: #2563eb; padding: 20px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0;">Bem-vindo ao FinanceApp!</h1>
+            </div>
+            <div style="padding: 20px;">
+              <p style="font-size: 16px;">Olá, <strong>${user.username}</strong>!</p>
+              <p style="font-size: 16px;">Estamos muito felizes em tê-lo conosco. Para garantir a segurança da sua conta e começar a usar o FinanceApp, por favor, utilize o código abaixo para verificar seu email:</p>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #2563eb; background-color: #f0f7ff; padding: 15px 25px; border-radius: 8px; display: inline-block;">${token}</div>
+              </div>
+              
+              <p style="font-size: 14px; color: #666;">Este código é válido por 24 horas.</p>
+              <p style="font-size: 14px; color: #666;">Se você não criou esta conta, por favor ignore este email.</p>
+            </div>
+            <div style="background-color: #f9fafb; padding: 15px; text-align: center; font-size: 12px; color: #999;">
+              &copy; ${new Date().getFullYear()} FinanceApp. Todos os direitos reservados.
+            </div>
+          </div>
         `,
       });
     } catch (error) {

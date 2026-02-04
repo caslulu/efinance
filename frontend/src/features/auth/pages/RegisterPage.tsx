@@ -21,6 +21,7 @@ export const RegisterPage = () => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
   const [userId, setUserId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
   
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -31,25 +32,34 @@ export const RegisterPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
+
     if (password !== confirmPassword) {
       setError('As senhas precisam ser iguais');
       return;
     }
     
+    setLoading(true);
+    setError('');
+    
     try {
       const res = await api.post('/auth/register', { username, email, password });
       setUserId(res.data.userId);
       setIsVerifying(true);
-      setError('');
     } catch (err: any) {
       const msg = err.response?.data?.message;
       setError(Array.isArray(msg) ? msg.join(', ') : msg || 'Falha no cadastro. Tente novamente.');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleVerification = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userId) return;
+    if (!userId || loading) return;
+
+    setLoading(true);
+    setError('');
 
     try {
       const res = await api.post('/auth/verify-email', { userId, token: verificationCode });
@@ -57,6 +67,8 @@ export const RegisterPage = () => {
       navigate('/', { state: { message: 'Conta verificada com sucesso!' } });
     } catch (err: any) {
       setError('Código inválido ou expirado.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -89,13 +101,12 @@ export const RegisterPage = () => {
                   required
                 />
               </div>
-              <Button type="submit" className="w-full">
-                Verificar e Entrar
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Verificando...' : 'Verificar e Entrar'}
               </Button>
             </form>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* ... form fields ... */}
               <div className="space-y-2">
                 <Label htmlFor="username">Usuário</Label>
                 <Input
@@ -165,8 +176,8 @@ export const RegisterPage = () => {
                   </button>
                 </div>
               </div>
-              <Button type="submit" className="w-full">
-                Criar Conta
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Criando Conta...' : 'Criar Conta'}
               </Button>
             </form>
           )}
