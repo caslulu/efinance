@@ -13,19 +13,38 @@ export class TransactionsService {
   ) {}
 
   async create(userId: number, createTransactionDto: CreateTransactionDto) {
+    let categoryId = createTransactionDto.category_id;
+
+    if (!categoryId) {
+      const defaultCategory = await this.prisma.transactionCategory.findFirst({
+        where: { user_id: userId, name: 'Outro' },
+      });
+      
+      if (defaultCategory) {
+        categoryId = defaultCategory.id;
+      } else {
+        const newCategory = await this.prisma.transactionCategory.create({
+          data: { name: 'Outro', user_id: userId },
+        });
+        categoryId = newCategory.id;
+      }
+      createTransactionDto.category_id = categoryId;
+    }
+
     const { installment_total, is_recurring, ...data } = createTransactionDto;
 
     if (installment_total && installment_total > 1) {
-      return this.createInstallments(userId, createTransactionDto);
+      return this.createInstallments(userId, createTransactionDto, categoryId!);
     }
 
     if (is_recurring && !installment_total) {
-      return this.createSubscription(userId, createTransactionDto);
+      return this.createSubscription(userId, createTransactionDto, categoryId!);
     }
 
     const transaction = await this.prisma.transaction.create({
       data: {
         ...data,
+        category_id: categoryId!,
         is_recurring: is_recurring || false,
         installment_total: 1,
         installment_number: 1,
@@ -42,7 +61,7 @@ export class TransactionsService {
     return transaction;
   }
 
-  private async createSubscription(userId: number, dto: CreateTransactionDto) {
+  private async createSubscription(userId: number, dto: CreateTransactionDto, categoryId: number) {
     const PREDICTION_MONTHS = 12;
     const monthlyValue = dto.value;
     const groupId = crypto.randomUUID();
@@ -65,7 +84,7 @@ export class TransactionsService {
         transaction_type: dto.transaction_type,
         is_recurring: true,
         value: monthlyValue,
-        category_id: dto.category_id,
+        category_id: categoryId,
         installment_id: groupId,
         installment_total: null,
         installment_number: i + 1,
@@ -89,7 +108,7 @@ export class TransactionsService {
     };
   }
 
-  private async createInstallments(userId: number, dto: CreateTransactionDto) {
+  private async createInstallments(userId: number, dto: CreateTransactionDto, categoryId: number) {
     const totalInstallments = dto.installment_total || 1;
     const installmentValue = Number((dto.value / totalInstallments).toFixed(2));
     const installmentId = crypto.randomUUID();
@@ -112,7 +131,7 @@ export class TransactionsService {
         transaction_type: dto.transaction_type,
         is_recurring: dto.is_recurring,
         value: installmentValue,
-        category_id: dto.category_id,
+        category_id: categoryId,
         installment_id: installmentId,
         installment_total: totalInstallments,
         installment_number: i + 1,

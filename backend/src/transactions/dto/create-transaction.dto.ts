@@ -18,9 +18,10 @@ export class CreateTransactionDto {
   @Min(0.01)
   value: number;
 
+  @IsOptional()
   @IsNumber()
   @Min(1)
-  category_id: number;
+  category_id?: number;
 
   @IsOptional()
   @IsNumber()

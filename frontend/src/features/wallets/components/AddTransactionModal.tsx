@@ -40,8 +40,8 @@ export const AddTransactionModal = ({ isOpen, type, walletId, onClose, onSuccess
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!categoryId || !amount) {
-      setError('Por favor preencha todos os campos');
+    if (!amount) {
+      setError('Por favor informe o valor');
       return;
     }
     setLoading(true);
@@ -52,7 +52,7 @@ export const AddTransactionModal = ({ isOpen, type, walletId, onClose, onSuccess
         wallet_id: walletId,
         value: Number(amount),
         transaction_type: type,
-        category_id: Number(categoryId),
+        category_id: categoryId ? Number(categoryId) : undefined,
         transaction_date: new Date(date).toISOString(),
         is_recurring: false,
         installment_total: installments ? Number(installments) : undefined,
@@ -112,7 +112,7 @@ export const AddTransactionModal = ({ isOpen, type, walletId, onClose, onSuccess
             <Label htmlFor="category">Categoria</Label>
             <Select value={categoryId} onValueChange={setCategoryId}>
               <SelectTrigger id="category">
-                <SelectValue placeholder="Selecione a Categoria" />
+                <SelectValue placeholder="Selecione (Padrão: Outro)" />
               </SelectTrigger>
               <SelectContent>
                 {categories.map(c => (

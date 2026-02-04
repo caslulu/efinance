@@ -8,9 +8,18 @@ export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(createUserDto: CreateUserDto) {
-    return this.prisma.user.create({
+    const user = await this.prisma.user.create({
       data: createUserDto,
     });
+
+    await this.prisma.transactionCategory.create({
+      data: {
+        name: 'Outro',
+        user_id: user.id,
+      },
+    });
+
+    return user;
   }
 
   async findByUsername(identifier: string) {
