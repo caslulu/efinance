@@ -24,7 +24,8 @@ export class AuthService {
 
   async login(user: any, rememberMe = false) {
     if (user.isTwoFactorEnabled) {
-      await this.sendTwoFactorToken(user);
+      // Send in background to allow immediate UI redirect
+      this.sendTwoFactorToken(user).catch(err => console.error('Failed to send 2FA email asynchronously', err));
       return {
         requires2FA: true,
         username: user.username,
@@ -33,6 +34,15 @@ export class AuthService {
     }
 
     return this.generateJwt(user, rememberMe);
+  }
+
+  async resendToken(userId: number) {
+    const user = await this.usersService.findOne(userId);
+    if (!user) throw new NotFoundException('User not found');
+    
+    // We don't need to check expiry for resend, just generate a new one
+    await this.sendTwoFactorToken(user);
+    return { message: 'Novo código enviado.' };
   }
 
   async login2fa(userId: number, token: string, rememberMe = false) {
@@ -67,6 +77,7 @@ export class AuthService {
 
   async sendTwoFactorToken(user: any) {
     const token = randomInt(100000, 999999).toString();
+    const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
     await this.usersService.setTwoFactorToken(user.id, token, expiry);
 
@@ -113,6 +124,7 @@ export class AuthService {
 
     const resetToken = randomBytes(32).toString('hex');
     const resetTokenExpiry = new Date(Date.now() + 3600000);
+    const resetLink = `http://localhost:5173/reset-password?token=${resetToken}`;
 
     await this.usersService.setResetToken(user.id, resetToken, resetTokenExpiry);
     

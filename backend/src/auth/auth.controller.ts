@@ -5,6 +5,7 @@ import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { LoginTwoFactorDto } from './dto/login-2fa.dto';
+import { ResendTokenDto } from './dto/resend-token.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { UsersService } from '../users/users.service';
 
@@ -30,6 +31,11 @@ export class AuthController {
   @Post('2fa/login')
   async login2fa(@Body() dto: LoginTwoFactorDto) {
     return this.authService.login2fa(dto.userId, dto.token, !!dto.rememberMe);
+  }
+
+  @Post('2fa/resend')
+  async resend2fa(@Body() dto: ResendTokenDto) {
+    return this.authService.resendToken(dto.userId);
   }
 
   @UseGuards(AuthGuard('jwt'))

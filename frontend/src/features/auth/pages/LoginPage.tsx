@@ -21,16 +21,42 @@ export const LoginPage = () => {
   const [success, setSuccess] = useState('');
   const [isCapsLockOn, setIsCapsLockOn] = useState(false);
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
+  const [resendTimer, setResendTimer] = useState(30);
+  const [canResend, setCanResend] = useState(false);
+  const [resendDelay, setResendDelay] = useState(30);
+  
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    if (location.state?.message) {
-      setSuccess(location.state.message);
-      window.history.replaceState({}, document.title);
+    let interval: NodeJS.Timeout;
+    if (requires2FA && resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
+    } else if (resendTimer === 0) {
+      setCanResend(true);
     }
-  }, [location]);
+    return () => clearInterval(interval);
+  }, [requires2FA, resendTimer]);
+
+  const handleResend = async () => {
+    setCanResend(false);
+    const newDelay = resendDelay + 30;
+    setResendDelay(newDelay);
+    setResendTimer(newDelay);
+    
+    try {
+      await api.post('/auth/2fa/resend', { userId });
+      setSuccess('Novo código enviado.');
+    } catch (err) {
+      setError('Falha ao reenviar código.');
+    }
+  };
+
+  useEffect(() => {
+
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -141,19 +167,31 @@ export const LoginPage = () => {
                 </div>
               </>
             ) : (
-              <div className="space-y-2">
-                <Label htmlFor="2fa">Código Recebido por Email</Label>
-                <Input
-                  id="2fa"
-                  type="text"
-                  value={twoFactorToken}
-                  onChange={(e) => setTwoFactorToken(e.target.value)}
-                  placeholder="000000"
-                  className="text-center text-lg tracking-widest"
-                  maxLength={6}
-                  required
-                  autoFocus
-                />
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="2fa">Código Recebido por Email</Label>
+                  <Input
+                    id="2fa"
+                    type="text"
+                    value={twoFactorToken}
+                    onChange={(e) => setTwoFactorToken(e.target.value)}
+                    placeholder="000000"
+                    className="text-center text-lg tracking-widest"
+                    maxLength={6}
+                    required
+                    autoFocus
+                  />
+                </div>
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={!canResend}
+                    className="text-sm text-blue-600 hover:underline disabled:text-gray-400 disabled:no-underline"
+                  >
+                    {canResend ? 'Reenviar código' : `Reenviar em ${resendTimer}s`}
+                  </button>
+                </div>
               </div>
             )}
 
