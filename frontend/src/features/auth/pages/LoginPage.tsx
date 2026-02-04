@@ -205,10 +205,20 @@ export const LoginPage = () => {
           </form>
           
           {!requires2FA && (
-            <div className="mt-4 text-center">
-              <Link to="/forgot-password" size="sm" className="text-sm text-blue-600 hover:underline">
-                Esqueci minha senha
-              </Link>
+            <div className="mt-4 text-center space-y-2">
+              <div>
+                <Link to="/forgot-password" size="sm" className="text-sm text-blue-600 hover:underline">
+                  Esqueci minha senha
+                </Link>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">
+                  Não tem uma conta?{' '}
+                  <Link to="/register" className="text-blue-600 hover:underline">
+                    Criar conta
+                  </Link>
+                </p>
+              </div>
             </div>
           )}
         </CardContent>
