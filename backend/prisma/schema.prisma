@@ -46,6 +46,8 @@ model Wallet {
   actual_cash  Decimal       @db.Decimal(10, 2)
   name         String
   type         String
+  closing_day  Int?
+  due_day      Int?
   transactions Transaction[]
   investments  Investment[]
   subscriptions Subscription[]

@@ -12,12 +12,16 @@ interface WalletCardProps {
 }
 
 export const WalletCard = ({ wallet, onAddFunds, onAddExpense }: WalletCardProps) => {
-  const typeColors = {
+  const typeColors: Record<string, string> = {
     BANK: 'bg-blue-500 hover:bg-blue-600',
     PHYSICAL: 'bg-green-500 hover:bg-green-600',
     MEAL_VOUCHER: 'bg-orange-500 hover:bg-orange-600',
     INVESTMENT: 'bg-purple-500 hover:bg-purple-600',
+    OTHER: 'bg-gray-500 hover:bg-gray-600',
   };
+
+  const formatCurrency = (val: number) => 
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -30,8 +34,37 @@ export const WalletCard = ({ wallet, onAddFunds, onAddExpense }: WalletCardProps
         </Badge>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">R$ {Number(wallet.actual_cash).toFixed(2)}</div>
-        <p className="text-xs text-muted-foreground mt-1">ID: #{wallet.id}</p>
+        {wallet.closing_day ? (
+          <div className="space-y-3">
+            <div>
+              <p className="text-xs text-muted-foreground">Saldo Disponível</p>
+              <div className="text-lg font-bold text-green-600">
+                {formatCurrency(Number(wallet.actual_cash))}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <p className="text-xs text-muted-foreground">Fatura Atual</p>
+                <div className="text-sm font-bold text-red-600">
+                  {formatCurrency(Number(wallet.current_invoice || 0))}
+                </div>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Fatura Total</p>
+                <div className="text-sm font-bold text-red-700">
+                  {formatCurrency(Number(wallet.total_invoice || 0))}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="text-2xl font-bold">
+              {formatCurrency(Number(wallet.actual_cash))}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">ID: #{wallet.id}</p>
+          </>
+        )}
       </CardContent>
       <CardFooter className="flex gap-2 pt-2">
         <Button 

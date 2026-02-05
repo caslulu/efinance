@@ -31,6 +31,8 @@ export const CreateWalletModal = ({ isOpen, onClose, onSuccess }: CreateWalletMo
   const [name, setName] = useState('');
   const [type, setType] = useState('BANK');
   const [balance, setBalance] = useState('');
+  const [closingDay, setClosingDay] = useState('');
+  const [dueDay, setDueDay] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -41,12 +43,16 @@ export const CreateWalletModal = ({ isOpen, onClose, onSuccess }: CreateWalletMo
         name,
         type,
         actual_cash: Number(balance),
+        closing_day: closingDay ? Number(closingDay) : undefined,
+        due_day: dueDay ? Number(dueDay) : undefined,
       });
       onSuccess();
       onClose();
       setName('');
       setBalance('');
       setType('BANK');
+      setClosingDay('');
+      setDueDay('');
     } catch (error) {
       alert('Falha ao criar carteira');
     } finally {
@@ -97,6 +103,36 @@ export const CreateWalletModal = ({ isOpen, onClose, onSuccess }: CreateWalletMo
               required
             />
           </div>
+          
+          {type === 'BANK' && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="closingDay">Dia Fechamento</Label>
+                <Input
+                  id="closingDay"
+                  type="number"
+                  min="1"
+                  max="31"
+                  placeholder="Ex: 10"
+                  value={closingDay}
+                  onChange={e => setClosingDay(e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="dueDay">Dia Vencimento</Label>
+                <Input
+                  id="dueDay"
+                  type="number"
+                  min="1"
+                  max="31"
+                  placeholder="Ex: 17"
+                  value={dueDay}
+                  onChange={e => setDueDay(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
             <Button type="submit" disabled={loading}>

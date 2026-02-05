@@ -17,10 +17,12 @@ export class WalletsService {
     });
   }
 
-  findAll(userId: number) {
-    return this.prisma.wallet.findMany({
+  async findAll(userId: number) {
+    const wallets = await this.prisma.wallet.findMany({
       where: { user_id: userId },
     });
+
+    return Promise.all(wallets.map(w => this.enrichWalletWithInvoice(w)));
   }
 
   async findOne(id: number, userId: number) {
@@ -32,7 +34,73 @@ export class WalletsService {
       throw new NotFoundException(`Wallet #${id} not found`);
     }
     
-    return wallet;
+    return this.enrichWalletWithInvoice(wallet);
+  }
+
+  private async enrichWalletWithInvoice(wallet: any) {
+    if (!wallet.closing_day) {
+      return { ...wallet, current_invoice: 0, total_invoice: 0 };
+    }
+
+    const today = new Date();
+    const currentDay = today.getDate();
+    const closingDay = wallet.closing_day;
+
+    let invoiceCloseDate = new Date(today.getFullYear(), today.getMonth(), closingDay);
+    // Set time to end of day to be inclusive
+    invoiceCloseDate.setHours(23, 59, 59, 999);
+
+    // If today is past the closing day, the current open invoice closes next month
+    if (currentDay > closingDay) {
+      invoiceCloseDate = new Date(today.getFullYear(), today.getMonth() + 1, closingDay);
+      invoiceCloseDate.setHours(23, 59, 59, 999);
+    }
+
+    // Start date is 1 month prior to close date, plus 1 day (conceptually)
+    // Actually simpler: The previous close date was 1 month before invoiceCloseDate.
+    // So current cycle starts the day AFTER that.
+    const previousCloseDate = new Date(invoiceCloseDate);
+    previousCloseDate.setMonth(previousCloseDate.getMonth() - 1);
+    // previousCloseDate is the closing day of last month.
+    // Cycle starts on previousCloseDate + 1 day? 
+    // Usually: Close 10. Cycle: 11th prev month -> 10th curr month.
+    const cycleStartDate = new Date(previousCloseDate);
+    cycleStartDate.setDate(previousCloseDate.getDate() + 1);
+    cycleStartDate.setHours(0, 0, 0, 0);
+
+    const [currentInvoiceAgg, totalInvoiceAgg] = await Promise.all([
+      // Current Invoice: Transactions strictly in the current cycle
+      this.prisma.transaction.aggregate({
+        where: {
+          wallet_id: wallet.id,
+          transaction_type: 'EXPENSE',
+          payment_method: 'CREDIT',
+          transaction_date: {
+            gte: cycleStartDate,
+            lte: invoiceCloseDate,
+          },
+        },
+        _sum: { value: true },
+      }),
+      // Total Invoice: Transactions from start of current cycle onwards (Current + Future)
+      this.prisma.transaction.aggregate({
+        where: {
+          wallet_id: wallet.id,
+          transaction_type: 'EXPENSE',
+          payment_method: 'CREDIT',
+          transaction_date: {
+            gte: cycleStartDate,
+          },
+        },
+        _sum: { value: true },
+      }),
+    ]);
+
+    return {
+      ...wallet,
+      current_invoice: Number(currentInvoiceAgg._sum.value || 0),
+      total_invoice: Number(totalInvoiceAgg._sum.value || 0),
+    };
   }
 
   async addIncoming(id: number, userId: number, amount: number) {
@@ -57,7 +125,12 @@ export class WalletsService {
       throw new BadRequestException('Amount must be positive');
     }
 
-    const wallet = await this.findOne(id, userId);
+    // Use raw findOne to avoid recursion/overhead in internal call, 
+    // but check balance logic manually if needed.
+    // Actually, simply using prisma.wallet.findUnique is enough as validation is simple.
+    const wallet = await this.prisma.wallet.findUnique({ where: { id } });
+    if (!wallet || wallet.user_id !== userId) throw new NotFoundException(`Wallet #${id} not found`);
+
     const currentBalance = new Decimal(wallet.actual_cash);
     const expenseAmount = new Decimal(amount);
 
