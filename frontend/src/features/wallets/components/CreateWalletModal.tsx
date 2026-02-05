@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { api } from '../../../api/api';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,9 +19,17 @@ interface CreateWalletModalProps {
   onSuccess: () => void;
 }
 
+const WALLET_TYPE_OPTIONS = [
+  { value: 'BANK', label: WALLET_TYPES.BANK_ACCOUNT },
+  { value: 'PHYSICAL', label: WALLET_TYPES.PHYSICAL },
+  { value: 'MEAL_VOUCHER', label: WALLET_TYPES.MEAL_VOUCHER },
+  { value: 'INVESTMENT', label: WALLET_TYPES.INVESTMENT },
+  { value: 'OTHER', label: WALLET_TYPES.OTHER },
+];
+
 export const CreateWalletModal = ({ isOpen, onClose, onSuccess }: CreateWalletModalProps) => {
   const [name, setName] = useState('');
-  const [type, setType] = useState(WALLET_TYPES.BANK_ACCOUNT);
+  const [type, setType] = useState('BANK');
   const [balance, setBalance] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -38,6 +46,7 @@ export const CreateWalletModal = ({ isOpen, onClose, onSuccess }: CreateWalletMo
       onClose();
       setName('');
       setBalance('');
+      setType('BANK');
     } catch (error) {
       alert('Falha ao criar carteira');
     } finally {
@@ -50,6 +59,9 @@ export const CreateWalletModal = ({ isOpen, onClose, onSuccess }: CreateWalletMo
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Nova Carteira</DialogTitle>
+          <DialogDescription>
+            Crie uma nova carteira para organizar suas finanças.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-4 py-4">
           <div className="grid gap-2">
@@ -68,8 +80,8 @@ export const CreateWalletModal = ({ isOpen, onClose, onSuccess }: CreateWalletMo
                 <SelectValue placeholder="Selecione o tipo" />
               </SelectTrigger>
               <SelectContent>
-                {Object.values(WALLET_TYPES).map((t) => (
-                  <SelectItem key={t} value={t}>{t}</SelectItem>
+                {WALLET_TYPE_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

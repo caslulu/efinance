@@ -15,7 +15,23 @@ export const WalletsPage = () => {
     walletType?: string;
   }>({ isOpen: false, type: null, walletId: null });
 
-// ...
+  const fetchWallets = async () => {
+    try {
+      const res = await api.get('/wallets');
+      if (Array.isArray(res.data)) {
+        setWallets(res.data);
+      } else {
+        console.error('Invalid wallets data format', res.data);
+        setWallets([]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch wallets');
+    }
+  };
+
+  useEffect(() => {
+    fetchWallets();
+  }, []);
 
   const openTransaction = (walletId: number, type: 'INCOME' | 'EXPENSE', walletType: string) => {
     setTransactionModal({ isOpen: true, type, walletId, walletType });
@@ -23,7 +39,16 @@ export const WalletsPage = () => {
 
   return (
     <div className="p-8">
-// ...
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">Minhas Carteiras</h1>
+        <button
+          onClick={() => setIsCreateOpen(true)}
+          className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white shadow-sm hover:bg-blue-700"
+        >
+          + Nova Carteira
+        </button>
+      </div>
+
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {wallets.map((wallet) => (
           <WalletCard
@@ -34,7 +59,19 @@ export const WalletsPage = () => {
           />
         ))}
       </div>
-// ...
+
+      {wallets.length === 0 && (
+        <div className="mt-10 text-center text-gray-500">
+          Nenhuma carteira encontrada. Crie uma para começar!
+        </div>
+      )}
+
+      <CreateWalletModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        onSuccess={fetchWallets}
+      />
+
       <AddTransactionModal
         isOpen={transactionModal.isOpen}
         type={transactionModal.type}

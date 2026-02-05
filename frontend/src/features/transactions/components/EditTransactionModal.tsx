@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Transaction } from '../../../types/Transaction';
+import type { Transaction } from '../../../types/Transaction';
 
 interface EditTransactionModalProps {
   isOpen: boolean;

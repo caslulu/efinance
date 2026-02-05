@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Edit2 } from 'lucide-react';
 import { EditTransactionModal } from './EditTransactionModal';
-import { PAYMENT_METHODS } from '../../../../constants/paymentMethods';
+import { PAYMENT_METHODS } from '../../../constants/paymentMethods';
 
 interface TransactionListProps {
   transactions: Transaction[];

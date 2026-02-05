@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../../api/api';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { ALLOWED_METHODS, PAYMENT_METHODS, WALLET_TYPES } from '../../../../constants/paymentMethods';
+import { ALLOWED_METHODS, PAYMENT_METHODS, WALLET_TYPES } from '../../../constants/paymentMethods';
 
 interface AddTransactionModalProps {
   isOpen: boolean;
@@ -51,6 +51,7 @@ export const AddTransactionModal = ({ isOpen, type, walletId, walletType, onClos
     if (walletType === 'PHYSICAL') normalizedType = WALLET_TYPES.PHYSICAL;
     if (walletType === 'MEAL_VOUCHER') normalizedType = WALLET_TYPES.MEAL_VOUCHER;
     if (walletType === 'INVESTMENT') normalizedType = WALLET_TYPES.INVESTMENT;
+    if (walletType === 'OTHER') normalizedType = WALLET_TYPES.OTHER;
 
     return ALLOWED_METHODS[normalizedType] || [];
   };
@@ -104,6 +105,9 @@ export const AddTransactionModal = ({ isOpen, type, walletId, walletType, onClos
           <DialogTitle>
             {type === 'INCOME' ? 'Adicionar Saldo' : 'Registrar Despesa'}
           </DialogTitle>
+          <DialogDescription>
+            Preencha os dados abaixo para registrar uma nova transação.
+          </DialogDescription>
         </DialogHeader>
         {error && <div className="mb-2 rounded bg-red-100 p-2 text-sm text-red-600">{error}</div>}
         <form onSubmit={handleSubmit} className="grid gap-4 py-4">
