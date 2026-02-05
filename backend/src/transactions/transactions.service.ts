@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -11,6 +11,46 @@ export class TransactionsService {
     private readonly prisma: PrismaService,
     private readonly walletsService: WalletsService,
   ) {}
+
+  async update(id: number, userId: number, updateTransactionDto: UpdateTransactionDto) {
+    const oldTransaction = await this.findOne(id, userId);
+    if (!oldTransaction) {
+      throw new NotFoundException('Transaction not found');
+    }
+
+    // Check if balance update is needed
+    if (
+      updateTransactionDto.value !== undefined || 
+      updateTransactionDto.transaction_type !== undefined ||
+      updateTransactionDto.wallet_id !== undefined
+    ) {
+      // Revert old transaction impact
+      if (oldTransaction.transaction_type === 'EXPENSE') {
+        await this.walletsService.addIncoming(oldTransaction.wallet_id, userId, Number(oldTransaction.value));
+      } else {
+        await this.walletsService.addExpense(oldTransaction.wallet_id, userId, Number(oldTransaction.value));
+      }
+
+      // Apply new transaction impact
+      const newValue = updateTransactionDto.value !== undefined ? updateTransactionDto.value : Number(oldTransaction.value);
+      const newType = updateTransactionDto.transaction_type || oldTransaction.transaction_type;
+      const newWalletId = updateTransactionDto.wallet_id || oldTransaction.wallet_id;
+
+      if (newType === 'EXPENSE') {
+        await this.walletsService.addExpense(newWalletId, userId, newValue);
+      } else {
+        await this.walletsService.addIncoming(newWalletId, userId, newValue);
+      }
+    }
+
+    return this.prisma.transaction.update({
+      where: { id },
+      data: {
+        ...updateTransactionDto,
+        transaction_date: updateTransactionDto.transaction_date ? new Date(updateTransactionDto.transaction_date) : undefined,
+      },
+    });
+  }
 
   async create(userId: number, createTransactionDto: CreateTransactionDto) {
     let categoryId = createTransactionDto.category_id;

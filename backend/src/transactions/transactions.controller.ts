@@ -1,6 +1,7 @@
-import { Controller, Get, Post, Body, Param, Delete, UseGuards, Request, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request, ParseIntPipe } from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
+import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { AuthGuard } from '@nestjs/passport';
 
 @Controller('transactions')
@@ -21,6 +22,11 @@ export class TransactionsController {
   @Get(':id')
   findOne(@Request() req, @Param('id', ParseIntPipe) id: number) {
     return this.transactionsService.findOne(id, req.user.userId);
+  }
+
+  @Patch(':id')
+  update(@Request() req, @Param('id', ParseIntPipe) id: number, @Body() updateTransactionDto: UpdateTransactionDto) {
+    return this.transactionsService.update(id, req.user.userId, updateTransactionDto);
   }
 
   @Delete(':id')

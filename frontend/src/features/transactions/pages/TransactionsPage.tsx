@@ -7,22 +7,22 @@ export const TransactionsPage = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchTransactions = async () => {
-      try {
-        const res = await api.get('/transactions');
-        if (Array.isArray(res.data)) {
-          setTransactions(res.data);
-        } else {
-          setTransactions([]);
-        }
-      } catch (error) {
-        console.error('Failed to fetch transactions');
-      } finally {
-        setLoading(false);
+  const fetchTransactions = async () => {
+    try {
+      const res = await api.get('/transactions');
+      if (Array.isArray(res.data)) {
+        setTransactions(res.data);
+      } else {
+        setTransactions([]);
       }
-    };
+    } catch (error) {
+      console.error('Failed to fetch transactions');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchTransactions();
   }, []);
 
@@ -35,7 +35,7 @@ export const TransactionsPage = () => {
       {loading ? (
         <div>Carregando...</div>
       ) : (
-        <TransactionList transactions={transactions} />
+        <TransactionList transactions={transactions} onTransactionUpdated={fetchTransactions} />
       )}
     </div>
   );
