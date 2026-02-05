@@ -22,11 +22,14 @@ export class TransactionsService {
     if (
       updateTransactionDto.value !== undefined || 
       updateTransactionDto.transaction_type !== undefined ||
-      updateTransactionDto.wallet_id !== undefined
+      updateTransactionDto.wallet_id !== undefined ||
+      updateTransactionDto.payment_method !== undefined
     ) {
       // Revert old transaction impact
       if (oldTransaction.transaction_type === 'EXPENSE') {
-        await this.walletsService.addIncoming(oldTransaction.wallet_id, userId, Number(oldTransaction.value));
+        if (oldTransaction.payment_method !== 'CREDIT') {
+          await this.walletsService.addIncoming(oldTransaction.wallet_id, userId, Number(oldTransaction.value));
+        }
       } else {
         await this.walletsService.addExpense(oldTransaction.wallet_id, userId, Number(oldTransaction.value));
       }
@@ -35,9 +38,12 @@ export class TransactionsService {
       const newValue = updateTransactionDto.value !== undefined ? updateTransactionDto.value : Number(oldTransaction.value);
       const newType = updateTransactionDto.transaction_type || oldTransaction.transaction_type;
       const newWalletId = updateTransactionDto.wallet_id || oldTransaction.wallet_id;
+      const newMethod = updateTransactionDto.payment_method !== undefined ? updateTransactionDto.payment_method : oldTransaction.payment_method;
 
       if (newType === 'EXPENSE') {
-        await this.walletsService.addExpense(newWalletId, userId, newValue);
+        if (newMethod !== 'CREDIT') {
+          await this.walletsService.addExpense(newWalletId, userId, newValue);
+        }
       } else {
         await this.walletsService.addIncoming(newWalletId, userId, newValue);
       }
@@ -93,7 +99,9 @@ export class TransactionsService {
     });
 
     if (data.transaction_type === 'EXPENSE') {
-      await this.walletsService.addExpense(data.wallet_id, userId, data.value);
+      if (data.payment_method !== 'CREDIT') {
+        await this.walletsService.addExpense(data.wallet_id, userId, data.value);
+      }
     } else {
       await this.walletsService.addIncoming(data.wallet_id, userId, data.value);
     }
@@ -136,7 +144,9 @@ export class TransactionsService {
     });
 
     if (dto.transaction_type === 'EXPENSE') {
-      await this.walletsService.addExpense(dto.wallet_id, userId, monthlyValue);
+      if (dto.payment_method !== 'CREDIT') {
+        await this.walletsService.addExpense(dto.wallet_id, userId, monthlyValue);
+      }
     } else {
       await this.walletsService.addIncoming(dto.wallet_id, userId, monthlyValue);
     }
@@ -183,7 +193,9 @@ export class TransactionsService {
     });
 
     if (dto.transaction_type === 'EXPENSE') {
-      await this.walletsService.addExpense(dto.wallet_id, userId, installmentValue);
+      if (dto.payment_method !== 'CREDIT') {
+        await this.walletsService.addExpense(dto.wallet_id, userId, installmentValue);
+      }
     } else {
       await this.walletsService.addIncoming(dto.wallet_id, userId, installmentValue);
     }
