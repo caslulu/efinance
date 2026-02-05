@@ -57,6 +57,7 @@ model Transaction {
   wallet_id           Int
   wallet              Wallet              @relation(fields: [wallet_id], references: [id])
   transaction_type    String
+  payment_method      String?
   is_recurring        Boolean
   value               Decimal             @db.Decimal(10, 2)
   installment_id      String?

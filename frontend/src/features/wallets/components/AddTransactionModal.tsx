@@ -11,20 +11,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { ALLOWED_METHODS, PAYMENT_METHODS, WALLET_TYPES } from '../../../../constants/paymentMethods';
 
 interface AddTransactionModalProps {
   isOpen: boolean;
   type: 'INCOME' | 'EXPENSE' | null;
   walletId: number | null;
+  walletType?: string;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export const AddTransactionModal = ({ isOpen, type, walletId, onClose, onSuccess }: AddTransactionModalProps) => {
+export const AddTransactionModal = ({ isOpen, type, walletId, walletType, onClose, onSuccess }: AddTransactionModalProps) => {
   const [amount, setAmount] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [installments, setInstallments] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('');
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -32,11 +35,27 @@ export const AddTransactionModal = ({ isOpen, type, walletId, onClose, onSuccess
   useEffect(() => {
     if (isOpen) {
       setError('');
+      setPaymentMethod('');
       api.get('/categories').then(res => {
         if (Array.isArray(res.data)) setCategories(res.data);
       });
     }
   }, [isOpen]);
+
+  const getAvailableMethods = () => {
+    if (!walletType) return [];
+    
+    // Normalize legacy types
+    let normalizedType = walletType;
+    if (walletType === 'BANK') normalizedType = WALLET_TYPES.BANK_ACCOUNT;
+    if (walletType === 'PHYSICAL') normalizedType = WALLET_TYPES.PHYSICAL;
+    if (walletType === 'MEAL_VOUCHER') normalizedType = WALLET_TYPES.MEAL_VOUCHER;
+    if (walletType === 'INVESTMENT') normalizedType = WALLET_TYPES.INVESTMENT;
+
+    return ALLOWED_METHODS[normalizedType] || [];
+  };
+
+  const availableMethods = getAvailableMethods();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,6 +72,7 @@ export const AddTransactionModal = ({ isOpen, type, walletId, onClose, onSuccess
         value: Number(amount),
         transaction_type: type,
         category_id: categoryId ? Number(categoryId) : undefined,
+        payment_method: paymentMethod || undefined,
         transaction_date: new Date(date).toISOString(),
         is_recurring: false,
         installment_total: installments ? Number(installments) : undefined,
@@ -64,6 +84,7 @@ export const AddTransactionModal = ({ isOpen, type, walletId, onClose, onSuccess
       setAmount('');
       setCategoryId('');
       setInstallments('');
+      setPaymentMethod('');
     } catch (err: any) {
       const msg = err.response?.data?.message;
       if (msg === 'Insufficient funds in wallet') {
@@ -98,6 +119,25 @@ export const AddTransactionModal = ({ isOpen, type, walletId, onClose, onSuccess
               min="0.01"
             />
           </div>
+          
+          {availableMethods.length > 0 && (
+            <div className="grid gap-2">
+              <Label htmlFor="method">Método de Pagamento</Label>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                <SelectTrigger id="method">
+                  <SelectValue placeholder="Selecione o método" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableMethods.map(methodKey => (
+                    <SelectItem key={methodKey} value={methodKey}>
+                      {PAYMENT_METHODS[methodKey as keyof typeof PAYMENT_METHODS]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div className="grid gap-2">
             <Label htmlFor="date">Data</Label>
             <Input

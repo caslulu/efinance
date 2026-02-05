@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { WALLET_TYPES } from '../../../../constants/paymentMethods';
 
 interface CreateWalletModalProps {
   isOpen: boolean;
@@ -20,7 +21,7 @@ interface CreateWalletModalProps {
 
 export const CreateWalletModal = ({ isOpen, onClose, onSuccess }: CreateWalletModalProps) => {
   const [name, setName] = useState('');
-  const [type, setType] = useState('BANK');
+  const [type, setType] = useState(WALLET_TYPES.BANK_ACCOUNT);
   const [balance, setBalance] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -67,10 +68,9 @@ export const CreateWalletModal = ({ isOpen, onClose, onSuccess }: CreateWalletMo
                 <SelectValue placeholder="Selecione o tipo" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="BANK">Conta Bancária</SelectItem>
-                <SelectItem value="PHYSICAL">Dinheiro Físico</SelectItem>
-                <SelectItem value="MEAL_VOUCHER">Vale Refeição</SelectItem>
-                <SelectItem value="INVESTMENT">Investimento</SelectItem>
+                {Object.values(WALLET_TYPES).map((t) => (
+                  <SelectItem key={t} value={t}>{t}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

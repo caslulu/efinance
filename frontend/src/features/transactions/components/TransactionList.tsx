@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Edit2 } from 'lucide-react';
 import { EditTransactionModal } from './EditTransactionModal';
+import { PAYMENT_METHODS } from '../../../../constants/paymentMethods';
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -30,6 +31,7 @@ export const TransactionList = ({ transactions, onTransactionUpdated }: Transact
             <TableRow>
               <TableHead>Data</TableHead>
               <TableHead>Categoria</TableHead>
+              <TableHead>Método</TableHead>
               <TableHead>Tipo</TableHead>
               <TableHead>Parcela</TableHead>
               <TableHead className="text-right">Valor</TableHead>
@@ -44,6 +46,9 @@ export const TransactionList = ({ transactions, onTransactionUpdated }: Transact
                 </TableCell>
                 <TableCell className="font-medium">
                   {tx.TransactionCategory?.name || 'Sem Categoria'}
+                </TableCell>
+                <TableCell>
+                  {tx.payment_method ? PAYMENT_METHODS[tx.payment_method as keyof typeof PAYMENT_METHODS] || tx.payment_method : '-'}
                 </TableCell>
                 <TableCell>
                   <Badge 
@@ -75,7 +80,7 @@ export const TransactionList = ({ transactions, onTransactionUpdated }: Transact
             ))}
             {transactions.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                   Nenhuma transação encontrada.
                 </TableCell>
               </TableRow>

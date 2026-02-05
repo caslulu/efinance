@@ -3,12 +3,14 @@ export interface Transaction {
   transaction_date: string;
   wallet_id: number;
   transaction_type: 'INCOME' | 'EXPENSE';
-  value: string;
-  category_id: number;
   is_recurring: boolean;
-  installment_number?: number;
+  value: number;
+  category_id: number;
+  payment_method?: string;
   installment_total?: number;
+  installment_number?: number;
   TransactionCategory?: {
+    id: number;
     name: string;
   };
 }

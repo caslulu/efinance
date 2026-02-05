@@ -15,10 +15,15 @@ export class CreateTransactionDto {
   is_recurring: boolean;
 
   @IsNumber()
-  @Min(0.01)
+  @Min(1)
   value: number;
 
   @IsOptional()
+  @IsString()
+  payment_method?: string;
+
+  @IsOptional()
+  @IsNumber()
   @IsNumber()
   @Min(1)
   category_id?: number;
