@@ -5,8 +5,8 @@ export class CreateWalletDto {
   @IsNotEmpty()
   name: string;
 
-  @IsEnum(['BANK', 'PHYSICAL', 'MEAL_VOUCHER', 'INVESTMENT'], {
-    message: 'Type must be BANK, PHYSICAL, MEAL_VOUCHER, or INVESTMENT',
+  @IsEnum(['BANK', 'PHYSICAL', 'MEAL_VOUCHER', 'INVESTMENT', 'OTHER'], {
+    message: 'Type must be BANK, PHYSICAL, MEAL_VOUCHER, INVESTMENT, or OTHER',
   })
   type: string;
 
