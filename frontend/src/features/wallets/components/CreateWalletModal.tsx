@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { WALLET_TYPES } from '../../../../constants/paymentMethods';
+import { WALLET_TYPES } from '../../../constants/paymentMethods';
 
 interface CreateWalletModalProps {
   isOpen: boolean;
