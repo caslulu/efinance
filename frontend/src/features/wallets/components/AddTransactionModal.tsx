@@ -66,6 +66,12 @@ export const AddTransactionModal = ({ isOpen, type, walletId, walletType, onClos
       setError('Por favor informe o valor');
       return;
     }
+    
+    if (availableMethods.length > 0 && !paymentMethod) {
+      setError('Selecione um método de pagamento');
+      return;
+    }
+
     setLoading(true);
     setError('');
     
