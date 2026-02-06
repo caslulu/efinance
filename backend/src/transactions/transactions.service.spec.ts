@@ -195,4 +195,29 @@ describe('TransactionsService', () => {
     expect(callArgs.data[0].payment_method).toBe('CREDIT');
     expect(walletsService.addExpense).not.toHaveBeenCalled();
   });
+
+  it('should create independent transactions for multiple subscriptions on the same date', async () => {
+    const dto = {
+      transaction_date: '2026-02-04T00:00:00.000Z',
+      wallet_id: 1,
+      transaction_type: 'EXPENSE',
+      is_recurring: true,
+      category_id: 2,
+      value: 50.00,
+      payment_method: 'CREDIT',
+    };
+    const userId = 1;
+
+    // Reset mocks for this test
+    jest.clearAllMocks();
+    mockPrismaService.transaction.createMany.mockResolvedValue({ count: 12 });
+
+    // First Subscription
+    await service.create(userId, dto);
+    expect(prisma.transaction.createMany).toHaveBeenCalledTimes(1);
+
+    // Second Subscription
+    await service.create(userId, dto);
+    expect(prisma.transaction.createMany).toHaveBeenCalledTimes(2);
+  });
 });

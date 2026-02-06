@@ -215,6 +215,10 @@ export class TransactionsService {
         wallet: { user_id: userId },
       },
       include: { TransactionCategory: true },
+      orderBy: [
+        { transaction_date: 'desc' },
+        { id: 'desc' },
+      ],
     });
   }
 
