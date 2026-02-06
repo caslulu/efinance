@@ -24,7 +24,6 @@ export class CreateTransactionDto {
 
   @IsOptional()
   @IsNumber()
-  @IsNumber()
   @Min(1)
   category_id?: number;
 
@@ -32,4 +31,9 @@ export class CreateTransactionDto {
   @IsNumber()
   @Min(1)
   installment_total?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  subscription_id?: number;
 }

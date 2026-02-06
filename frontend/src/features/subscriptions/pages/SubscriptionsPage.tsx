@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import clsx from 'clsx';
-import { Play, Plus } from 'lucide-react';
+import { Play, Plus, Trash } from 'lucide-react';
 
 export const SubscriptionsPage = () => {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
@@ -45,6 +45,17 @@ export const SubscriptionsPage = () => {
     }
   };
 
+  const handleDelete = async (id: number) => {
+    if (!confirm('Tem certeza que deseja excluir esta recorrência?')) return;
+    
+    try {
+      await api.delete(`/subscriptions/${id}`);
+      fetchSubscriptions();
+    } catch (error) {
+      alert('Falha ao excluir recorrência');
+    }
+  };
+
   useEffect(() => {
     fetchSubscriptions();
   }, []);
@@ -72,6 +83,7 @@ export const SubscriptionsPage = () => {
               <TableHead>Frequência</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Próx. Cobrança</TableHead>
+              <TableHead className="w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -93,11 +105,16 @@ export const SubscriptionsPage = () => {
                 <TableCell>
                   {new Date(sub.next_billing_date).toLocaleDateString()}
                 </TableCell>
+                <TableCell>
+                  <Button variant="ghost" size="icon" onClick={() => handleDelete(sub.id)}>
+                    <Trash className="h-4 w-4 text-red-500" />
+                  </Button>
+                </TableCell>
               </TableRow>
             ))}
             {subscriptions.length === 0 && !loading && (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                   Nenhuma recorrência encontrada.
                 </TableCell>
               </TableRow>
