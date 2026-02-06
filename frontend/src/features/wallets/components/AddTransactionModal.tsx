@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -28,6 +29,7 @@ export const AddTransactionModal = ({ isOpen, type, walletId, walletType, onClos
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [installments, setInstallments] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
+  const [isRecurring, setIsRecurring] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -75,8 +77,8 @@ export const AddTransactionModal = ({ isOpen, type, walletId, walletType, onClos
         category_id: categoryId ? Number(categoryId) : undefined,
         payment_method: paymentMethod || undefined,
         transaction_date: new Date(date).toISOString(),
-        is_recurring: false,
-        installment_total: installments ? Number(installments) : undefined,
+        is_recurring: isRecurring,
+        installment_total: (installments && !isRecurring) ? Number(installments) : undefined,
       };
       
       await api.post('/transactions', payload);
@@ -86,6 +88,7 @@ export const AddTransactionModal = ({ isOpen, type, walletId, walletType, onClos
       setCategoryId('');
       setInstallments('');
       setPaymentMethod('');
+      setIsRecurring(false);
     } catch (err: any) {
       const msg = err.response?.data?.message;
       if (msg === 'Insufficient funds in wallet') {
@@ -165,8 +168,17 @@ export const AddTransactionModal = ({ isOpen, type, walletId, walletType, onClos
               </SelectContent>
             </Select>
           </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="recurring" 
+              checked={isRecurring}
+              onCheckedChange={(checked) => setIsRecurring(checked as boolean)}
+            />
+            <Label htmlFor="recurring">Transação Recorrente (Assinatura)</Label>
+          </div>
           
-          {type === 'EXPENSE' && (
+          {type === 'EXPENSE' && !isRecurring && (
             <div className="grid gap-2">
               <Label htmlFor="installments">Parcelas (Opcional)</Label>
               <Input
