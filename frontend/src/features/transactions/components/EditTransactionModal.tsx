@@ -47,6 +47,30 @@ export const EditTransactionModal = ({ isOpen, transaction, onClose, onSuccess }
     }
   }, [transaction]);
 
+  const handleDelete = async () => {
+    if (!transaction) return;
+    
+    let message = 'Tem certeza que deseja excluir esta transação?';
+    if (transaction.is_recurring) {
+      message = 'Esta é uma transação recorrente. Excluir apagará todas as recorrências desta série. Confirmar?';
+    } else if (transaction.installment_total && transaction.installment_total > 1) {
+      message = 'Esta é uma compra parcelada. Excluir apagará todas as parcelas. Confirmar?';
+    }
+
+    if (!window.confirm(message)) return;
+
+    setLoading(true);
+    try {
+      await api.delete(`/transactions/${transaction.id}`);
+      onSuccess();
+      onClose();
+    } catch (err) {
+      setError('Falha ao excluir transação.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount || !transaction) return;
@@ -117,11 +141,16 @@ export const EditTransactionModal = ({ isOpen, transaction, onClose, onSuccess }
             </Select>
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Salvando...' : 'Salvar Alterações'}
+          <DialogFooter className="sm:justify-between">
+            <Button type="button" variant="destructive" onClick={handleDelete} disabled={loading}>
+              Excluir
             </Button>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? 'Salvando...' : 'Salvar Alterações'}
+              </Button>
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>
