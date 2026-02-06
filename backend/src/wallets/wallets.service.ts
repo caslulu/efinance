@@ -43,29 +43,55 @@ export class WalletsService {
     }
 
     const today = new Date();
+    // Normalize today to start of day for comparison clarity
+    today.setHours(0, 0, 0, 0);
+    
     const currentDay = today.getDate();
     const closingDay = wallet.closing_day;
+    const dueDay = wallet.due_day;
 
-    let invoiceCloseDate = new Date(today.getFullYear(), today.getMonth(), closingDay);
-    // Set time to end of day to be inclusive
-    invoiceCloseDate.setHours(23, 59, 59, 999);
-
-    // If today is past the closing day, the current open invoice closes next month
+    // 1. Determine the "Open" cycle close date (Candidate)
+    let candidateCloseDate = new Date(today.getFullYear(), today.getMonth(), closingDay);
     if (currentDay > closingDay) {
-      invoiceCloseDate = new Date(today.getFullYear(), today.getMonth() + 1, closingDay);
-      invoiceCloseDate.setHours(23, 59, 59, 999);
+      candidateCloseDate = new Date(today.getFullYear(), today.getMonth() + 1, closingDay);
+    }
+    candidateCloseDate.setHours(23, 59, 59, 999);
+
+    let invoiceCloseDate = candidateCloseDate;
+
+    // 2. Check if we are in the "Payment Window" of the previous closed invoice
+    if (dueDay) {
+      const previousCloseDate = new Date(candidateCloseDate);
+      previousCloseDate.setMonth(previousCloseDate.getMonth() - 1);
+      // Ensure day is correct (handle month length edge cases automatically by Date, but closingDay is preferred)
+      // Actually, since we constructed candidate from closingDay, shifting month is usually safe, 
+      // but simpler to reconstruct:
+      // previousCloseDate is the Close Date strictly prior to candidate.
+      
+      let dueDateForPrevious = new Date(previousCloseDate);
+      // Set to dueDay
+      // If dueDay > closingDay -> Same Month as Close Date
+      // If dueDay <= closingDay -> Next Month after Close Date
+      if (dueDay > closingDay) {
+        dueDateForPrevious.setDate(dueDay);
+      } else {
+        dueDateForPrevious.setMonth(dueDateForPrevious.getMonth() + 1);
+        dueDateForPrevious.setDate(dueDay);
+      }
+      dueDateForPrevious.setHours(23, 59, 59, 999);
+
+      // Check if Today is within the window (After Prev Close but Before/On Due Date)
+      // Since candidate is the *next* close, today is by definition <= candidate.
+      // We just need to check if today <= dueDateForPrevious
+      if (today <= dueDateForPrevious) {
+        invoiceCloseDate = previousCloseDate;
+      }
     }
 
-    // Start date is 1 month prior to close date, plus 1 day (conceptually)
-    // Actually simpler: The previous close date was 1 month before invoiceCloseDate.
-    // So current cycle starts the day AFTER that.
-    const previousCloseDate = new Date(invoiceCloseDate);
-    previousCloseDate.setMonth(previousCloseDate.getMonth() - 1);
-    // previousCloseDate is the closing day of last month.
-    // Cycle starts on previousCloseDate + 1 day? 
-    // Usually: Close 10. Cycle: 11th prev month -> 10th curr month.
-    const cycleStartDate = new Date(previousCloseDate);
-    cycleStartDate.setDate(previousCloseDate.getDate() + 1);
+    // 3. Define Cycle Start (1 month before Invoice Close + 1 day)
+    const cycleStartDate = new Date(invoiceCloseDate);
+    cycleStartDate.setMonth(cycleStartDate.getMonth() - 1);
+    cycleStartDate.setDate(cycleStartDate.getDate() + 1);
     cycleStartDate.setHours(0, 0, 0, 0);
 
     const [currentInvoiceAgg, totalInvoiceAgg] = await Promise.all([
