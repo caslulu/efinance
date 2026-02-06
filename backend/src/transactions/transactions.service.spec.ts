@@ -61,6 +61,46 @@ describe('TransactionsService', () => {
     expect(walletsService.addExpense).toHaveBeenCalledWith(dto.wallet_id, userId, dto.value);
   });
 
+  it('should update wallet balance if payment_method is DEBIT', async () => {
+    const dto = {
+      transaction_date: new Date().toISOString(),
+      wallet_id: 1,
+      transaction_type: 'EXPENSE',
+      is_recurring: false,
+      value: 50,
+      category_id: 1,
+      payment_method: 'DEBIT',
+    };
+    const userId = 1;
+
+    mockPrismaService.transaction.create.mockResolvedValue({ id: 1, ...dto });
+
+    await service.create(userId, dto);
+
+    expect(prisma.transaction.create).toHaveBeenCalled();
+    expect(walletsService.addExpense).toHaveBeenCalledWith(dto.wallet_id, userId, dto.value);
+  });
+
+  it('should update wallet balance if payment_method is PIX', async () => {
+    const dto = {
+      transaction_date: new Date().toISOString(),
+      wallet_id: 1,
+      transaction_type: 'EXPENSE',
+      is_recurring: false,
+      value: 75,
+      category_id: 1,
+      payment_method: 'PIX',
+    };
+    const userId = 1;
+
+    mockPrismaService.transaction.create.mockResolvedValue({ id: 1, ...dto });
+
+    await service.create(userId, dto);
+
+    expect(prisma.transaction.create).toHaveBeenCalled();
+    expect(walletsService.addExpense).toHaveBeenCalledWith(dto.wallet_id, userId, dto.value);
+  });
+
   it('should NOT update wallet balance if payment_method is CREDIT', async () => {
     const dto = {
       transaction_date: new Date().toISOString(),
