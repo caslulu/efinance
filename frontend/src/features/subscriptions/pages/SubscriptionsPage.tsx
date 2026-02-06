@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import clsx from 'clsx';
-import { Play, Plus, Trash } from 'lucide-react';
+import { Play, Plus, Trash, PauseCircle, PlayCircle } from 'lucide-react';
 
 export const SubscriptionsPage = () => {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
@@ -46,13 +46,23 @@ export const SubscriptionsPage = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Tem certeza que deseja excluir esta recorrência?')) return;
+    if (!confirm('Tem certeza que deseja excluir esta recorrência? Todas as transações geradas por ela também serão excluídas.')) return;
     
     try {
       await api.delete(`/subscriptions/${id}`);
       fetchSubscriptions();
     } catch (error) {
       alert('Falha ao excluir recorrência');
+    }
+  };
+
+  const handleToggleStatus = async (sub: Subscription) => {
+    const newStatus = sub.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
+    try {
+      await api.patch(`/subscriptions/${sub.id}`, { status: newStatus });
+      fetchSubscriptions();
+    } catch (error) {
+      alert('Falha ao atualizar status');
     }
   };
 
@@ -83,7 +93,7 @@ export const SubscriptionsPage = () => {
               <TableHead>Frequência</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Próx. Cobrança</TableHead>
-              <TableHead className="w-[50px]"></TableHead>
+              <TableHead className="w-[100px]">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -99,16 +109,25 @@ export const SubscriptionsPage = () => {
                         sub.status === 'ACTIVE' ? 'border-green-500 text-green-600 bg-green-50' : 'border-yellow-500 text-yellow-600 bg-yellow-50'
                     )}
                   >
-                    {sub.status}
+                    {sub.status === 'ACTIVE' ? 'Ativo' : 'Pausado'}
                   </Badge>
                 </TableCell>
                 <TableCell>
                   {new Date(sub.next_billing_date).toLocaleDateString()}
                 </TableCell>
                 <TableCell>
-                  <Button variant="ghost" size="icon" onClick={() => handleDelete(sub.id)}>
-                    <Trash className="h-4 w-4 text-red-500" />
-                  </Button>
+                  <div className="flex items-center">
+                    <Button variant="ghost" size="icon" onClick={() => handleToggleStatus(sub)} title={sub.status === 'ACTIVE' ? 'Pausar' : 'Ativar'}>
+                      {sub.status === 'ACTIVE' ? (
+                        <PauseCircle className="h-4 w-4 text-yellow-500" />
+                      ) : (
+                        <PlayCircle className="h-4 w-4 text-green-500" />
+                      )}
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleDelete(sub.id)} title="Excluir">
+                      <Trash className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

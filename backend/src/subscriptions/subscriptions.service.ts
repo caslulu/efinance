@@ -48,6 +48,7 @@ export class SubscriptionsService {
         value: Number(sub.value),
         transaction_type: sub.transaction_type,
         is_recurring: true,
+        subscription_id: sub.id,
       });
 
       const nextDate = new Date(sub.next_billing_date);
@@ -99,6 +100,12 @@ export class SubscriptionsService {
 
   async remove(id: number, userId: number) {
     await this.findOne(id, userId);
+    
+    // Delete all associated transactions first
+    await this.prisma.transaction.deleteMany({
+      where: { subscription_id: id },
+    });
+
     return this.prisma.subscription.delete({ where: { id } });
   }
 }
