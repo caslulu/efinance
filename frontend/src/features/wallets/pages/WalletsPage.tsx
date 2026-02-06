@@ -4,10 +4,12 @@ import type { Wallet } from '../../../types/Wallet';
 import { WalletCard } from '../components/WalletCard';
 import { CreateWalletModal } from '../components/CreateWalletModal';
 import { AddTransactionModal } from '../components/AddTransactionModal';
+import { EditWalletModal } from '../components/EditWalletModal';
 
 export const WalletsPage = () => {
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editWallet, setEditWallet] = useState<Wallet | null>(null);
   const [transactionModal, setTransactionModal] = useState<{
     isOpen: boolean;
     type: 'INCOME' | 'EXPENSE' | null;
@@ -56,6 +58,7 @@ export const WalletsPage = () => {
             wallet={wallet}
             onAddFunds={() => openTransaction(wallet.id, 'INCOME', wallet.type)}
             onAddExpense={() => openTransaction(wallet.id, 'EXPENSE', wallet.type)}
+            onEdit={() => setEditWallet(wallet)}
           />
         ))}
       </div>
@@ -69,6 +72,13 @@ export const WalletsPage = () => {
       <CreateWalletModal
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
+        onSuccess={fetchWallets}
+      />
+
+      <EditWalletModal
+        isOpen={!!editWallet}
+        wallet={editWallet}
+        onClose={() => setEditWallet(null)}
         onSuccess={fetchWallets}
       />
 

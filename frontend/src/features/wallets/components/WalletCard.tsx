@@ -3,15 +3,16 @@ import type { Wallet } from '../../../types/Wallet';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Plus, Minus } from 'lucide-react';
+import { Plus, Minus, Pencil } from 'lucide-react';
 
 interface WalletCardProps {
   wallet: Wallet;
   onAddFunds: (id: number) => void;
   onAddExpense: (id: number) => void;
+  onEdit: () => void;
 }
 
-export const WalletCard = ({ wallet, onAddFunds, onAddExpense }: WalletCardProps) => {
+export const WalletCard = ({ wallet, onAddFunds, onAddExpense, onEdit }: WalletCardProps) => {
   const typeColors: Record<string, string> = {
     BANK: 'bg-blue-500 hover:bg-blue-600',
     PHYSICAL: 'bg-green-500 hover:bg-green-600',
@@ -24,14 +25,24 @@ export const WalletCard = ({ wallet, onAddFunds, onAddExpense }: WalletCardProps
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card className="hover:shadow-md transition-shadow relative group">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           {wallet.name}
         </CardTitle>
-        <Badge className={clsx('text-white', typeColors[wallet.type] || 'bg-gray-500')}>
-          {wallet.type.replace('_', ' ')}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge className={clsx('text-white', typeColors[wallet.type] || 'bg-gray-500')}>
+            {wallet.type.replace('_', ' ')}
+          </Badge>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={onEdit}
+          >
+            <Pencil className="h-3 w-3" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {wallet.closing_day ? (
