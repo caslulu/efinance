@@ -129,7 +129,8 @@ describe('TransactionsService', () => {
       is_recurring: false,
       category_id: 1,
       installment_total: 10,
-      value: 100
+      value: 100,
+      payment_method: 'CREDIT'
     };
     const userId = 1;
 
@@ -140,9 +141,10 @@ describe('TransactionsService', () => {
     expect(prisma.transaction.createMany).toHaveBeenCalled();
     const callArgs = mockPrismaService.transaction.createMany.mock.calls[0][0];
     expect(callArgs.data.length).toBe(10);
+    expect(callArgs.data[0].payment_method).toBe('CREDIT');
     
     // Default behavior (no payment_method) calls addExpense
-    expect(walletsService.addExpense).toHaveBeenCalledWith(dto.wallet_id, userId, 10);
+    expect(walletsService.addExpense).not.toHaveBeenCalled();
   });
 
   it('should create a Subscription (12 months view) when is_recurring is true (DEBIT)', async () => {
@@ -153,6 +155,7 @@ describe('TransactionsService', () => {
       is_recurring: true,
       category_id: 2,
       value: 29.90,
+      payment_method: 'DEBIT'
     };
     const userId = 1;
 
@@ -163,6 +166,7 @@ describe('TransactionsService', () => {
     expect(prisma.transaction.createMany).toHaveBeenCalled();
     const callArgs = mockPrismaService.transaction.createMany.mock.calls[0][0];
     expect(callArgs.data.length).toBe(12);
+    expect(callArgs.data[0].payment_method).toBe('DEBIT');
 
     expect(callArgs.data[0].value).toBe(29.90);
     expect(callArgs.data[11].value).toBe(29.90);
@@ -187,6 +191,8 @@ describe('TransactionsService', () => {
     await service.create(userId, dto);
 
     expect(prisma.transaction.createMany).toHaveBeenCalled();
+    const callArgs = mockPrismaService.transaction.createMany.mock.calls[0][0];
+    expect(callArgs.data[0].payment_method).toBe('CREDIT');
     expect(walletsService.addExpense).not.toHaveBeenCalled();
   });
 });
