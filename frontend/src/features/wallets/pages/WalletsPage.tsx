@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../../api/api';
 import type { Wallet } from '../../../types/Wallet';
+import type { Subscription } from '../../../types/Subscription';
 import { WalletCard } from '../components/WalletCard';
 import { CreateWalletModal } from '../components/CreateWalletModal';
 import { AddTransactionModal } from '../components/AddTransactionModal';
@@ -8,6 +9,7 @@ import { EditWalletModal } from '../components/EditWalletModal';
 
 export const WalletsPage = () => {
   const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editWallet, setEditWallet] = useState<Wallet | null>(null);
   const [transactionModal, setTransactionModal] = useState<{
@@ -17,22 +19,26 @@ export const WalletsPage = () => {
     walletType?: string;
   }>({ isOpen: false, type: null, walletId: null });
 
-  const fetchWallets = async () => {
+  const fetchData = async () => {
     try {
-      const res = await api.get('/wallets');
-      if (Array.isArray(res.data)) {
-        setWallets(res.data);
-      } else {
-        console.error('Invalid wallets data format', res.data);
-        setWallets([]);
+      const [walletsRes, subsRes] = await Promise.all([
+        api.get('/wallets'),
+        api.get('/subscriptions')
+      ]);
+
+      if (Array.isArray(walletsRes.data)) {
+        setWallets(walletsRes.data);
+      }
+      if (Array.isArray(subsRes.data)) {
+        setSubscriptions(subsRes.data);
       }
     } catch (error) {
-      console.error('Failed to fetch wallets');
+      console.error('Failed to fetch data');
     }
   };
 
   useEffect(() => {
-    fetchWallets();
+    fetchData();
   }, []);
 
   const openTransaction = (walletId: number, type: 'INCOME' | 'EXPENSE', walletType: string) => {
@@ -52,15 +58,34 @@ export const WalletsPage = () => {
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {wallets.map((wallet) => (
-          <WalletCard
-            key={wallet.id}
-            wallet={wallet}
-            onAddFunds={() => openTransaction(wallet.id, 'INCOME', wallet.type)}
-            onAddExpense={() => openTransaction(wallet.id, 'EXPENSE', wallet.type)}
-            onEdit={() => setEditWallet(wallet)}
-          />
-        ))}
+        {wallets.map((wallet) => {
+          // Calculate projected total including 12 months of active subscriptions
+          let projectedTotal = Number(wallet.total_invoice || 0);
+          
+          const walletSubs = subscriptions.filter(
+            s => s.wallet_id === wallet.id && s.status === 'ACTIVE'
+          );
+          
+          walletSubs.forEach(sub => {
+            // Add 12 months of future value
+            projectedTotal += Number(sub.value) * 12;
+          });
+
+          const walletWithProjection = {
+            ...wallet,
+            total_invoice: projectedTotal
+          };
+
+          return (
+            <WalletCard
+              key={wallet.id}
+              wallet={walletWithProjection}
+              onAddFunds={() => openTransaction(wallet.id, 'INCOME', wallet.type)}
+              onAddExpense={() => openTransaction(wallet.id, 'EXPENSE', wallet.type)}
+              onEdit={() => setEditWallet(wallet)}
+            />
+          );
+        })}
       </div>
 
       {wallets.length === 0 && (
@@ -72,14 +97,14 @@ export const WalletsPage = () => {
       <CreateWalletModal
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
-        onSuccess={fetchWallets}
+        onSuccess={fetchData}
       />
 
       <EditWalletModal
         isOpen={!!editWallet}
         wallet={editWallet}
         onClose={() => setEditWallet(null)}
-        onSuccess={fetchWallets}
+        onSuccess={fetchData}
       />
 
       <AddTransactionModal
@@ -88,7 +113,7 @@ export const WalletsPage = () => {
         walletId={transactionModal.walletId}
         walletType={transactionModal.walletType}
         onClose={() => setTransactionModal({ ...transactionModal, isOpen: false })}
-        onSuccess={fetchWallets}
+        onSuccess={fetchData}
       />
     </div>
   );
