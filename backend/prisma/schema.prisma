@@ -87,6 +87,7 @@ model Subscription {
   status            SubscriptionStatus @default(ACTIVE)
   start_date        DateTime
   next_billing_date DateTime
+  payment_method    String?
   
   transactions      Transaction[]      @relation("SubscriptionTransactions")
 }

@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { ALLOWED_METHODS, PAYMENT_METHODS, WALLET_TYPES } from '../../../constants/paymentMethods';
 
 interface CreateSubscriptionModalProps {
   isOpen: boolean;
@@ -27,6 +28,7 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [walletId, setWalletId] = useState('');
   const [categoryId, setCategoryId] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('');
   
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -34,13 +36,41 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
 
   useEffect(() => {
     if (isOpen) {
+      setPaymentMethod('');
       api.get('/wallets').then(res => setWallets(res.data));
       api.get('/categories').then(res => setCategories(res.data));
     }
   }, [isOpen]);
 
+  const getAvailableMethods = () => {
+    const selectedWallet = wallets.find(w => String(w.id) === walletId);
+    if (!selectedWallet) return [];
+    
+    let normalizedType = selectedWallet.type;
+    // Assuming backend returns ENUM keys (BANK, PHYSICAL...), map to constants if needed
+    // But WALLET_TYPES constants ARE the labels (Conta Bancária).
+    // The backend returns 'BANK'.
+    // So we need to map 'BANK' -> 'Conta Bancária'.
+    
+    if (selectedWallet.type === 'BANK') normalizedType = WALLET_TYPES.BANK_ACCOUNT;
+    if (selectedWallet.type === 'PHYSICAL') normalizedType = WALLET_TYPES.PHYSICAL;
+    if (selectedWallet.type === 'MEAL_VOUCHER') normalizedType = WALLET_TYPES.MEAL_VOUCHER;
+    if (selectedWallet.type === 'INVESTMENT') normalizedType = WALLET_TYPES.INVESTMENT;
+    if (selectedWallet.type === 'OTHER') normalizedType = WALLET_TYPES.OTHER;
+
+    return ALLOWED_METHODS[normalizedType] || [];
+  };
+
+  const availableMethods = getAvailableMethods();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (availableMethods.length > 0 && !paymentMethod) {
+      alert('Selecione um método de pagamento');
+      return;
+    }
+
     setLoading(true);
     try {
       await api.post('/subscriptions', {
@@ -51,11 +81,13 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
         start_date: new Date(startDate).toISOString(),
         wallet_id: Number(walletId),
         category_id: Number(categoryId),
+        payment_method: paymentMethod || undefined,
       });
       onSuccess();
       onClose();
       setName('');
       setValue('');
+      setPaymentMethod('');
     } catch (error) {
       alert('Falha ao criar item recorrente');
     } finally {
@@ -121,6 +153,25 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
               </SelectContent>
             </Select>
           </div>
+          
+          {availableMethods.length > 0 && (
+            <div className="grid gap-2">
+              <Label htmlFor="method">Método de Pagamento</Label>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                <SelectTrigger id="method">
+                  <SelectValue placeholder="Selecione o método" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableMethods.map(methodKey => (
+                    <SelectItem key={methodKey} value={methodKey}>
+                      {PAYMENT_METHODS[methodKey as keyof typeof PAYMENT_METHODS]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div className="grid gap-2">
             <Label htmlFor="category">Categoria</Label>
             <Select value={categoryId} onValueChange={setCategoryId}>

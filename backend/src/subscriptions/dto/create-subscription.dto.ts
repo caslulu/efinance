@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsNumber, IsEnum, IsDateString, Min } from 'class-validator';
+import { IsString, IsNotEmpty, IsNumber, IsEnum, IsDateString, Min, IsOptional } from 'class-validator';
 
 export class CreateSubscriptionDto {
   @IsString()
@@ -23,4 +23,8 @@ export class CreateSubscriptionDto {
 
   @IsDateString()
   start_date: string;
+
+  @IsOptional()
+  @IsString()
+  payment_method?: string;
 }

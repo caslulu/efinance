@@ -22,6 +22,7 @@ export class SubscriptionsService {
         frequency: createSubscriptionDto.frequency as Frequency,
         status: SubscriptionStatus.ACTIVE,
         next_billing_date: nextDate,
+        payment_method: createSubscriptionDto.payment_method,
       },
     });
 
@@ -53,6 +54,7 @@ export class SubscriptionsService {
         transaction_type: sub.transaction_type,
         is_recurring: true,
         subscription_id: sub.id,
+        payment_method: sub.payment_method || undefined,
       });
 
       const nextDate = new Date(sub.next_billing_date);
