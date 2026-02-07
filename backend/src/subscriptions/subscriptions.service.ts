@@ -87,6 +87,7 @@ export class SubscriptionsService {
   findAll(userId: number) {
     return this.prisma.subscription.findMany({
       where: { user_id: userId },
+      include: { category: true },
     });
   }
 
