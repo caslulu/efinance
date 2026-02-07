@@ -30,7 +30,9 @@ export const TransactionsPage = () => {
   today.setHours(23, 59, 59, 999);
 
   const pastTransactions = transactions.filter(t => new Date(t.transaction_date) <= today);
-  const futureTransactions = transactions.filter(t => new Date(t.transaction_date) > today);
+  const futureTransactions = transactions
+    .filter(t => new Date(t.transaction_date) > today)
+    .sort((a, b) => new Date(a.transaction_date).getTime() - new Date(b.transaction_date).getTime());
 
   return (
     <div className="p-8 space-y-8">
