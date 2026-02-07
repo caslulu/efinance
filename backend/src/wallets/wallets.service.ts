@@ -108,15 +108,12 @@ export class WalletsService {
         },
         _sum: { value: true },
       }),
-      // Total Invoice: Transactions from start of current cycle onwards (Current + Future)
+      // Total Invoice: Sum of ALL credit transactions (Past + Current + Future)
       this.prisma.transaction.aggregate({
         where: {
           wallet_id: wallet.id,
           transaction_type: 'EXPENSE',
           payment_method: 'CREDIT',
-          transaction_date: {
-            gte: cycleStartDate,
-          },
         },
         _sum: { value: true },
       }),
