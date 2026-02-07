@@ -82,7 +82,8 @@ export const AddTransactionModal = ({ isOpen, type, walletId, walletType, onClos
         transaction_type: type,
         category_id: categoryId ? Number(categoryId) : undefined,
         payment_method: paymentMethod || undefined,
-        transaction_date: new Date(date).toISOString(),
+        // Use T12:00:00 to prevent timezone shifts (e.g. UTC midnight shifting to previous day in local time)
+        transaction_date: new Date(date + 'T12:00:00').toISOString(),
         is_recurring: isRecurring,
         installment_total: (installments && !isRecurring) ? Number(installments) : undefined,
       };

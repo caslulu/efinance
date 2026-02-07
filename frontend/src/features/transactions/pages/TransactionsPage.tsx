@@ -26,16 +26,31 @@ export const TransactionsPage = () => {
     fetchTransactions();
   }, []);
 
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+
+  const pastTransactions = transactions.filter(t => new Date(t.transaction_date) <= today);
+  const futureTransactions = transactions.filter(t => new Date(t.transaction_date) > today);
+
   return (
-    <div className="p-8">
-      <div className="mb-8 flex items-center justify-between">
+    <div className="p-8 space-y-8">
+      <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-gray-900">Transações</h1>
       </div>
 
       {loading ? (
         <div>Carregando...</div>
       ) : (
-        <TransactionList transactions={transactions} onTransactionUpdated={fetchTransactions} />
+        <>
+          <TransactionList transactions={pastTransactions} onTransactionUpdated={fetchTransactions} />
+          
+          {futureTransactions.length > 0 && (
+            <div className="pt-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Lançamentos Futuros</h2>
+              <TransactionList transactions={futureTransactions} onTransactionUpdated={fetchTransactions} />
+            </div>
+          )}
+        </>
       )}
     </div>
   );
