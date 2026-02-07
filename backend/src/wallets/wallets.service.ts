@@ -66,7 +66,6 @@ export class WalletsService {
     if (dueDay) {
       const closedCloseDate = new Date(openCloseDate);
       closedCloseDate.setMonth(closedCloseDate.getMonth() - 1);
-      // Ensure time is end of day
       closedCloseDate.setHours(23, 59, 59, 999);
 
       const closedStartDate = new Date(closedCloseDate);
@@ -75,9 +74,6 @@ export class WalletsService {
       closedStartDate.setHours(0, 0, 0, 0);
 
       let dueDate = new Date(closedCloseDate);
-      // Logic for Due Date:
-      // If Due Day > Closing Day -> Same month as Close Date
-      // If Due Day <= Closing Day -> Next month
       if (dueDay > closingDay) {
         dueDate.setDate(dueDay);
       } else {
@@ -87,41 +83,61 @@ export class WalletsService {
       dueDate.setHours(23, 59, 59, 999);
 
       if (today <= dueDate) {
-        const closedAgg = await this.prisma.transaction.aggregate({
-          where: {
-            wallet_id: wallet.id,
-            transaction_type: 'EXPENSE',
-            payment_method: 'CREDIT',
-            transaction_date: {
-              gte: closedStartDate,
-              lte: closedCloseDate,
+        const [exp, inc] = await Promise.all([
+          this.prisma.transaction.aggregate({
+            where: {
+              wallet_id: wallet.id,
+              transaction_type: 'EXPENSE',
+              payment_method: 'CREDIT',
+              transaction_date: { gte: closedStartDate, lte: closedCloseDate },
             },
-          },
-          _sum: { value: true },
-        });
-        closedInvoiceValue = Number(closedAgg._sum.value || 0);
+            _sum: { value: true },
+          }),
+          this.prisma.transaction.aggregate({
+            where: {
+              wallet_id: wallet.id,
+              transaction_type: 'INCOME',
+              payment_method: 'CREDIT',
+              transaction_date: { gte: closedStartDate, lte: closedCloseDate },
+            },
+            _sum: { value: true },
+          }),
+        ]);
+        closedInvoiceValue = Number(exp._sum.value || 0) - Number(inc._sum.value || 0);
       }
     }
 
-    const [openInvoiceAgg, totalInvoiceAgg] = await Promise.all([
-      // Open Invoice: Accumulating
+    const [openExp, openInc, totalExp, totalInc] = await Promise.all([
       this.prisma.transaction.aggregate({
         where: {
           wallet_id: wallet.id,
           transaction_type: 'EXPENSE',
           payment_method: 'CREDIT',
-          transaction_date: {
-            gte: openStartDate,
-            lte: openCloseDate,
-          },
+          transaction_date: { gte: openStartDate, lte: openCloseDate },
         },
         _sum: { value: true },
       }),
-      // Total Invoice: ALL history
+      this.prisma.transaction.aggregate({
+        where: {
+          wallet_id: wallet.id,
+          transaction_type: 'INCOME',
+          payment_method: 'CREDIT',
+          transaction_date: { gte: openStartDate, lte: openCloseDate },
+        },
+        _sum: { value: true },
+      }),
       this.prisma.transaction.aggregate({
         where: {
           wallet_id: wallet.id,
           transaction_type: 'EXPENSE',
+          payment_method: 'CREDIT',
+        },
+        _sum: { value: true },
+      }),
+      this.prisma.transaction.aggregate({
+        where: {
+          wallet_id: wallet.id,
+          transaction_type: 'INCOME',
           payment_method: 'CREDIT',
         },
         _sum: { value: true },
@@ -130,9 +146,9 @@ export class WalletsService {
 
     return {
       ...wallet,
-      current_invoice: Number(openInvoiceAgg._sum.value || 0),
+      current_invoice: Number(openExp._sum.value || 0) - Number(openInc._sum.value || 0),
       due_invoice: closedInvoiceValue,
-      total_invoice: Number(totalInvoiceAgg._sum.value || 0),
+      total_invoice: Number(totalExp._sum.value || 0) - Number(totalInc._sum.value || 0),
     };
   }
 
