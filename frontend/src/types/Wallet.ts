@@ -7,5 +7,6 @@ export interface Wallet {
   closing_day?: number;
   due_day?: number;
   current_invoice?: number;
+  due_invoice?: number;
   total_invoice?: number;
 }

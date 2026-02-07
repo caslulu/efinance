@@ -53,13 +53,32 @@ export const WalletCard = ({ wallet, onAddFunds, onAddExpense, onEdit }: WalletC
                 {formatCurrency(Number(wallet.actual_cash))}
               </div>
             </div>
+            
             <div className="grid grid-cols-2 gap-2">
-              <div>
-                <p className="text-xs text-muted-foreground">Fatura Atual</p>
-                <div className="text-sm font-bold text-red-600">
-                  {formatCurrency(Number(wallet.current_invoice || 0))}
+              {Number(wallet.due_invoice) > 0 ? (
+                <>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Fatura Fechada</p>
+                    <div className="text-sm font-bold text-red-600">
+                      {formatCurrency(Number(wallet.due_invoice))}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Fatura Aberta</p>
+                    <div className="text-sm font-bold text-blue-600">
+                      {formatCurrency(Number(wallet.current_invoice))}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <p className="text-xs text-muted-foreground">Fatura Atual</p>
+                  <div className="text-sm font-bold text-red-600">
+                    {formatCurrency(Number(wallet.current_invoice || 0))}
+                  </div>
                 </div>
-              </div>
+              )}
+              
               <div>
                 <p className="text-xs text-muted-foreground">Fatura Total</p>
                 <div className="text-sm font-bold text-red-700">

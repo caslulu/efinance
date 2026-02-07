@@ -39,76 +39,85 @@ export class WalletsService {
 
   private async enrichWalletWithInvoice(wallet: any) {
     if (!wallet.closing_day) {
-      return { ...wallet, current_invoice: 0, total_invoice: 0 };
+      return { ...wallet, current_invoice: 0, due_invoice: 0, total_invoice: 0 };
     }
 
     const today = new Date();
-    // Normalize today to start of day for comparison clarity
     today.setHours(0, 0, 0, 0);
     
     const currentDay = today.getDate();
     const closingDay = wallet.closing_day;
     const dueDay = wallet.due_day;
 
-    // 1. Determine the "Open" cycle close date (Candidate)
-    let candidateCloseDate = new Date(today.getFullYear(), today.getMonth(), closingDay);
+    // 1. Determine "Open" (Accumulating) Cycle
+    let openCloseDate = new Date(today.getFullYear(), today.getMonth(), closingDay);
     if (currentDay > closingDay) {
-      candidateCloseDate = new Date(today.getFullYear(), today.getMonth() + 1, closingDay);
+      openCloseDate = new Date(today.getFullYear(), today.getMonth() + 1, closingDay);
     }
-    candidateCloseDate.setHours(23, 59, 59, 999);
+    openCloseDate.setHours(23, 59, 59, 999);
 
-    let invoiceCloseDate = candidateCloseDate;
+    const openStartDate = new Date(openCloseDate);
+    openStartDate.setMonth(openStartDate.getMonth() - 1);
+    openStartDate.setDate(openStartDate.getDate() + 1);
+    openStartDate.setHours(0, 0, 0, 0);
 
-    // 2. Check if we are in the "Payment Window" of the previous closed invoice
+    // 2. Determine "Closed" (Due) Cycle (if applicable)
+    let closedInvoiceValue = 0;
     if (dueDay) {
-      const previousCloseDate = new Date(candidateCloseDate);
-      previousCloseDate.setMonth(previousCloseDate.getMonth() - 1);
-      // Ensure day is correct (handle month length edge cases automatically by Date, but closingDay is preferred)
-      // Actually, since we constructed candidate from closingDay, shifting month is usually safe, 
-      // but simpler to reconstruct:
-      // previousCloseDate is the Close Date strictly prior to candidate.
-      
-      let dueDateForPrevious = new Date(previousCloseDate);
-      // Set to dueDay
-      // If dueDay > closingDay -> Same Month as Close Date
-      // If dueDay <= closingDay -> Next Month after Close Date
-      if (dueDay > closingDay) {
-        dueDateForPrevious.setDate(dueDay);
-      } else {
-        dueDateForPrevious.setMonth(dueDateForPrevious.getMonth() + 1);
-        dueDateForPrevious.setDate(dueDay);
-      }
-      dueDateForPrevious.setHours(23, 59, 59, 999);
+      const closedCloseDate = new Date(openCloseDate);
+      closedCloseDate.setMonth(closedCloseDate.getMonth() - 1);
+      // Ensure time is end of day
+      closedCloseDate.setHours(23, 59, 59, 999);
 
-      // Check if Today is within the window (After Prev Close but Before/On Due Date)
-      // Since candidate is the *next* close, today is by definition <= candidate.
-      // We just need to check if today <= dueDateForPrevious
-      if (today <= dueDateForPrevious) {
-        invoiceCloseDate = previousCloseDate;
+      const closedStartDate = new Date(closedCloseDate);
+      closedStartDate.setMonth(closedStartDate.getMonth() - 1);
+      closedStartDate.setDate(closedStartDate.getDate() + 1);
+      closedStartDate.setHours(0, 0, 0, 0);
+
+      let dueDate = new Date(closedCloseDate);
+      // Logic for Due Date:
+      // If Due Day > Closing Day -> Same month as Close Date
+      // If Due Day <= Closing Day -> Next month
+      if (dueDay > closingDay) {
+        dueDate.setDate(dueDay);
+      } else {
+        dueDate.setMonth(dueDate.getMonth() + 1);
+        dueDate.setDate(dueDay);
+      }
+      dueDate.setHours(23, 59, 59, 999);
+
+      if (today <= dueDate) {
+        const closedAgg = await this.prisma.transaction.aggregate({
+          where: {
+            wallet_id: wallet.id,
+            transaction_type: 'EXPENSE',
+            payment_method: 'CREDIT',
+            transaction_date: {
+              gte: closedStartDate,
+              lte: closedCloseDate,
+            },
+          },
+          _sum: { value: true },
+        });
+        closedInvoiceValue = Number(closedAgg._sum.value || 0);
       }
     }
 
-    // 3. Define Cycle Start (1 month before Invoice Close + 1 day)
-    const cycleStartDate = new Date(invoiceCloseDate);
-    cycleStartDate.setMonth(cycleStartDate.getMonth() - 1);
-    cycleStartDate.setDate(cycleStartDate.getDate() + 1);
-    cycleStartDate.setHours(0, 0, 0, 0);
-
-    const [currentInvoiceAgg, totalInvoiceAgg] = await Promise.all([
-      // Current Invoice: Transactions strictly in the current cycle
+    const [openInvoiceAgg, totalInvoiceAgg] = await Promise.all([
+      // Open Invoice: Accumulating
       this.prisma.transaction.aggregate({
         where: {
           wallet_id: wallet.id,
           transaction_type: 'EXPENSE',
           payment_method: 'CREDIT',
           transaction_date: {
-            gte: cycleStartDate,
-            lte: invoiceCloseDate,
+            gte: openStartDate,
+            lte: openCloseDate,
           },
         },
         _sum: { value: true },
       }),
-      // Total Invoice: Sum of ALL credit transactions (Past + Current + Future)
+      // Total Invoice: ALL history
       this.prisma.transaction.aggregate({
         where: {
           wallet_id: wallet.id,
@@ -121,7 +130,8 @@ export class WalletsService {
 
     return {
       ...wallet,
-      current_invoice: Number(currentInvoiceAgg._sum.value || 0),
+      current_invoice: Number(openInvoiceAgg._sum.value || 0),
+      due_invoice: closedInvoiceValue,
       total_invoice: Number(totalInvoiceAgg._sum.value || 0),
     };
   }
