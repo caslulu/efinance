@@ -15,7 +15,7 @@ export class SubscriptionsService {
   async create(userId: number, createSubscriptionDto: CreateSubscriptionDto) {
     const nextDate = new Date(createSubscriptionDto.start_date);
     
-    return this.prisma.subscription.create({
+    const sub = await this.prisma.subscription.create({
       data: {
         ...createSubscriptionDto,
         user_id: userId,
@@ -24,6 +24,10 @@ export class SubscriptionsService {
         next_billing_date: nextDate,
       },
     });
+
+    await this.triggerCheck();
+
+    return sub;
   }
 
   async triggerCheck() {
