@@ -9,6 +9,8 @@ export interface Transaction {
   payment_method?: string;
   installment_total?: number;
   installment_number?: number;
+  installment_id?: string;
+  subscription_id?: number;
   TransactionCategory?: {
     id: number;
     name: string;

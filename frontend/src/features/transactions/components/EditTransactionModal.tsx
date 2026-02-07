@@ -51,8 +51,11 @@ export const EditTransactionModal = ({ isOpen, transaction, onClose, onSuccess }
     if (!transaction) return;
     
     let message = 'Tem certeza que deseja excluir esta transação?';
-    if (transaction.is_recurring) {
-      message = 'Esta é uma transação recorrente. Excluir apagará todas as recorrências desta série. Confirmar?';
+    
+    if (transaction.is_recurring && transaction.installment_id) {
+      message = 'Esta é uma transação recorrente (Série). Excluir apagará todas as recorrências desta série. Confirmar?';
+    } else if (transaction.is_recurring) {
+      message = 'Esta é uma transação recorrente avulsa. Confirmar exclusão?';
     } else if (transaction.installment_total && transaction.installment_total > 1) {
       message = 'Esta é uma compra parcelada. Excluir apagará todas as parcelas. Confirmar?';
     }
