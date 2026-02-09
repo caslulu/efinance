@@ -31,7 +31,10 @@ export class TransactionsService {
           await this.walletsService.addIncoming(oldTransaction.wallet_id, userId, Number(oldTransaction.value));
         }
       } else {
-        await this.walletsService.addExpense(oldTransaction.wallet_id, userId, Number(oldTransaction.value));
+        // INCOME
+        if (oldTransaction.payment_method !== 'CREDIT') {
+          await this.walletsService.addExpense(oldTransaction.wallet_id, userId, Number(oldTransaction.value));
+        }
       }
 
       // Apply new transaction impact
@@ -45,7 +48,10 @@ export class TransactionsService {
           await this.walletsService.addExpense(newWalletId, userId, newValue);
         }
       } else {
-        await this.walletsService.addIncoming(newWalletId, userId, newValue);
+        // INCOME
+        if (newMethod !== 'CREDIT') {
+          await this.walletsService.addIncoming(newWalletId, userId, newValue);
+        }
       }
     }
 
@@ -117,7 +123,9 @@ export class TransactionsService {
         await this.walletsService.addExpense(data.wallet_id, userId, data.value);
       }
     } else {
-      await this.walletsService.addIncoming(data.wallet_id, userId, data.value);
+      if (data.payment_method !== 'CREDIT') {
+        await this.walletsService.addIncoming(data.wallet_id, userId, data.value);
+      }
     }
 
     return transaction;
@@ -163,7 +171,9 @@ export class TransactionsService {
         await this.walletsService.addExpense(dto.wallet_id, userId, monthlyValue);
       }
     } else {
-      await this.walletsService.addIncoming(dto.wallet_id, userId, monthlyValue);
+      if (dto.payment_method !== 'CREDIT') {
+        await this.walletsService.addIncoming(dto.wallet_id, userId, monthlyValue);
+      }
     }
 
     return {
@@ -213,7 +223,9 @@ export class TransactionsService {
         await this.walletsService.addExpense(dto.wallet_id, userId, installmentValue);
       }
     } else {
-      await this.walletsService.addIncoming(dto.wallet_id, userId, installmentValue);
+      if (dto.payment_method !== 'CREDIT') {
+        await this.walletsService.addIncoming(dto.wallet_id, userId, installmentValue);
+      }
     }
 
     return {
@@ -257,7 +269,10 @@ export class TransactionsService {
         await this.walletsService.addIncoming(transaction.wallet_id, userId, Number(transaction.value));
       }
     } else {
-      await this.walletsService.addExpense(transaction.wallet_id, userId, Number(transaction.value));
+      // INCOME
+      if (transaction.payment_method !== 'CREDIT') {
+        await this.walletsService.addExpense(transaction.wallet_id, userId, Number(transaction.value));
+      }
     }
 
     if (transaction.installment_id) {

@@ -6,12 +6,14 @@ import { WalletCard } from '../components/WalletCard';
 import { CreateWalletModal } from '../components/CreateWalletModal';
 import { AddTransactionModal } from '../components/AddTransactionModal';
 import { EditWalletModal } from '../components/EditWalletModal';
+import { PayInvoiceModal } from '../components/PayInvoiceModal';
 
 export const WalletsPage = () => {
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editWallet, setEditWallet] = useState<Wallet | null>(null);
+  const [payInvoiceWallet, setPayInvoiceWallet] = useState<Wallet | null>(null);
   const [transactionModal, setTransactionModal] = useState<{
     isOpen: boolean;
     type: 'INCOME' | 'EXPENSE' | null;
@@ -83,6 +85,7 @@ export const WalletsPage = () => {
               onAddFunds={() => openTransaction(wallet.id, 'INCOME', wallet.type)}
               onAddExpense={() => openTransaction(wallet.id, 'EXPENSE', wallet.type)}
               onEdit={() => setEditWallet(wallet)}
+              onPayInvoice={() => setPayInvoiceWallet(wallet)}
             />
           );
         })}
@@ -104,6 +107,13 @@ export const WalletsPage = () => {
         isOpen={!!editWallet}
         wallet={editWallet}
         onClose={() => setEditWallet(null)}
+        onSuccess={fetchData}
+      />
+
+      <PayInvoiceModal
+        isOpen={!!payInvoiceWallet}
+        wallet={payInvoiceWallet}
+        onClose={() => setPayInvoiceWallet(null)}
         onSuccess={fetchData}
       />
 
