@@ -43,7 +43,10 @@ const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'
 export const DashboardPage = () => {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [isDrilldownOpen, setIsDrilldownOpen] = useState(false);
+  const [drilldownCategory, setDrilldownCategory] = useState<string | null>(null);
+  const [drilldownTransactions, setDrilldownTransactions] = useState<any[]>([]);
+  const [loadingDrilldown, setLoadingDrilldown] = useState(false);
+  
   const carouselRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -79,10 +82,21 @@ export const DashboardPage = () => {
     }
   };
 
-  const onPieClick = (data: any) => {
-    if (data.name === 'Outro') {
-      setIsDrilldownOpen(true);
-    }
+  const onPieClick = (pieData: any) => {
+    const categoryName = pieData.name;
+    setDrilldownCategory(categoryName);
+    setLoadingDrilldown(true);
+    
+    api.get(`/dashboard/category/${encodeURIComponent(categoryName)}`)
+      .then(res => {
+        setDrilldownTransactions(res.data);
+      })
+      .catch(err => {
+        console.error('Failed to fetch category transactions', err);
+      })
+      .finally(() => {
+        setLoadingDrilldown(false);
+      });
   };
 
   if (loading) return <div className="p-8 text-center text-gray-500">Carregando painel...</div>;
@@ -105,7 +119,7 @@ export const DashboardPage = () => {
         </div>
       </div>
 
-      {/* KPI Cards Row 1 */}
+      {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
@@ -155,9 +169,8 @@ export const DashboardPage = () => {
       </div>
 
       <div className="grid gap-8 lg:grid-cols-3">
-        {/* Main flow carousel occupies 2/3 */}
+        {/* Main flow carousel */}
         <div className="lg:col-span-2 space-y-8">
-           {/* Invoice/Expense Carousel */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-base font-semibold">
@@ -174,26 +187,14 @@ export const DashboardPage = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div 
-                ref={carouselRef}
-                className="flex gap-4 overflow-x-hidden py-2 px-1"
-              >
+              <div ref={carouselRef} className="flex gap-4 overflow-x-hidden py-2 px-1">
                 {data.monthFlow.map((month: any, i: number) => (
-                  <div 
-                    key={i} 
-                    className={`min-w-[140px] p-3 rounded-lg border flex flex-col items-center justify-center transition-all ${
-                      month.isProjected 
-                        ? 'bg-blue-50/50 border-blue-100 border-dashed' 
-                        : 'bg-white shadow-sm border-gray-200'
-                    } ${!month.isProjected && data.monthFlow[i+1]?.isProjected ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`}
-                  >
+                  <div key={i} className={`min-w-[140px] p-3 rounded-lg border flex flex-col items-center justify-center transition-all ${
+                    month.isProjected ? 'bg-blue-50/50 border-blue-100 border-dashed' : 'bg-white shadow-sm border-gray-200'
+                  } ${!month.isProjected && data.monthFlow[i+1]?.isProjected ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`}>
                     <span className="text-[10px] font-bold text-muted-foreground uppercase">{month.name}</span>
-                    <span className={`text-base font-bold ${month.isProjected ? 'text-blue-500' : 'text-gray-900'}`}>
-                      {formatCurrency(month.value)}
-                    </span>
-                    <span className="text-[9px] text-muted-foreground">
-                      {month.isProjected ? 'Projetado' : 'Realizado'}
-                    </span>
+                    <span className={`text-base font-bold ${month.isProjected ? 'text-blue-500' : 'text-gray-900'}`}>{formatCurrency(month.value)}</span>
+                    <span className="text-[9px] text-muted-foreground">{month.isProjected ? 'Projetado' : 'Realizado'}</span>
                   </div>
                 ))}
               </div>
@@ -201,14 +202,13 @@ export const DashboardPage = () => {
           </Card>
 
           <div className="grid gap-8 md:grid-cols-2">
-             {/* Expenses by Category */}
             <Card>
               <CardHeader className="pb-0">
                 <CardTitle className="flex items-center gap-2 text-base font-semibold">
                   <TrendingUp className="h-4 w-4 text-blue-500" />
                   Gastos por Categoria (30d)
                 </CardTitle>
-                <p className="text-[11px] text-muted-foreground italic">Dica: clique em 'Outro' para detalhes</p>
+                <p className="text-[11px] text-muted-foreground italic">Dica: clique em qualquer categoria para ver detalhes</p>
               </CardHeader>
               <CardContent className="h-[300px]">
                 {data.expensesByCategory.length > 0 ? (
@@ -235,14 +235,11 @@ export const DashboardPage = () => {
                     </PieChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="flex items-center justify-center h-full text-muted-foreground">
-                    Nenhuma despesa registrada.
-                  </div>
+                  <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Nenhuma despesa.</div>
                 )}
               </CardContent>
             </Card>
 
-            {/* Cashflow Chart */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-base font-semibold">Histórico & Projeção</CardTitle>
@@ -258,11 +255,7 @@ export const DashboardPage = () => {
                       cursor={{ fill: '#f1f5f9' }}
                       contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                     />
-                    <Bar 
-                      dataKey="value" 
-                      radius={[4, 4, 0, 0]} 
-                      fill="#3b82f6"
-                    >
+                    <Bar dataKey="value" radius={[4, 4, 0, 0]} fill="#3b82f6">
                       {data.monthFlow.map((entry: any, index: number) => (
                         <Cell key={`cell-${index}`} fill={entry.isProjected ? '#93c5fd' : '#3b82f6'} />
                       ))}
@@ -274,7 +267,7 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        {/* Sidebar - Upcoming Bills occupying 1/3 */}
+        {/* Sidebar */}
         <div className="lg:col-span-1">
           <Card className="h-full">
             <CardHeader>
@@ -289,94 +282,68 @@ export const DashboardPage = () => {
                   data.upcomingTransactions.map((tx: any) => (
                     <div key={tx.id} className="flex items-center justify-between p-3 rounded-lg border bg-gray-50/50 hover:bg-gray-50 transition-colors">
                       <div className="space-y-1">
-                        <p className="text-xs font-bold text-gray-900 line-clamp-1">{tx.TransactionCategory?.name || 'Outro'}</p>
+                        <p className="text-xs font-bold text-gray-900 line-clamp-1">{tx.description || tx.TransactionCategory?.name || 'Sem nome'}</p>
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                            <Wallet size={10} />
-                            {tx.wallet?.name}
+                            <Wallet size={10} /> {tx.wallet?.name}
                           </span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 font-medium">
-                            {formatDate(tx.transaction_date)}
-                          </span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 font-medium">{formatDate(tx.transaction_date)}</span>
                         </div>
                       </div>
                       <div className="text-right">
                         <p className={`text-xs font-bold ${tx.transaction_type === 'EXPENSE' ? 'text-red-600' : 'text-green-600'}`}>
                           {tx.transaction_type === 'EXPENSE' ? '-' : '+'} {formatCurrency(Number(tx.value))}
                         </p>
-                        {tx.installment_total && (
-                          <p className="text-[9px] text-muted-foreground italic">
-                            Parc. {tx.installment_number}/{tx.installment_total}
-                          </p>
-                        )}
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p className="text-sm">Nenhuma conta para os próximos 7 dias.</p>
-                  </div>
+                  <div className="text-center py-8 text-muted-foreground text-sm">Nenhuma conta em breve.</div>
                 )}
-                <Button variant="ghost" className="w-full text-xs text-blue-600 hover:text-blue-700" onClick={() => window.location.href = '/transactions'}>
-                  Ver todas as transações
-                </Button>
+                <Button variant="ghost" className="w-full text-xs text-blue-600" onClick={() => window.location.href = '/transactions'}>Ver todas</Button>
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
 
-      {/* Drill-down Dialog for 'Outro' */}
-      <Dialog open={isDrilldownOpen} onOpenChange={setIsDrilldownOpen}>
+      {/* Flexible Drill-down Dialog */}
+      <Dialog open={!!drilldownCategory} onOpenChange={() => setDrilldownCategory(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <div className="flex items-center gap-2 text-blue-600 mb-2">
               <Search size={20} />
-              <DialogTitle>Detalhamento: Categoria Outro</DialogTitle>
+              <DialogTitle>Detalhamento: {drilldownCategory}</DialogTitle>
             </div>
-            <DialogDescription>
-              Maiores gastos classificados como 'Outro' nos últimos 30 dias.
-            </DialogDescription>
+            <DialogDescription>Transações nesta categoria nos últimos 30 dias.</DialogDescription>
           </DialogHeader>
           <div className="mt-4 border rounded-md overflow-hidden">
             <Table>
               <TableHeader className="bg-gray-50">
                 <TableRow>
                   <TableHead className="text-[11px] font-bold">Data</TableHead>
+                  <TableHead className="text-[11px] font-bold">Nome / Descrição</TableHead>
                   <TableHead className="text-[11px] font-bold">Carteira</TableHead>
-                  <TableHead className="text-[11px] font-bold">Parcela</TableHead>
                   <TableHead className="text-[11px] font-bold text-right">Valor</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.outroTransactions && data.outroTransactions.length > 0 ? (
-                  data.outroTransactions.map((tx: any) => (
+                {loadingDrilldown ? (
+                  <TableRow><TableCell colSpan={4} className="text-center py-4 text-xs">Carregando...</TableCell></TableRow>
+                ) : drilldownTransactions.length > 0 ? (
+                  drilldownTransactions.map((tx: any) => (
                     <TableRow key={tx.id}>
                       <TableCell className="text-xs">{formatDate(tx.transaction_date)}</TableCell>
+                      <TableCell className="text-xs font-medium">{tx.description || drilldownCategory}</TableCell>
                       <TableCell className="text-xs">{tx.wallet?.name}</TableCell>
-                      <TableCell className="text-xs italic text-muted-foreground">
-                        {tx.installment_total ? `${tx.installment_number}/${tx.installment_total}` : 'À vista'}
-                      </TableCell>
-                      <TableCell className="text-xs font-bold text-right text-red-600">
-                        {formatCurrency(Number(tx.value))}
-                      </TableCell>
+                      <TableCell className="text-xs font-bold text-right text-red-600">{formatCurrency(Number(tx.value))}</TableCell>
                     </TableRow>
                   ))
                 ) : (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-4 text-muted-foreground text-xs">
-                      Nenhuma transação encontrada.
-                    </TableCell>
-                  </TableRow>
+                  <TableRow><TableCell colSpan={4} className="text-center py-4 text-xs">Nenhuma transação.</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
-          </div>
-          <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100 flex items-start gap-2">
-            <TrendingUp size={16} className="text-blue-600 mt-0.5 shrink-0" />
-            <p className="text-[11px] text-blue-800 leading-relaxed">
-              <strong>Dica de Otimização:</strong> Se houver muitos gastos recorrentes aqui, considere criar uma nova categoria em "Categorias" para melhorar seu controle financeiro.
-            </p>
           </div>
         </DialogContent>
       </Dialog>

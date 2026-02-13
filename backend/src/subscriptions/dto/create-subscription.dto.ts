@@ -27,4 +27,8 @@ export class CreateSubscriptionDto {
   @IsOptional()
   @IsString()
   payment_method?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
 }

@@ -89,6 +89,7 @@ export const SubscriptionsPage = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
+              <TableHead>Descrição</TableHead>
               <TableHead>Valor</TableHead>
               <TableHead>Frequência</TableHead>
               <TableHead>Status</TableHead>
@@ -100,6 +101,9 @@ export const SubscriptionsPage = () => {
             {subscriptions.map((sub) => (
               <TableRow key={sub.id}>
                 <TableCell className="font-medium">{sub.name}</TableCell>
+                <TableCell className="text-sm text-muted-foreground truncate max-w-[120px]" title={sub.description}>
+                  {sub.description || '-'}
+                </TableCell>
                 <TableCell>R$ {Number(sub.value).toFixed(2)}</TableCell>
                 <TableCell>{sub.frequency}</TableCell>
                 <TableCell>
@@ -133,7 +137,7 @@ export const SubscriptionsPage = () => {
             ))}
             {subscriptions.length === 0 && !loading && (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                   Nenhuma recorrência encontrada.
                 </TableCell>
               </TableRow>

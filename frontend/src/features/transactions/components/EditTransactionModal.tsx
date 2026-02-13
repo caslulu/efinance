@@ -22,6 +22,7 @@ interface EditTransactionModalProps {
 
 export const EditTransactionModal = ({ isOpen, transaction, onClose, onSuccess }: EditTransactionModalProps) => {
   const [amount, setAmount] = useState('');
+  const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [date, setDate] = useState('');
   const [categories, setCategories] = useState<any[]>([]);
@@ -40,6 +41,7 @@ export const EditTransactionModal = ({ isOpen, transaction, onClose, onSuccess }
   useEffect(() => {
     if (transaction) {
       setAmount(String(transaction.value));
+      setDescription(transaction.description || '');
       setCategoryId(String(transaction.category_id));
       // Format date to YYYY-MM-DD for input
       const dateObj = new Date(transaction.transaction_date);
@@ -84,6 +86,7 @@ export const EditTransactionModal = ({ isOpen, transaction, onClose, onSuccess }
     try {
       const payload = {
         value: Number(amount),
+        description: description || undefined,
         category_id: categoryId ? Number(categoryId) : undefined,
         transaction_date: new Date(date).toISOString(),
       };
@@ -108,6 +111,16 @@ export const EditTransactionModal = ({ isOpen, transaction, onClose, onSuccess }
         </DialogHeader>
         {error && <div className="mb-2 rounded bg-red-100 p-2 text-sm text-red-600">{error}</div>}
         <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+          <div className="grid gap-2">
+            <Label htmlFor="description">Nome / Descrição (Opcional)</Label>
+            <Input
+              id="description"
+              type="text"
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="Ex: Aluguel, Supermercado..."
+            />
+          </div>
           <div className="grid gap-2">
             <Label htmlFor="amount">Valor</Label>
             <Input

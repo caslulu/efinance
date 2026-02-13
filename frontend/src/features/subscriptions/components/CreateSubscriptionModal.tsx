@@ -22,6 +22,7 @@ interface CreateSubscriptionModalProps {
 
 export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSubscriptionModalProps) => {
   const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
   const [value, setValue] = useState('');
   const [type, setType] = useState('EXPENSE');
   const [frequency, setFrequency] = useState('MONTHLY');
@@ -37,6 +38,7 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
   useEffect(() => {
     if (isOpen) {
       setPaymentMethod('');
+      setDescription('');
       api.get('/wallets').then(res => setWallets(res.data));
       api.get('/categories').then(res => setCategories(res.data));
     }
@@ -75,6 +77,7 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
     try {
       await api.post('/subscriptions', {
         name,
+        description: description || undefined,
         value: Number(value),
         transaction_type: type,
         frequency,
@@ -86,6 +89,7 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
       onSuccess();
       onClose();
       setName('');
+      setDescription('');
       setValue('');
       setPaymentMethod('');
     } catch (error) {
@@ -101,10 +105,14 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
         <DialogHeader>
           <DialogTitle>Novo Item Recorrente</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+        <form onSubmit={handleSubmit} className="grid gap-4 py-4 max-h-[80vh] overflow-y-auto pr-2">
           <div className="grid gap-2">
-            <Label htmlFor="name">Nome</Label>
-            <Input id="name" value={name} onChange={e => setName(e.target.value)} required />
+            <Label htmlFor="name">Nome / Título</Label>
+            <Input id="name" value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Netflix, Aluguel..." required />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="description">Descrição (Opcional)</Label>
+            <Input id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Ex: Plano familiar..." />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="type">Tipo</Label>

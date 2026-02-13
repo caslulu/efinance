@@ -54,6 +54,7 @@ export const TransactionsPage = () => {
           id: -1 * (sub.id * 1000 + i), // Temporary negative ID
           transaction_date: currentDate.toISOString(),
           wallet_id: sub.wallet_id,
+          description: sub.name,
           transaction_type: sub.transaction_type as 'INCOME' | 'EXPENSE',
           is_recurring: true,
           value: Number(sub.value),

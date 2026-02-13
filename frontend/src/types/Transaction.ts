@@ -3,6 +3,7 @@ export interface Transaction {
   transaction_date: string;
   wallet_id: number;
   transaction_type: 'INCOME' | 'EXPENSE';
+  description?: string;
   is_recurring: boolean;
   value: number;
   category_id: number;

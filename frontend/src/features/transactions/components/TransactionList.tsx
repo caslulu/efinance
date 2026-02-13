@@ -30,6 +30,7 @@ export const TransactionList = ({ transactions, onTransactionUpdated }: Transact
           <TableHeader>
             <TableRow>
               <TableHead>Data</TableHead>
+              <TableHead>Nome</TableHead>
               <TableHead>Categoria</TableHead>
               <TableHead>Método</TableHead>
               <TableHead>Tipo</TableHead>
@@ -44,7 +45,10 @@ export const TransactionList = ({ transactions, onTransactionUpdated }: Transact
                 <TableCell>
                   {new Date(tx.transaction_date).toLocaleDateString()}
                 </TableCell>
-                <TableCell className="font-medium">
+                <TableCell className="font-medium truncate max-w-[150px]" title={tx.description}>
+                  {tx.description || '-'}
+                </TableCell>
+                <TableCell>
                   {tx.TransactionCategory?.name || 'Sem Categoria'}
                 </TableCell>
                 <TableCell>
@@ -80,7 +84,7 @@ export const TransactionList = ({ transactions, onTransactionUpdated }: Transact
             ))}
             {transactions.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                   Nenhuma transação encontrada.
                 </TableCell>
               </TableRow>

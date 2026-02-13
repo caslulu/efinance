@@ -23,6 +23,10 @@ export class CreateTransactionDto {
   payment_method?: string;
 
   @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
   @IsNumber()
   @Min(1)
   category_id?: number;

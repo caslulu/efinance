@@ -100,34 +100,7 @@ export class DashboardService {
       take: 5,
     });
 
-    // 4. Drill-down for 'Outro' Category (Specific transactions in last 30d)
-    const outroCategory = await this.prisma.transactionCategory.findFirst({
-      where: { user_id: userId, name: 'Outro' }
-    });
-
-    let outroTransactions = [];
-    if (outroCategory) {
-      outroTransactions = await this.prisma.transaction.findMany({
-        where: {
-          wallet: { user_id: userId },
-          category_id: outroCategory.id,
-          transaction_type: 'EXPENSE',
-          transaction_date: { gte: oneMonthAgo, lte: new Date() }
-        },
-        select: {
-          id: true,
-          transaction_date: true,
-          value: true,
-          installment_number: true,
-          installment_total: true,
-          wallet: { select: { name: true } }
-        },
-        orderBy: { value: 'desc' },
-        take: 10
-      });
-    }
-
-    // 5. Recurring Payments KPI
+    // 4. Recurring Payments KPI
     const activeSubscriptions = await this.prisma.subscription.aggregate({
       where: {
         user_id: userId,
@@ -136,7 +109,7 @@ export class DashboardService {
       _sum: { value: true },
     });
 
-    // 4. Totals & Savings Rate
+    // 5. Totals & Savings Rate
     const [totalWallets, totalExpensesMonth, totalIncomesMonth] = await Promise.all([
       this.prisma.wallet.aggregate({
         where: { user_id: userId },
@@ -173,7 +146,27 @@ export class DashboardService {
       expensesByCategory,
       monthFlow,
       upcomingTransactions,
-      outroTransactions
     };
   }
+
+  async getCategoryTransactions(userId: number, categoryName: string) {
+    const today = new Date();
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(today.getMonth() - 1);
+
+    return this.prisma.transaction.findMany({
+      where: {
+        wallet: { user_id: userId },
+        TransactionCategory: { name: categoryName },
+        transaction_type: 'EXPENSE',
+        transaction_date: { gte: oneMonthAgo, lte: today }
+      },
+      include: {
+        wallet: { select: { name: true } }
+      },
+      orderBy: { transaction_date: 'desc' },
+      take: 20
+    });
+  }
+}
 }

@@ -60,6 +60,7 @@ model Transaction {
   wallet              Wallet              @relation(fields: [wallet_id], references: [id])
   transaction_type    String
   payment_method      String?
+  description         String?
   is_recurring        Boolean
   value               Decimal             @db.Decimal(10, 2)
   installment_id      String?
@@ -81,6 +82,7 @@ model Subscription {
   category          TransactionCategory @relation(fields: [category_id], references: [id])
   
   name              String
+  description       String?
   value             Decimal            @db.Decimal(10, 2)
   transaction_type  String             @default("EXPENSE")
   frequency         Frequency

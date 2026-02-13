@@ -26,6 +26,7 @@ interface AddTransactionModalProps {
 
 export const AddTransactionModal = ({ isOpen, type, walletId, walletType, hasClosingDay, onClose, onSuccess }: AddTransactionModalProps) => {
   const [amount, setAmount] = useState('');
+  const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [installments, setInstallments] = useState('');
@@ -39,6 +40,7 @@ export const AddTransactionModal = ({ isOpen, type, walletId, walletType, hasClo
     if (isOpen) {
       setError('');
       setPaymentMethod(hasClosingDay ? 'CREDIT' : '');
+      setDescription('');
       api.get('/categories').then(res => {
         if (Array.isArray(res.data)) setCategories(res.data);
       });
@@ -80,6 +82,7 @@ export const AddTransactionModal = ({ isOpen, type, walletId, walletType, hasClo
       const payload = {
         wallet_id: walletId,
         value: Number(amount),
+        description: description || undefined,
         transaction_type: type,
         category_id: categoryId ? Number(categoryId) : undefined,
         payment_method: paymentMethod || undefined,
@@ -93,6 +96,7 @@ export const AddTransactionModal = ({ isOpen, type, walletId, walletType, hasClo
       onSuccess();
       onClose();
       setAmount('');
+      setDescription('');
       setCategoryId('');
       setInstallments('');
       setPaymentMethod('');
@@ -122,6 +126,17 @@ export const AddTransactionModal = ({ isOpen, type, walletId, walletType, hasClo
         </DialogHeader>
         {error && <div className="mb-2 rounded bg-red-100 p-2 text-sm text-red-600">{error}</div>}
         <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+          <div className="grid gap-2">
+            <Label htmlFor="description">Nome / Descrição (Opcional)</Label>
+            <Input
+              id="description"
+              type="text"
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="Ex: Aluguel, Supermercado..."
+            />
+          </div>
+
           <div className="grid gap-2">
             <Label htmlFor="amount">Valor</Label>
             <Input

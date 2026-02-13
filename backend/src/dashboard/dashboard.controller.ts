@@ -11,4 +11,9 @@ export class DashboardController {
   getOverview(@Request() req) {
     return this.dashboardService.getOverview(req.user.userId);
   }
+
+  @Get('category/:name')
+  getCategoryTransactions(@Request() req, @Param('name') name: string) {
+    return this.dashboardService.getCategoryTransactions(req.user.userId, name);
+  }
 }
