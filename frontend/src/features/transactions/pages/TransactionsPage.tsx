@@ -188,21 +188,7 @@ export const TransactionsPage = () => {
         <div className="text-center py-10 text-muted-foreground">Carregando transações...</div>
       ) : (
         <div className="space-y-12">
-          {/* 1. PAST SECTION */}
-          {groupedData.past.length > 0 && (
-            <div className="space-y-4">
-              <h2 className="text-lg font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
-                <div className="h-px flex-1 bg-gray-200"></div>
-                Passadas
-                <div className="h-px flex-1 bg-gray-200"></div>
-              </h2>
-              <div className="space-y-4">
-                {groupedData.past.map(renderGroup)}
-              </div>
-            </div>
-          )}
-
-          {/* 2. CURRENT SECTION */}
+          {/* 1. CURRENT SECTION (TOP) */}
           {groupedData.current && (
             <div className="space-y-4">
               <h2 className="text-lg font-bold text-blue-600 uppercase tracking-wider flex items-center gap-2">
@@ -214,7 +200,7 @@ export const TransactionsPage = () => {
             </div>
           )}
 
-          {/* 3. FUTURE SECTION */}
+          {/* 2. FUTURE SECTION (MIDDLE) */}
           {groupedData.future.length > 0 && (
             <div className="space-y-4">
               <h2 className="text-lg font-bold text-purple-600 uppercase tracking-wider flex items-center gap-2">
@@ -224,6 +210,20 @@ export const TransactionsPage = () => {
               </h2>
               <div className="space-y-4">
                 {groupedData.future.map(renderGroup)}
+              </div>
+            </div>
+          )}
+
+          {/* 3. PAST SECTION (BOTTOM) */}
+          {groupedData.past.length > 0 && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                <div className="h-px flex-1 bg-gray-200"></div>
+                Passadas
+                <div className="h-px flex-1 bg-gray-200"></div>
+              </h2>
+              <div className="space-y-4">
+                {groupedData.past.map(renderGroup)}
               </div>
             </div>
           )}
