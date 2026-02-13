@@ -4,7 +4,7 @@ import type { Transaction } from '../../../types/Transaction';
 import type { Subscription } from '../../../types/Subscription';
 import type { Wallet } from '../../../types/Wallet';
 import { TransactionList } from '../components/TransactionList';
-import { ChevronDown, ChevronRight, Calendar, Search, Filter, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, Calendar, Search, Filter, X, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';

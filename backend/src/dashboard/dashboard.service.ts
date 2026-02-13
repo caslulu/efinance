@@ -30,6 +30,7 @@ export class DashboardService {
       where: {
         wallet: { user_id: userId },
         transaction_type: 'EXPENSE',
+        payment_method: { not: 'TRANSFER' },
         transaction_date: {
           gte: oneMonthAgo,
           lte: new Date(),
@@ -55,6 +56,7 @@ export class DashboardService {
       where: {
         wallet: { user_id: userId },
         transaction_type: 'EXPENSE',
+        payment_method: { not: 'TRANSFER' },
         transaction_date: {
           gte: twelveMonthsAgo,
           lte: oneYearFuture,
@@ -124,6 +126,7 @@ export class DashboardService {
         where: {
           wallet: { user_id: userId },
           transaction_type: 'EXPENSE',
+          payment_method: { not: 'TRANSFER' },
           transaction_date: { gte: oneMonthAgo, lte: new Date() },
         },
         _sum: { value: true },
@@ -132,6 +135,7 @@ export class DashboardService {
         where: {
           wallet: { user_id: userId },
           transaction_type: 'INCOME',
+          payment_method: { not: 'TRANSFER' },
           transaction_date: { gte: oneMonthAgo, lte: new Date() },
         },
         _sum: { value: true },

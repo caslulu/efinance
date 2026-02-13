@@ -7,11 +7,15 @@ import { CreateWalletModal } from '../components/CreateWalletModal';
 import { AddTransactionModal } from '../components/AddTransactionModal';
 import { EditWalletModal } from '../components/EditWalletModal';
 import { PayInvoiceModal } from '../components/PayInvoiceModal';
+import { TransferModal } from '../components/TransferModal';
+import { Button } from '@/components/ui/button';
+import { ArrowRightLeft } from 'lucide-react';
 
 export const WalletsPage = () => {
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [editWallet, setEditWallet] = useState<Wallet | null>(null);
   const [payInvoiceWallet, setPayInvoiceWallet] = useState<Wallet | null>(null);
   const [transactionModal, setTransactionModal] = useState<{
@@ -52,12 +56,22 @@ export const WalletsPage = () => {
     <div className="p-8">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Minhas Carteiras</h1>
-        <button
-          onClick={() => setIsCreateOpen(true)}
-          className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white shadow-sm hover:bg-blue-700"
-        >
-          + Nova Carteira
-        </button>
+        <div className="flex gap-4">
+          <Button
+            variant="outline"
+            onClick={() => setIsTransferOpen(true)}
+            className="flex items-center gap-2 border-blue-200 text-blue-600 hover:bg-blue-50"
+          >
+            <ArrowRightLeft size={18} />
+            Transferir
+          </Button>
+          <button
+            onClick={() => setIsCreateOpen(true)}
+            className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white shadow-sm hover:bg-blue-700"
+          >
+            + Nova Carteira
+          </button>
+        </div>
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -115,6 +129,12 @@ export const WalletsPage = () => {
         isOpen={!!payInvoiceWallet}
         wallet={payInvoiceWallet}
         onClose={() => setPayInvoiceWallet(null)}
+        onSuccess={fetchData}
+      />
+
+      <TransferModal
+        isOpen={isTransferOpen}
+        onClose={() => setIsTransferOpen(false)}
         onSuccess={fetchData}
       />
 

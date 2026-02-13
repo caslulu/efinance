@@ -40,6 +40,11 @@ export class WalletsController {
     return this.walletsService.update(id, req.user.userId, updateWalletDto);
   }
 
+  @Post('transfer')
+  transfer(@Request() req, @Body() body: { fromId: number; toId: number; amount: number }) {
+    return this.walletsService.transfer(req.user.userId, body.fromId, body.toId, body.amount);
+  }
+
   @Delete(':id')
   remove(@Request() req, @Param('id', ParseIntPipe) id: number) {
     return this.walletsService.remove(id, req.user.userId);

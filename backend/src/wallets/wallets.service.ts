@@ -207,4 +207,76 @@ export class WalletsService {
     await this.findOne(id, userId);
     return this.prisma.wallet.delete({ where: { id } });
   }
+
+  async transfer(userId: number, fromId: number, toId: number, amount: number) {
+    if (amount <= 0) throw new BadRequestException('Amount must be positive');
+    if (fromId === toId) throw new BadRequestException('Source and destination wallets must be different');
+
+    const [fromWallet, toWallet] = await Promise.all([
+      this.prisma.wallet.findUnique({ where: { id: fromId } }),
+      this.prisma.wallet.findUnique({ where: { id: toId } }),
+    ]);
+
+    if (!fromWallet || fromWallet.user_id !== userId) throw new NotFoundException(`Source wallet #${fromId} not found`);
+    if (!toWallet || toWallet.user_id !== userId) throw new NotFoundException(`Destination wallet #${toId} not found`);
+
+    if (new Decimal(fromWallet.actual_cash).lessThan(new Decimal(amount))) {
+      throw new BadRequestException('Insufficient funds in source wallet');
+    }
+
+    // Default Category for Transfers
+    let transferCategory = await this.prisma.transactionCategory.findFirst({
+      where: { user_id: userId, name: 'Transferência' }
+    });
+
+    if (!transferCategory) {
+      transferCategory = await this.prisma.transactionCategory.create({
+        data: { name: 'Transferência', user_id: userId }
+      });
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Update Balances
+      await tx.wallet.update({
+        where: { id: fromId },
+        data: { actual_cash: { decrement: amount } }
+      });
+
+      await tx.wallet.update({
+        where: { id: toId },
+        data: { actual_cash: { increment: amount } }
+      });
+
+      // 2. Create Transactions
+      const description = `Transferência de ${fromWallet.name} para ${toWallet.name}`;
+      
+      await tx.transaction.create({
+        data: {
+          wallet_id: fromId,
+          value: amount,
+          transaction_type: 'EXPENSE',
+          description,
+          category_id: transferCategory.id,
+          payment_method: 'TRANSFER',
+          transaction_date: new Date(),
+          is_recurring: false,
+        }
+      });
+
+      await tx.transaction.create({
+        data: {
+          wallet_id: toId,
+          value: amount,
+          transaction_type: 'INCOME',
+          description,
+          category_id: transferCategory.id,
+          payment_method: 'TRANSFER',
+          transaction_date: new Date(),
+          is_recurring: false,
+        }
+      });
+
+      return { message: 'Transfer completed successfully' };
+    });
+  }
 }

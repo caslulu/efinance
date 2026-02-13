@@ -1255,3 +1255,228 @@ For more common dependency resolution issues, see: https://docs.nestjs.com/faq/c
     id: [32m'cca158808f27deee63bc3'[39m
   }
 }
+[2J[3J[H[[90m4:31:00 PM[0m] File change detected. Starting incremental compilation...
+
+[[90m4:31:01 PM[0m] Found 0 errors. Watching for file changes.
+
+[32m[Nest] 52482  - [39m02/13/2026, 4:31:01 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 52482  - [39m02/13/2026, 4:31:01 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mMailerModule dependencies initialized[39m[38;5;3m +12ms[39m
+[32m[Nest] 52482  - [39m02/13/2026, 4:31:01 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPrismaModule dependencies initialized[39m[38;5;3m +10ms[39m
+[32m[Nest] 52482  - [39m02/13/2026, 4:31:01 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +0ms[39m
+[31m[Nest] 52482  - [39m02/13/2026, 4:31:01 PM [31m  ERROR[39m [38;5;3m[ExceptionHandler] [39mUnknownDependenciesException [Error]: Nest can't resolve dependencies of the DashboardService (PrismaService, ?). Please make sure that the argument BudgetsService at index [1] is available in the DashboardModule context.
+
+Potential solutions:
+- Is DashboardModule a valid NestJS module?
+- If BudgetsService is a provider, is it part of the current DashboardModule?
+- If BudgetsService is exported from a separate @Module, is that module imported within DashboardModule?
+  @Module({
+    imports: [ /* the Module containing BudgetsService */ ]
+  })
+
+For more common dependency resolution issues, see: https://docs.nestjs.com/faq/common-errors
+    at Injector.lookupComponentInParentModules [90m(/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:290:19[90m)[39m
+    at async resolveParam [90m(/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:140:38[90m)[39m
+    at async Promise.all (index 1)
+    at async Injector.resolveConstructorParams [90m(/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:169:27[90m)[39m
+    at async Injector.loadInstance [90m(/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:75:13[90m)[39m
+    at async Injector.loadProvider [90m(/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:103:9[90m)[39m
+    at async [90m/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:56:13
+    at async Promise.all (index 3)
+    at async InstanceLoader.createInstancesOfProviders [90m(/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:55:9[90m)[39m
+    at async [90m/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:40:13 {
+  type: [32m'DashboardService'[39m,
+  context: {
+    index: [33m1[39m,
+    dependencies: [
+      [36m[class PrismaService extends t][39m,
+      [36m[class BudgetsService][39m
+    ],
+    name: [36m[class BudgetsService][39m
+  },
+  metadata: {
+    id: [32m'87fb7b078ca593ed1a7f2'[39m
+  },
+  moduleRef: {
+    id: [32m'deddd89415f8c750d8643'[39m
+  }
+}
+[2J[3J[H[[90m4:31:06 PM[0m] File change detected. Starting incremental compilation...
+
+[[90m4:31:06 PM[0m] Found 0 errors. Watching for file changes.
+
+[32m[Nest] 52490  - [39m02/13/2026, 4:31:07 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 52490  - [39m02/13/2026, 4:31:07 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mMailerModule dependencies initialized[39m[38;5;3m +11ms[39m
+[32m[Nest] 52490  - [39m02/13/2026, 4:31:07 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPrismaModule dependencies initialized[39m[38;5;3m +3ms[39m
+[32m[Nest] 52490  - [39m02/13/2026, 4:31:07 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +2ms[39m
+[31m[Nest] 52490  - [39m02/13/2026, 4:31:07 PM [31m  ERROR[39m [38;5;3m[ExceptionHandler] [39mUnknownDependenciesException [Error]: Nest can't resolve dependencies of the DashboardService (PrismaService, ?). Please make sure that the argument BudgetsService at index [1] is available in the DashboardModule context.
+
+Potential solutions:
+- Is DashboardModule a valid NestJS module?
+- If BudgetsService is a provider, is it part of the current DashboardModule?
+- If BudgetsService is exported from a separate @Module, is that module imported within DashboardModule?
+  @Module({
+    imports: [ /* the Module containing BudgetsService */ ]
+  })
+
+For more common dependency resolution issues, see: https://docs.nestjs.com/faq/common-errors
+    at Injector.lookupComponentInParentModules [90m(/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:290:19[90m)[39m
+    at async resolveParam [90m(/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:140:38[90m)[39m
+    at async Promise.all (index 1)
+    at async Injector.resolveConstructorParams [90m(/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:169:27[90m)[39m
+    at async Injector.loadInstance [90m(/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:75:13[90m)[39m
+    at async Injector.loadProvider [90m(/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:103:9[90m)[39m
+    at async [90m/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:56:13
+    at async Promise.all (index 3)
+    at async InstanceLoader.createInstancesOfProviders [90m(/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:55:9[90m)[39m
+    at async [90m/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:40:13 {
+  type: [32m'DashboardService'[39m,
+  context: {
+    index: [33m1[39m,
+    dependencies: [
+      [36m[class PrismaService extends t][39m,
+      [36m[class BudgetsService][39m
+    ],
+    name: [36m[class BudgetsService][39m
+  },
+  metadata: {
+    id: [32m'101350fb8801120a7d501'[39m
+  },
+  moduleRef: {
+    id: [32m'41242e8700e6dc0464f67'[39m
+  }
+}
+[2J[3J[H[[90m4:32:12 PM[0m] File change detected. Starting incremental compilation...
+
+[[90m4:32:12 PM[0m] Found 0 errors. Watching for file changes.
+
+[32m[Nest] 52502  - [39m02/13/2026, 4:32:13 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 52502  - [39m02/13/2026, 4:32:13 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mMailerModule dependencies initialized[39m[38;5;3m +13ms[39m
+[32m[Nest] 52502  - [39m02/13/2026, 4:32:13 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPrismaModule dependencies initialized[39m[38;5;3m +13ms[39m
+[32m[Nest] 52502  - [39m02/13/2026, 4:32:13 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +0ms[39m
+[31m[Nest] 52502  - [39m02/13/2026, 4:32:13 PM [31m  ERROR[39m [38;5;3m[ExceptionHandler] [39mUnknownDependenciesException [Error]: Nest can't resolve dependencies of the DashboardService (PrismaService, ?). Please make sure that the argument BudgetsService at index [1] is available in the DashboardModule context.
+
+Potential solutions:
+- Is DashboardModule a valid NestJS module?
+- If BudgetsService is a provider, is it part of the current DashboardModule?
+- If BudgetsService is exported from a separate @Module, is that module imported within DashboardModule?
+  @Module({
+    imports: [ /* the Module containing BudgetsService */ ]
+  })
+
+For more common dependency resolution issues, see: https://docs.nestjs.com/faq/common-errors
+    at Injector.lookupComponentInParentModules [90m(/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:290:19[90m)[39m
+    at async resolveParam [90m(/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:140:38[90m)[39m
+    at async Promise.all (index 1)
+    at async Injector.resolveConstructorParams [90m(/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:169:27[90m)[39m
+    at async Injector.loadInstance [90m(/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:75:13[90m)[39m
+    at async Injector.loadProvider [90m(/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:103:9[90m)[39m
+    at async [90m/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:56:13
+    at async Promise.all (index 3)
+    at async InstanceLoader.createInstancesOfProviders [90m(/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:55:9[90m)[39m
+    at async [90m/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:40:13 {
+  type: [32m'DashboardService'[39m,
+  context: {
+    index: [33m1[39m,
+    dependencies: [
+      [36m[class PrismaService extends t][39m,
+      [36m[class BudgetsService][39m
+    ],
+    name: [36m[class BudgetsService][39m
+  },
+  metadata: {
+    id: [32m'0702a189e91f78b5b3b31'[39m
+  },
+  moduleRef: {
+    id: [32m'0e37ebbeafa593bbbe335'[39m
+  }
+}
+[2J[3J[H[[90m4:32:21 PM[0m] File change detected. Starting incremental compilation...
+
+[[90m4:32:21 PM[0m] Found 0 errors. Watching for file changes.
+
+[32m[Nest] 52515  - [39m02/13/2026, 4:32:21 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 52515  - [39m02/13/2026, 4:32:21 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mMailerModule dependencies initialized[39m[38;5;3m +13ms[39m
+[32m[Nest] 52515  - [39m02/13/2026, 4:32:21 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPrismaModule dependencies initialized[39m[38;5;3m +3ms[39m
+[32m[Nest] 52515  - [39m02/13/2026, 4:32:21 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +0ms[39m
+[31m[Nest] 52515  - [39m02/13/2026, 4:32:21 PM [31m  ERROR[39m [38;5;3m[ExceptionHandler] [39mUnknownDependenciesException [Error]: Nest can't resolve dependencies of the DashboardService (PrismaService, ?). Please make sure that the argument BudgetsService at index [1] is available in the DashboardModule context.
+
+Potential solutions:
+- Is DashboardModule a valid NestJS module?
+- If BudgetsService is a provider, is it part of the current DashboardModule?
+- If BudgetsService is exported from a separate @Module, is that module imported within DashboardModule?
+  @Module({
+    imports: [ /* the Module containing BudgetsService */ ]
+  })
+
+For more common dependency resolution issues, see: https://docs.nestjs.com/faq/common-errors
+    at Injector.lookupComponentInParentModules [90m(/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:290:19[90m)[39m
+    at async resolveParam [90m(/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:140:38[90m)[39m
+    at async Promise.all (index 1)
+    at async Injector.resolveConstructorParams [90m(/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:169:27[90m)[39m
+    at async Injector.loadInstance [90m(/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:75:13[90m)[39m
+    at async Injector.loadProvider [90m(/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:103:9[90m)[39m
+    at async [90m/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:56:13
+    at async Promise.all (index 3)
+    at async InstanceLoader.createInstancesOfProviders [90m(/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:55:9[90m)[39m
+    at async [90m/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:40:13 {
+  type: [32m'DashboardService'[39m,
+  context: {
+    index: [33m1[39m,
+    dependencies: [
+      [36m[class PrismaService extends t][39m,
+      [36m[class BudgetsService][39m
+    ],
+    name: [36m[class BudgetsService][39m
+  },
+  metadata: {
+    id: [32m'6f005fe4fe03f50eff600'[39m
+  },
+  moduleRef: {
+    id: [32m'9094a2d93444f6a9cf495'[39m
+  }
+}
+[2J[3J[H[[90m4:32:28 PM[0m] File change detected. Starting incremental compilation...
+
+[[90m4:32:29 PM[0m] Found 0 errors. Watching for file changes.
+
+[32m[Nest] 52517  - [39m02/13/2026, 4:32:29 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 52517  - [39m02/13/2026, 4:32:29 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mMailerModule dependencies initialized[39m[38;5;3m +11ms[39m
+[32m[Nest] 52517  - [39m02/13/2026, 4:32:29 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPrismaModule dependencies initialized[39m[38;5;3m +3ms[39m
+[32m[Nest] 52517  - [39m02/13/2026, 4:32:29 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +0ms[39m
+[31m[Nest] 52517  - [39m02/13/2026, 4:32:29 PM [31m  ERROR[39m [38;5;3m[ExceptionHandler] [39mUnknownDependenciesException [Error]: Nest can't resolve dependencies of the DashboardService (PrismaService, ?). Please make sure that the argument BudgetsService at index [1] is available in the DashboardModule context.
+
+Potential solutions:
+- Is DashboardModule a valid NestJS module?
+- If BudgetsService is a provider, is it part of the current DashboardModule?
+- If BudgetsService is exported from a separate @Module, is that module imported within DashboardModule?
+  @Module({
+    imports: [ /* the Module containing BudgetsService */ ]
+  })
+
+For more common dependency resolution issues, see: https://docs.nestjs.com/faq/common-errors
+    at Injector.lookupComponentInParentModules [90m(/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:290:19[90m)[39m
+    at async resolveParam [90m(/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:140:38[90m)[39m
+    at async Promise.all (index 1)
+    at async Injector.resolveConstructorParams [90m(/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:169:27[90m)[39m
+    at async Injector.loadInstance [90m(/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:75:13[90m)[39m
+    at async Injector.loadProvider [90m(/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:103:9[90m)[39m
+    at async [90m/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:56:13
+    at async Promise.all (index 3)
+    at async InstanceLoader.createInstancesOfProviders [90m(/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:55:9[90m)[39m
+    at async [90m/Users/lucasduarte/Developer/github.com/financeApp/backend/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:40:13 {
+  type: [32m'DashboardService'[39m,
+  context: {
+    index: [33m1[39m,
+    dependencies: [
+      [36m[class PrismaService extends t][39m,
+      [36m[class BudgetsService][39m
+    ],
+    name: [36m[class BudgetsService][39m
+  },
+  metadata: {
+    id: [32m'9ba4a22bea05474ce482a'[39m
+  },
+  moduleRef: {
+    id: [32m'0126e7e9b7eb64b73fac2'[39m
+  }
+}
