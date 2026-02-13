@@ -82,8 +82,11 @@ export const DashboardPage = () => {
     }
   };
 
-  const onPieClick = (pieData: any) => {
-    const categoryName = pieData.name;
+  const onPieClick = (eventData: any) => {
+    // Recharts passes the clicked object in eventData.payload
+    const categoryName = eventData.payload?.name || eventData.name;
+    if (!categoryName) return;
+
     setDrilldownCategory(categoryName);
     setLoadingDrilldown(true);
     

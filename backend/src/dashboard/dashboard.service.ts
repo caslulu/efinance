@@ -154,19 +154,29 @@ export class DashboardService {
     const oneMonthAgo = new Date();
     oneMonthAgo.setMonth(today.getMonth() - 1);
 
-    return this.prisma.transaction.findMany({
+    console.log(`[DashboardService] Fetching transactions for User: ${userId}, Category: "${categoryName}"`);
+
+    const txs = await this.prisma.transaction.findMany({
       where: {
         wallet: { user_id: userId },
-        TransactionCategory: { name: categoryName },
+        TransactionCategory: { 
+          name: {
+            equals: categoryName,
+            mode: 'insensitive'
+          }
+        },
         transaction_type: 'EXPENSE',
         transaction_date: { gte: oneMonthAgo, lte: today }
       },
       include: {
-        wallet: { select: { name: true } }
+        wallet: { select: { name: true } },
+        TransactionCategory: true
       },
       orderBy: { transaction_date: 'desc' },
       take: 20
     });
+
+    console.log(`[DashboardService] Found ${txs.length} transactions for "${categoryName}"`);
+    return txs;
   }
-}
 }
