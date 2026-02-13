@@ -1,8 +1,9 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { api } from '../../../api/api';
 import type { Transaction } from '../../../types/Transaction';
 import type { Subscription } from '../../../types/Subscription';
 import { TransactionList } from '../components/TransactionList';
+import { ChevronDown, ChevronRight, Calendar } from 'lucide-center'; // wait, it's lucide-react in previous files
 import { ChevronDown, ChevronRight, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -11,6 +12,7 @@ export const TransactionsPage = () => {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedMonths, setExpandedMonths] = useState<string[]>([]);
+  const hasInitialExpanded = useRef(false);
 
   const fetchData = async () => {
     try {
@@ -118,12 +120,13 @@ export const TransactionsPage = () => {
     };
   }, [transactions, subscriptions]);
 
-  // Expand current month by default
+  // Expand current month by default ONLY ONCE on load
   useEffect(() => {
-    if (groupedData.current && expandedMonths.length === 0) {
+    if (groupedData.current && !hasInitialExpanded.current) {
       setExpandedMonths([groupedData.current.label]);
+      hasInitialExpanded.current = true;
     }
-  }, [groupedData.current, expandedMonths.length]);
+  }, [groupedData.current]);
 
   const toggleMonth = (label: string) => {
     setExpandedMonths(prev => 
