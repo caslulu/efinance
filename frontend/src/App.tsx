@@ -11,7 +11,8 @@ import { TransactionsPage } from './features/transactions/pages/TransactionsPage
 import { SubscriptionsPage } from './features/subscriptions/pages/SubscriptionsPage';
 import { CategoriesPage } from './features/categories/pages/CategoriesPage';
 import { SettingsPage } from './features/settings/pages/SettingsPage';
-import { ChevronDown, LogOut, Settings, LayoutDashboard } from 'lucide-react';
+import { BudgetsPage } from './features/budgets/pages/BudgetsPage';
+import { ChevronDown, LogOut, Settings, LayoutDashboard, Target } from 'lucide-react';
 
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const { isAuthenticated } = useAuth();
@@ -46,6 +47,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               <Link to="/" className="text-gray-600 hover:text-gray-900">Dashboard</Link>
               <Link to="/wallets" className="text-gray-600 hover:text-gray-900">Carteiras</Link>
               <Link to="/transactions" className="text-gray-600 hover:text-gray-900">Transações</Link>
+              <Link to="/budgets" className="text-gray-600 hover:text-gray-900">Metas</Link>
               <Link to="/subscriptions" className="text-gray-600 hover:text-gray-900">Recorrências</Link>
               <Link to="/categories" className="text-gray-600 hover:text-gray-900">Categorias</Link>
             </div>
@@ -149,6 +151,16 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <CategoriesPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/budgets"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <BudgetsPage />
                 </Layout>
               </ProtectedRoute>
             }

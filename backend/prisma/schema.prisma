@@ -37,6 +37,7 @@ model User {
   wishlists             Wishlist[]
   transactionCategories TransactionCategory[]
   subscriptions         Subscription[]
+  budgets               Budget[]
 }
 
 model Wallet {
@@ -101,6 +102,18 @@ model TransactionCategory {
   name         String
   transactions Transaction[]
   subscriptions Subscription[]
+  budgets      Budget[]
+}
+
+model Budget {
+  id          Int                 @id @default(autoincrement())
+  user_id     Int
+  user        User                @relation(fields: [user_id], references: [id])
+  category_id Int
+  category    TransactionCategory @relation(fields: [category_id], references: [id])
+  limit       Decimal             @db.Decimal(10, 2)
+  
+  @@unique([user_id, category_id])
 }
 
 model Investment {

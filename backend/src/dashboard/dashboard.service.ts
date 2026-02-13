@@ -1,12 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { BudgetsService } from '../budgets/budgets.service';
 
 @Injectable()
 export class DashboardService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly budgetsService: BudgetsService
+  ) {}
 
   async getOverview(userId: number) {
     const today = new Date();
+    // ... rest of the setup
     today.setHours(0, 0, 0, 0);
 
     const oneMonthAgo = new Date();
@@ -137,6 +142,8 @@ export class DashboardService {
     const expense = Number(totalExpensesMonth._sum.value || 0);
     const savingsRate = income > 0 ? ((income - expense) / income) * 100 : 0;
 
+    const budgetSummary = await this.budgetsService.getBudgetStatus(userId);
+
     return {
       totalBalance: Number(totalWallets._sum.actual_cash || 0),
       monthlyExpenses: expense,
@@ -146,6 +153,7 @@ export class DashboardService {
       expensesByCategory,
       monthFlow,
       upcomingTransactions,
+      budgetSummary
     };
   }
 

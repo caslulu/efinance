@@ -12,6 +12,7 @@ import { InvestmentsModule } from './investments/investments.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { BudgetsModule } from './budgets/budgets.module';
 
 @Module({
   imports: [
@@ -41,7 +42,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     TransactionsModule, 
     CategoriesModule, 
     SubscriptionsModule, 
-    InvestmentsModule, DashboardModule
+    InvestmentsModule, DashboardModule, BudgetsModule
   ],
   controllers: [AppController],
   providers: [AppService],

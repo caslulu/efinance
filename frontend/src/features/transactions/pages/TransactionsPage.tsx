@@ -2,26 +2,41 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import { api } from '../../../api/api';
 import type { Transaction } from '../../../types/Transaction';
 import type { Subscription } from '../../../types/Subscription';
+import type { Wallet } from '../../../types/Wallet';
 import { TransactionList } from '../components/TransactionList';
-import { ChevronDown, ChevronRight, Calendar } from 'lucide-react';
+import { ChevronDown, ChevronRight, Calendar, Search, Filter, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export const TransactionsPage = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedMonths, setExpandedMonths] = useState<string[]>([]);
   const hasInitialExpanded = useRef(false);
 
+  // Filter States
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterCategory, setFilterCategory] = useState('ALL');
+  const [filterWallet, setFilterWallet] = useState('ALL');
+  const [filterType, setFilterType] = useState('ALL');
+
   const fetchData = async () => {
     try {
-      const [txRes, subRes] = await Promise.all([
+      const [txRes, subRes, walletRes, catRes] = await Promise.all([
         api.get('/transactions'),
-        api.get('/subscriptions')
+        api.get('/subscriptions'),
+        api.get('/wallets'),
+        api.get('/categories')
       ]);
       
       if (Array.isArray(txRes.data)) setTransactions(txRes.data);
       if (Array.isArray(subRes.data)) setSubscriptions(subRes.data);
+      if (Array.isArray(walletRes.data)) setWallets(walletRes.data);
+      if (Array.isArray(catRes.data)) setCategories(catRes.data);
     } catch (error) {
       console.error('Failed to fetch data');
     } finally {
@@ -32,6 +47,13 @@ export const TransactionsPage = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setFilterCategory('ALL');
+    setFilterWallet('ALL');
+    setFilterType('ALL');
+  };
 
   const groupedData = useMemo(() => {
     const today = new Date();
@@ -70,15 +92,26 @@ export const TransactionsPage = () => {
       }
     });
 
-    const allTx = [...transactions, ...virtualTransactions];
+    // 2. Apply Filters
+    const filteredTx = [...transactions, ...virtualTransactions].filter(tx => {
+      const matchesSearch = 
+        (tx.description?.toLowerCase().includes(searchTerm.toLowerCase())) || 
+        (tx.TransactionCategory?.name.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+      const matchesCategory = filterCategory === 'ALL' || tx.category_id === Number(filterCategory);
+      const matchesWallet = filterWallet === 'ALL' || tx.wallet_id === Number(filterWallet);
+      const matchesType = filterType === 'ALL' || tx.transaction_type === filterType;
+
+      return matchesSearch && matchesCategory && matchesWallet && matchesType;
+    });
     
-    // 2. Group by Month/Year
+    // 3. Group by Month/Year
     const groups: Record<string, { label: string; transactions: Transaction[]; totalExpense: number; totalIncome: number; orderKey: number }> = {};
 
-    allTx.forEach(tx => {
+    filteredTx.forEach(tx => {
       const d = new Date(tx.transaction_date);
       const monthLabel = d.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
-      const orderKey = d.getFullYear() * 100 + d.getMonth(); // e.g. 202511 for Nov 2025
+      const orderKey = d.getFullYear() * 100 + d.getMonth();
 
       if (!groups[monthLabel]) {
         groups[monthLabel] = { 
@@ -99,7 +132,7 @@ export const TransactionsPage = () => {
       }
     });
 
-    // 3. Convert to array and sort ASCENDING
+    // 4. Convert to array and sort ASCENDING
     const sortedGroups = Object.values(groups)
       .sort((a, b) => a.orderKey - b.orderKey)
       .map(group => ({
@@ -109,7 +142,7 @@ export const TransactionsPage = () => {
         )
       }));
 
-    // 4. Split into Past, Current, Future
+    // 5. Split into Past, Current, Future
     const currentOrderKey = today.getFullYear() * 100 + today.getMonth();
     
     return {
@@ -117,7 +150,7 @@ export const TransactionsPage = () => {
       current: sortedGroups.find(g => g.orderKey === currentOrderKey) || null,
       future: sortedGroups.filter(g => g.orderKey > currentOrderKey)
     };
-  }, [transactions, subscriptions]);
+  }, [transactions, subscriptions, searchTerm, filterCategory, filterWallet, filterType]);
 
   // Expand current month by default ONLY ONCE on load
   useEffect(() => {
@@ -180,10 +213,69 @@ export const TransactionsPage = () => {
     );
   };
 
+  const isFiltered = searchTerm !== '' || filterCategory !== 'ALL' || filterWallet !== 'ALL' || filterType !== 'ALL';
+
   return (
-    <div className="p-8 space-y-12">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Histórico de Transações</h1>
+    <div className="p-8 space-y-8">
+      <div className="flex flex-col gap-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold text-gray-900">Histórico de Transações</h1>
+          {isFiltered && (
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+              <X size={16} className="mr-2" /> Limpar Filtros
+            </Button>
+          )}
+        </div>
+
+        {/* Filters Bar */}
+        <div className="grid gap-4 md:grid-cols-4 bg-white p-4 rounded-xl border shadow-sm">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Buscar por nome..." 
+              className="pl-9"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <Select value={filterCategory} onValueChange={setFilterCategory}>
+            <SelectTrigger>
+              <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
+              <SelectValue placeholder="Categoria" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Todas as Categorias</SelectItem>
+              {categories.map(cat => (
+                <SelectItem key={cat.id} value={String(cat.id)}>{cat.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={filterWallet} onValueChange={setFilterWallet}>
+            <SelectTrigger>
+              <Wallet className="h-4 w-4 mr-2 text-muted-foreground" />
+              <SelectValue placeholder="Carteira" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Todas as Carteiras</SelectItem>
+              {wallets.map(w => (
+                <SelectItem key={w.id} value={String(w.id)}>{w.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={filterType} onValueChange={setFilterType}>
+            <SelectTrigger>
+              <SelectValue placeholder="Tipo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Todos os Tipos</SelectItem>
+              <SelectItem value="INCOME">Apenas Receitas</SelectItem>
+              <SelectItem value="EXPENSE">Apenas Despesas</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {loading ? (
@@ -191,19 +283,22 @@ export const TransactionsPage = () => {
       ) : (
         <div className="space-y-12">
           {/* 1. CURRENT SECTION (TOP) */}
-          {groupedData.current && (
+          {(groupedData.current || isFiltered) && (
             <div className="space-y-4">
               <h2 className="text-lg font-bold text-blue-600 uppercase tracking-wider flex items-center gap-2">
                 <div className="h-px flex-1 bg-blue-100"></div>
-                Atual
+                {isFiltered ? 'Resultados Encontrados' : 'Atual'}
                 <div className="h-px flex-1 bg-blue-100"></div>
               </h2>
-              {renderGroup(groupedData.current)}
+              {groupedData.current && renderGroup(groupedData.current)}
+              {isFiltered && groupedData.past.length === 0 && !groupedData.current && groupedData.future.length === 0 && (
+                <div className="text-center py-10 text-muted-foreground">Nenhuma transação corresponde aos filtros.</div>
+              )}
             </div>
           )}
 
           {/* 2. FUTURE SECTION (MIDDLE) */}
-          {groupedData.future.length > 0 && (
+          {!isFiltered && groupedData.future.length > 0 && (
             <div className="space-y-4">
               <h2 className="text-lg font-bold text-purple-600 uppercase tracking-wider flex items-center gap-2">
                 <div className="h-px flex-1 bg-purple-100"></div>
@@ -217,7 +312,7 @@ export const TransactionsPage = () => {
           )}
 
           {/* 3. PAST SECTION (BOTTOM) */}
-          {groupedData.past.length > 0 && (
+          {!isFiltered && groupedData.past.length > 0 && (
             <div className="space-y-4">
               <h2 className="text-lg font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
                 <div className="h-px flex-1 bg-gray-200"></div>
@@ -230,7 +325,14 @@ export const TransactionsPage = () => {
             </div>
           )}
 
-          {groupedData.past.length === 0 && !groupedData.current && groupedData.future.length === 0 && (
+          {isFiltered && (groupedData.past.length > 0 || groupedData.future.length > 0) && (
+            <div className="space-y-4">
+               {groupedData.future.map(renderGroup)}
+               {groupedData.past.map(renderGroup)}
+            </div>
+          )}
+
+          {groupedData.past.length === 0 && !groupedData.current && groupedData.future.length === 0 && !isFiltered && (
             <div className="text-center py-20 border-2 border-dashed rounded-xl text-muted-foreground">
               Nenhuma transação encontrada.
             </div>
