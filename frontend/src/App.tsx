@@ -5,12 +5,13 @@ import { LoginPage } from './features/auth/pages/LoginPage';
 import { RegisterPage } from './features/auth/pages/RegisterPage';
 import { ForgotPasswordPage } from './features/auth/pages/ForgotPasswordPage';
 import { ResetPasswordPage } from './features/auth/pages/ResetPasswordPage';
+import { DashboardPage } from './features/dashboard/pages/DashboardPage';
 import { WalletsPage } from './features/wallets/pages/WalletsPage';
 import { TransactionsPage } from './features/transactions/pages/TransactionsPage';
 import { SubscriptionsPage } from './features/subscriptions/pages/SubscriptionsPage';
 import { CategoriesPage } from './features/categories/pages/CategoriesPage';
 import { SettingsPage } from './features/settings/pages/SettingsPage';
-import { ChevronDown, LogOut, Settings } from 'lucide-react';
+import { ChevronDown, LogOut, Settings, LayoutDashboard } from 'lucide-react';
 
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const { isAuthenticated } = useAuth();
@@ -34,12 +35,16 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm">
+      <nav className="bg-white shadow-sm sticky top-0 z-40">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-8">
-            <Link to="/" className="text-xl font-bold text-blue-600">FinanceApp</Link>
+            <Link to="/" className="flex items-center gap-2 text-xl font-bold text-blue-600">
+              <LayoutDashboard size={24} />
+              <span>FinanceApp</span>
+            </Link>
             <div className="hidden md:flex gap-4">
-              <Link to="/" className="text-gray-600 hover:text-gray-900">Carteiras</Link>
+              <Link to="/" className="text-gray-600 hover:text-gray-900">Dashboard</Link>
+              <Link to="/wallets" className="text-gray-600 hover:text-gray-900">Carteiras</Link>
               <Link to="/transactions" className="text-gray-600 hover:text-gray-900">Transações</Link>
               <Link to="/subscriptions" className="text-gray-600 hover:text-gray-900">Recorrências</Link>
               <Link to="/categories" className="text-gray-600 hover:text-gray-900">Categorias</Link>
@@ -51,7 +56,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none"
             >
-              <span>{user?.username}</span>
+              <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
+                {user?.username?.charAt(0).toUpperCase()}
+              </div>
+              <span className="hidden sm:inline">{user?.username}</span>
               <ChevronDown size={16} />
             </button>
 
@@ -97,6 +105,16 @@ function App() {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route
             path="/"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <DashboardPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/wallets"
             element={
               <ProtectedRoute>
                 <Layout>
