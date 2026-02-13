@@ -98,25 +98,32 @@ export const TransactionsPage = () => {
       }
     });
 
-    // 3. Sort groups (latest first) and transactions within groups
-    return Object.values(groups)
-      .sort((a, b) => b.orderKey - a.orderKey)
+    // 3. Convert to array and sort ASCENDING
+    const sortedGroups = Object.values(groups)
+      .sort((a, b) => a.orderKey - b.orderKey)
       .map(group => ({
         ...group,
         transactions: group.transactions.sort((a, b) => 
-          new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime()
+          new Date(a.transaction_date).getTime() - new Date(b.transaction_date).getTime()
         )
       }));
+
+    // 4. Split into Past, Current, Future
+    const currentOrderKey = today.getFullYear() * 100 + today.getMonth();
+    
+    return {
+      past: sortedGroups.filter(g => g.orderKey < currentOrderKey),
+      current: sortedGroups.find(g => g.orderKey === currentOrderKey) || null,
+      future: sortedGroups.filter(g => g.orderKey > currentOrderKey)
+    };
   }, [transactions, subscriptions]);
 
   // Expand current month by default
   useEffect(() => {
-    if (groupedData.length > 0 && expandedMonths.length === 0) {
-      const currentMonth = new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
-      const currentLabel = currentMonth.charAt(0).toUpperCase() + currentMonth.slice(1);
-      setExpandedMonths([currentLabel]);
+    if (groupedData.current && expandedMonths.length === 0) {
+      setExpandedMonths([groupedData.current.label]);
     }
-  }, [groupedData, expandedMonths.length]);
+  }, [groupedData.current, expandedMonths.length]);
 
   const toggleMonth = (label: string) => {
     setExpandedMonths(prev => 
@@ -127,8 +134,52 @@ export const TransactionsPage = () => {
   const formatCurrency = (val: number) => 
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
+  const renderGroup = (group: any) => {
+    const isExpanded = expandedMonths.includes(group.label);
+    const isFuture = group.orderKey > (new Date().getFullYear() * 100 + new Date().getMonth());
+
+    return (
+      <div key={group.label} className="border rounded-xl bg-white overflow-hidden shadow-sm transition-all hover:shadow-md">
+        <button 
+          onClick={() => toggleMonth(group.label)}
+          className="w-full flex items-center justify-between p-4 bg-gray-50/50 hover:bg-gray-50 transition-colors border-b"
+        >
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-lg ${isFuture ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}`}>
+              <Calendar size={18} />
+            </div>
+            <div className="text-left">
+              <h3 className="font-bold text-gray-900 capitalize">{group.label}</h3>
+              {isFuture && <span className="text-[10px] bg-blue-500 text-white px-1.5 py-0.5 rounded uppercase font-bold ml-2">Projeção</span>}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-6">
+            <div className="hidden md:flex gap-4 text-sm">
+              <div className="text-right">
+                <p className="text-[10px] text-muted-foreground uppercase">Receitas</p>
+                <p className="font-bold text-green-600">{formatCurrency(group.totalIncome)}</p>
+              </div>
+              <div className="text-right border-l pl-4">
+                <p className="text-[10px] text-muted-foreground uppercase">Gastos</p>
+                <p className="font-bold text-red-600">{formatCurrency(group.totalExpense)}</p>
+              </div>
+            </div>
+            {isExpanded ? <ChevronDown className="text-gray-400" /> : <ChevronRight className="text-gray-400" />}
+          </div>
+        </button>
+
+        {isExpanded && (
+          <div className="p-2 animate-in fade-in slide-in-from-top-1 duration-200">
+            <TransactionList transactions={group.transactions} onTransactionUpdated={fetchData} />
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-8 space-y-12">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-gray-900">Histórico de Transações</h1>
       </div>
@@ -136,54 +187,50 @@ export const TransactionsPage = () => {
       {loading ? (
         <div className="text-center py-10 text-muted-foreground">Carregando transações...</div>
       ) : (
-        <div className="space-y-4">
-          {groupedData.map((group) => {
-            const isExpanded = expandedMonths.includes(group.label);
-            const isFuture = group.orderKey > (new Date().getFullYear() * 100 + new Date().getMonth());
-
-            return (
-              <div key={group.label} className="border rounded-xl bg-white overflow-hidden shadow-sm transition-all hover:shadow-md">
-                <button 
-                  onClick={() => toggleMonth(group.label)}
-                  className="w-full flex items-center justify-between p-4 bg-gray-50/50 hover:bg-gray-50 transition-colors border-b"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${isFuture ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}`}>
-                      <Calendar size={18} />
-                    </div>
-                    <div className="text-left">
-                      <h3 className="font-bold text-gray-900 capitalize">{group.label}</h3>
-                      {isFuture && <span className="text-[10px] bg-blue-500 text-white px-1.5 py-0.5 rounded uppercase font-bold">Projeção</span>}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-6">
-                    <div className="hidden md:flex gap-4 text-sm">
-                      <div className="text-right">
-                        <p className="text-[10px] text-muted-foreground uppercase">Receitas</p>
-                        <p className="font-bold text-green-600">{formatCurrency(group.totalIncome)}</p>
-                      </div>
-                      <div className="text-right border-l pl-4">
-                        <p className="text-[10px] text-muted-foreground uppercase">Gastos</p>
-                        <p className="font-bold text-red-600">{formatCurrency(group.totalExpense)}</p>
-                      </div>
-                    </div>
-                    {isExpanded ? <ChevronDown className="text-gray-400" /> : <ChevronRight className="text-gray-400" />}
-                  </div>
-                </button>
-
-                {isExpanded && (
-                  <div className="p-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                    <TransactionList transactions={group.transactions} onTransactionUpdated={fetchData} />
-                  </div>
-                )}
+        <div className="space-y-12">
+          {/* 1. PAST SECTION */}
+          {groupedData.past.length > 0 && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                <div className="h-px flex-1 bg-gray-200"></div>
+                Passadas
+                <div className="h-px flex-1 bg-gray-200"></div>
+              </h2>
+              <div className="space-y-4">
+                {groupedData.past.map(renderGroup)}
               </div>
-            );
-          })}
+            </div>
+          )}
 
-          {groupedData.length === 0 && (
+          {/* 2. CURRENT SECTION */}
+          {groupedData.current && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-bold text-blue-600 uppercase tracking-wider flex items-center gap-2">
+                <div className="h-px flex-1 bg-blue-100"></div>
+                Atual
+                <div className="h-px flex-1 bg-blue-100"></div>
+              </h2>
+              {renderGroup(groupedData.current)}
+            </div>
+          )}
+
+          {/* 3. FUTURE SECTION */}
+          {groupedData.future.length > 0 && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-bold text-purple-600 uppercase tracking-wider flex items-center gap-2">
+                <div className="h-px flex-1 bg-purple-100"></div>
+                Futuras
+                <div className="h-px flex-1 bg-purple-100"></div>
+              </h2>
+              <div className="space-y-4">
+                {groupedData.future.map(renderGroup)}
+              </div>
+            </div>
+          )}
+
+          {groupedData.past.length === 0 && !groupedData.current && groupedData.future.length === 0 && (
             <div className="text-center py-20 border-2 border-dashed rounded-xl text-muted-foreground">
-              Nenhuma transação encontrada para este período.
+              Nenhuma transação encontrada.
             </div>
           )}
         </div>
