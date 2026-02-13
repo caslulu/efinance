@@ -11,7 +11,6 @@ export class DashboardService {
 
   async getOverview(userId: number) {
     const today = new Date();
-    // ... rest of the setup
     today.setHours(0, 0, 0, 0);
 
     const oneMonthAgo = new Date();
@@ -73,7 +72,7 @@ export class DashboardService {
       flowMap.set(monthLabel, { 
         name: monthLabel, 
         value: 0, 
-        isProjected: i > 0 || (i === 0 && d > today) // Simplistic projection check
+        isProjected: i > 0 || (i === 0 && d > today)
       });
     }
 
@@ -107,7 +106,21 @@ export class DashboardService {
       take: 5,
     });
 
-    // 4. Recurring Payments KPI
+    // 4. Recent Transactions
+    const recentTransactions = await this.prisma.transaction.findMany({
+      where: {
+        wallet: { user_id: userId },
+        transaction_date: { lte: new Date() }
+      },
+      include: { 
+        TransactionCategory: true,
+        wallet: true
+      },
+      orderBy: { transaction_date: 'desc' },
+      take: 5,
+    });
+
+    // 5. Recurring Payments KPI
     const activeSubscriptions = await this.prisma.subscription.aggregate({
       where: {
         user_id: userId,
@@ -116,11 +129,15 @@ export class DashboardService {
       _sum: { value: true },
     });
 
-    // 5. Totals & Savings Rate
-    const [totalWallets, totalExpensesMonth, totalIncomesMonth] = await Promise.all([
+    // 6. Totals, Savings Rate & Net Worth
+    const [totalWallets, totalInvestments, totalExpensesMonth, totalIncomesMonth] = await Promise.all([
       this.prisma.wallet.aggregate({
         where: { user_id: userId },
         _sum: { actual_cash: true },
+      }),
+      this.prisma.investment.aggregate({
+        where: { wallet: { user_id: userId } },
+        _sum: { current_amount: true },
       }),
       this.prisma.transaction.aggregate({
         where: {
@@ -145,11 +162,16 @@ export class DashboardService {
     const income = Number(totalIncomesMonth._sum.value || 0);
     const expense = Number(totalExpensesMonth._sum.value || 0);
     const savingsRate = income > 0 ? ((income - expense) / income) * 100 : 0;
+    
+    const cash = Number(totalWallets._sum.actual_cash || 0);
+    const invested = Number(totalInvestments._sum.current_amount || 0);
 
     const budgetSummary = await this.budgetsService.getBudgetStatus(userId);
 
     return {
-      totalBalance: Number(totalWallets._sum.actual_cash || 0),
+      totalBalance: cash,
+      totalInvested: invested,
+      netWorth: cash + invested,
       monthlyExpenses: expense,
       monthlyIncomes: income,
       savingsRate: Number(savingsRate.toFixed(1)),
@@ -157,6 +179,7 @@ export class DashboardService {
       expensesByCategory,
       monthFlow,
       upcomingTransactions,
+      recentTransactions,
       budgetSummary
     };
   }

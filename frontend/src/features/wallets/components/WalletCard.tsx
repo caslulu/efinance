@@ -3,7 +3,7 @@ import type { Wallet } from '../../../types/Wallet';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Plus, Minus, Pencil } from 'lucide-react';
+import { Plus, Minus, Pencil, CreditCard, ReceiptText } from 'lucide-react';
 
 interface WalletCardProps {
   wallet: Wallet;
@@ -28,7 +28,8 @@ export const WalletCard = ({ wallet, onAddFunds, onAddExpense, onEdit, onPayInvo
   return (
     <Card className="hover:shadow-md transition-shadow relative group">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
+        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+          {wallet.closing_day && <CreditCard className="h-4 w-4 text-blue-500" />}
           {wallet.name}
         </CardTitle>
         <div className="flex items-center gap-2">
@@ -47,57 +48,45 @@ export const WalletCard = ({ wallet, onAddFunds, onAddExpense, onEdit, onPayInvo
       </CardHeader>
       <CardContent>
         {wallet.closing_day ? (
-          <div className="space-y-3">
-            <div>
-              <p className="text-xs text-muted-foreground">Saldo Disponível</p>
-              <div className="text-lg font-bold text-green-600">
-                {formatCurrency(Number(wallet.actual_cash))}
+          <div className="space-y-4">
+            <div className="flex justify-between items-end">
+              <div>
+                <p className="text-[10px] uppercase font-bold text-muted-foreground">Saldo Disponível</p>
+                <div className="text-xl font-bold text-green-600">
+                  {formatCurrency(Number(wallet.actual_cash))}
+                </div>
               </div>
+              {onPayInvoice && (Number(wallet.due_invoice) > 0 || Number(wallet.current_invoice) > 0) && (
+                <Button 
+                  size="sm" 
+                  className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm flex items-center gap-2 h-8 px-3" 
+                  onClick={onPayInvoice}
+                >
+                  <ReceiptText className="h-4 w-4" />
+                  Pagar Fatura
+                </Button>
+              )}
             </div>
             
-            <div className="grid grid-cols-2 gap-2">
-              {Number(wallet.due_invoice) > 0 ? (
-                <>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Fatura Fechada</p>
-                    <div className="flex items-center gap-2">
-                      <div className="text-sm font-bold text-red-600">
-                        {formatCurrency(Number(wallet.due_invoice))}
-                      </div>
-                      {onPayInvoice && (
-                        <Button variant="outline" size="sm" className="h-6 px-2 text-xs" onClick={onPayInvoice}>
-                          Pagar
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Fatura Aberta</p>
-                    <div className="text-sm font-bold text-blue-600">
-                      {formatCurrency(Number(wallet.current_invoice))}
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div>
-                  <p className="text-xs text-muted-foreground">Fatura Atual</p>
-                  <div className="flex items-center gap-2">
-                    <div className="text-sm font-bold text-red-600">
-                      {formatCurrency(Number(wallet.current_invoice || 0))}
-                    </div>
-                    {onPayInvoice && Number(wallet.current_invoice) > 0 && (
-                        <Button variant="outline" size="sm" className="h-6 px-2 text-xs" onClick={onPayInvoice}>
-                          Pagar
-                        </Button>
-                    )}
-                  </div>
-                </div>
-              )}
-              
-              <div>
-                <p className="text-xs text-muted-foreground">Fatura Total</p>
-                <div className="text-sm font-bold text-red-700">
-                  {formatCurrency(Number(wallet.total_invoice || 0))}
+            <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-gray-50 border border-gray-100">
+              <div className="space-y-1">
+                <p className="text-[9px] uppercase font-bold text-muted-foreground">Fatura Fechada</p>
+                <p className={clsx("text-sm font-bold", Number(wallet.due_invoice) > 0 ? "text-red-600" : "text-gray-400")}>
+                  {formatCurrency(Number(wallet.due_invoice))}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[9px] uppercase font-bold text-muted-foreground">Fatura Aberta</p>
+                <p className="text-sm font-bold text-blue-600">
+                  {formatCurrency(Number(wallet.current_invoice))}
+                </p>
+              </div>
+              <div className="col-span-2 pt-2 border-t border-gray-200 mt-1">
+                <div className="flex justify-between items-center">
+                  <p className="text-[9px] uppercase font-bold text-muted-foreground">Total Comprometido</p>
+                  <p className="text-sm font-black text-red-700">
+                    {formatCurrency(Number(wallet.total_invoice || 0))}
+                  </p>
                 </div>
               </div>
             </div>

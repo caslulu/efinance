@@ -25,7 +25,10 @@ import {
   CalendarDays,
   Bell,
   Search,
-  Target
+  Target,
+  History,
+  Coins,
+  Wallet as WalletIcon
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -84,7 +87,6 @@ export const DashboardPage = () => {
   };
 
   const onPieClick = (eventData: any) => {
-    // Recharts passes the clicked object in eventData.payload
     const categoryName = eventData.payload?.name || eventData.name;
     if (!categoryName) return;
 
@@ -123,20 +125,23 @@ export const DashboardPage = () => {
         </div>
       </div>
 
-      {/* KPI Cards */}
+      {/* KPI Cards Row 1 */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="border-l-4 border-l-blue-500 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium">Saldo Total</CardTitle>
-            <Wallet className="h-4 w-4 text-blue-500" />
+            <CardTitle className="text-sm font-medium">Patrimônio Total</CardTitle>
+            <Coins className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{formatCurrency(data.totalBalance)}</div>
-            <p className="text-xs text-muted-foreground">Soma de todas as carteiras</p>
+            <div className="text-2xl font-bold text-gray-900">{formatCurrency(data.netWorth)}</div>
+            <div className="text-[10px] text-muted-foreground flex gap-2 mt-1">
+              <span className="bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">Saldo: {formatCurrency(data.totalBalance)}</span>
+              {data.totalInvested > 0 && <span className="bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded">Inv: {formatCurrency(data.totalInvested)}</span>}
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-green-500 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-sm font-medium">Receitas (30d)</CardTitle>
             <ArrowUpCircle className="h-4 w-4 text-green-500" />
@@ -147,18 +152,18 @@ export const DashboardPage = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-purple-500 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-sm font-medium">Assinaturas</CardTitle>
             <Repeat className="h-4 w-4 text-purple-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">{formatCurrency(data.recurringMonthly)}</div>
-            <p className="text-xs text-muted-foreground">Custo fixo mensal recorrente</p>
+            <p className="text-xs text-muted-foreground">Custo mensal fixo</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-orange-500 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-sm font-medium">Taxa de Poupança</CardTitle>
             <PiggyBank className="h-4 w-4 text-orange-500" />
@@ -167,7 +172,7 @@ export const DashboardPage = () => {
             <div className={`text-2xl font-bold ${data.savingsRate > 0 ? 'text-green-600' : 'text-red-600'}`}>
               {data.savingsRate}%
             </div>
-            <p className="text-xs text-muted-foreground">Do que entra vs o que sai</p>
+            <p className="text-xs text-muted-foreground">Economia real do mês</p>
           </CardContent>
         </Card>
       </div>
@@ -252,7 +257,7 @@ export const DashboardPage = () => {
                   <TrendingUp className="h-4 w-4 text-blue-500" />
                   Gastos por Categoria (30d)
                 </CardTitle>
-                <p className="text-[11px] text-muted-foreground italic">Dica: clique em qualquer categoria para ver detalhes</p>
+                <p className="text-[11px] text-muted-foreground italic">Dica: clique para ver detalhes</p>
               </CardHeader>
               <CardContent className="h-[300px]">
                 {data.expensesByCategory.length > 0 ? (
@@ -312,8 +317,8 @@ export const DashboardPage = () => {
         </div>
 
         {/* Sidebar */}
-        <div className="lg:col-span-1">
-          <Card className="h-full">
+        <div className="lg:col-span-1 space-y-8">
+          <Card className="border-t-4 border-t-orange-500">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base font-semibold">
                 <Bell size={18} className="text-orange-500" />
@@ -329,7 +334,7 @@ export const DashboardPage = () => {
                         <p className="text-xs font-bold text-gray-900 line-clamp-1">{tx.description || tx.TransactionCategory?.name || 'Sem nome'}</p>
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                            <Wallet size={10} /> {tx.wallet?.name}
+                            <WalletIcon size={10} /> {tx.wallet?.name}
                           </span>
                           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 font-medium">{formatDate(tx.transaction_date)}</span>
                         </div>
@@ -342,9 +347,41 @@ export const DashboardPage = () => {
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-8 text-muted-foreground text-sm">Nenhuma conta em breve.</div>
+                  <div className="text-center py-4 text-muted-foreground text-xs italic">Nenhuma conta em breve.</div>
                 )}
-                <Button variant="ghost" className="w-full text-xs text-blue-600" onClick={() => window.location.href = '/transactions'}>Ver todas</Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-t-4 border-t-blue-500">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                <History size={18} className="text-blue-500" />
+                Atividade Recente
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {data.recentTransactions && data.recentTransactions.length > 0 ? (
+                  data.recentTransactions.map((tx: any) => (
+                    <div key={tx.id} className="flex items-center justify-between p-3 rounded-lg border bg-white shadow-sm hover:shadow-md transition-all">
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold text-gray-900 line-clamp-1">{tx.description || tx.TransactionCategory?.name || 'Sem nome'}</p>
+                        <p className="text-[9px] text-muted-foreground uppercase">{formatDate(tx.transaction_date)} • {tx.wallet?.name}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-xs font-bold ${tx.transaction_type === 'EXPENSE' ? 'text-red-600' : 'text-green-600'}`}>
+                          {tx.transaction_type === 'EXPENSE' ? '-' : '+'} {formatCurrency(Number(tx.value))}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-4 text-muted-foreground text-xs italic">Nenhuma atividade recente.</div>
+                )}
+                <Button variant="ghost" className="w-full text-xs text-blue-600" onClick={() => window.location.href = '/transactions'}>
+                  Ver histórico completo
+                </Button>
               </div>
             </CardContent>
           </Card>
