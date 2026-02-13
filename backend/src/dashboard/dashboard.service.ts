@@ -80,7 +80,54 @@ export class DashboardService {
 
     const monthFlow = Array.from(flowMap.values());
 
-    // 3. Recurring Payments KPI
+    // 3. Upcoming Transactions (Next 7 days)
+    const sevenDaysFromNow = new Date();
+    sevenDaysFromNow.setDate(today.getDate() + 7);
+
+    const upcomingTransactions = await this.prisma.transaction.findMany({
+      where: {
+        wallet: { user_id: userId },
+        transaction_date: {
+          gte: today,
+          lte: sevenDaysFromNow,
+        },
+      },
+      include: { 
+        TransactionCategory: true,
+        wallet: true
+      },
+      orderBy: { transaction_date: 'asc' },
+      take: 5,
+    });
+
+    // 4. Drill-down for 'Outro' Category (Specific transactions in last 30d)
+    const outroCategory = await this.prisma.transactionCategory.findFirst({
+      where: { user_id: userId, name: 'Outro' }
+    });
+
+    let outroTransactions = [];
+    if (outroCategory) {
+      outroTransactions = await this.prisma.transaction.findMany({
+        where: {
+          wallet: { user_id: userId },
+          category_id: outroCategory.id,
+          transaction_type: 'EXPENSE',
+          transaction_date: { gte: oneMonthAgo, lte: new Date() }
+        },
+        select: {
+          id: true,
+          transaction_date: true,
+          value: true,
+          installment_number: true,
+          installment_total: true,
+          wallet: { select: { name: true } }
+        },
+        orderBy: { value: 'desc' },
+        take: 10
+      });
+    }
+
+    // 5. Recurring Payments KPI
     const activeSubscriptions = await this.prisma.subscription.aggregate({
       where: {
         user_id: userId,
@@ -125,6 +172,8 @@ export class DashboardService {
       recurringMonthly: Number(activeSubscriptions._sum.value || 0),
       expensesByCategory,
       monthFlow,
+      upcomingTransactions,
+      outroTransactions
     };
   }
 }
