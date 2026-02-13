@@ -7,11 +7,18 @@ export class DashboardService {
 
   async getOverview(userId: number) {
     const today = new Date();
-    const lastMonth = new Date();
-    lastMonth.setMonth(today.getMonth() - 1);
+    today.setHours(0, 0, 0, 0);
 
-    const nextYear = new Date();
-    nextYear.setFullYear(today.getFullYear() + 1);
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(today.getMonth() - 1);
+
+    const twelveMonthsAgo = new Date();
+    twelveMonthsAgo.setMonth(today.getMonth() - 12);
+    twelveMonthsAgo.setDate(1);
+    twelveMonthsAgo.setHours(0, 0, 0, 0);
+
+    const oneYearFuture = new Date();
+    oneYearFuture.setFullYear(today.getFullYear() + 1);
 
     // 1. Last Month Expenses by Category
     const lastMonthTransactions = await this.prisma.transaction.findMany({
@@ -19,8 +26,8 @@ export class DashboardService {
         wallet: { user_id: userId },
         transaction_type: 'EXPENSE',
         transaction_date: {
-          gte: lastMonth,
-          lte: today,
+          gte: oneMonthAgo,
+          lte: new Date(),
         },
       },
       include: { TransactionCategory: true },
@@ -38,40 +45,51 @@ export class DashboardService {
       value: Number(value.toFixed(2)),
     }));
 
-    // 2. Future Expenses (Next 12 Months)
-    const futureTransactions = await this.prisma.transaction.findMany({
+    // 2. 24-Month Invoice/Expense Flow (Past 12 + Future 12)
+    const allTransactions24m = await this.prisma.transaction.findMany({
       where: {
         wallet: { user_id: userId },
         transaction_type: 'EXPENSE',
         transaction_date: {
-          gt: today,
-          lte: nextYear,
+          gte: twelveMonthsAgo,
+          lte: oneYearFuture,
         },
       },
     });
 
-    const futureMap = new Map<string, number>();
-    // Initialize next 12 months
-    for (let i = 1; i <= 12; i++) {
-      const d = new Date();
-      d.setMonth(today.getMonth() + i);
+    const flowMap = new Map<string, { name: string; value: number; isProjected: boolean }>();
+    
+    // Initialize 24 months
+    for (let i = -11; i <= 12; i++) {
+      const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
       const monthLabel = d.toLocaleString('pt-BR', { month: 'short', year: '2-digit' });
-      futureMap.set(monthLabel, 0);
+      flowMap.set(monthLabel, { 
+        name: monthLabel, 
+        value: 0, 
+        isProjected: i > 0 || (i === 0 && d > today) // Simplistic projection check
+      });
     }
 
-    futureTransactions.forEach((t) => {
+    allTransactions24m.forEach((t) => {
       const monthLabel = t.transaction_date.toLocaleString('pt-BR', { month: 'short', year: '2-digit' });
-      if (futureMap.has(monthLabel)) {
-        futureMap.set(monthLabel, (futureMap.get(monthLabel) || 0) + Number(t.value));
+      const current = flowMap.get(monthLabel);
+      if (current) {
+        current.value += Number(t.value);
       }
     });
 
-    const futureExpenses = Array.from(futureMap.entries()).map(([name, value]) => ({
-      name,
-      value: Number(value.toFixed(2)),
-    }));
+    const monthFlow = Array.from(flowMap.values());
 
-    // 3. Totals
+    // 3. Recurring Payments KPI
+    const activeSubscriptions = await this.prisma.subscription.aggregate({
+      where: {
+        user_id: userId,
+        status: 'ACTIVE',
+      },
+      _sum: { value: true },
+    });
+
+    // 4. Totals & Savings Rate
     const [totalWallets, totalExpensesMonth, totalIncomesMonth] = await Promise.all([
       this.prisma.wallet.aggregate({
         where: { user_id: userId },
@@ -81,7 +99,7 @@ export class DashboardService {
         where: {
           wallet: { user_id: userId },
           transaction_type: 'EXPENSE',
-          transaction_date: { gte: lastMonth, lte: today },
+          transaction_date: { gte: oneMonthAgo, lte: new Date() },
         },
         _sum: { value: true },
       }),
@@ -89,18 +107,24 @@ export class DashboardService {
         where: {
           wallet: { user_id: userId },
           transaction_type: 'INCOME',
-          transaction_date: { gte: lastMonth, lte: today },
+          transaction_date: { gte: oneMonthAgo, lte: new Date() },
         },
         _sum: { value: true },
       }),
     ]);
 
+    const income = Number(totalIncomesMonth._sum.value || 0);
+    const expense = Number(totalExpensesMonth._sum.value || 0);
+    const savingsRate = income > 0 ? ((income - expense) / income) * 100 : 0;
+
     return {
       totalBalance: Number(totalWallets._sum.actual_cash || 0),
-      monthlyExpenses: Number(totalExpensesMonth._sum.value || 0),
-      monthlyIncomes: Number(totalIncomesMonth._sum.value || 0),
+      monthlyExpenses: expense,
+      monthlyIncomes: income,
+      savingsRate: Number(savingsRate.toFixed(1)),
+      recurringMonthly: Number(activeSubscriptions._sum.value || 0),
       expensesByCategory,
-      futureExpenses,
+      monthFlow,
     };
   }
 }
