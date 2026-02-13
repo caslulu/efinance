@@ -11,7 +11,7 @@ export class DashboardService {
     lastMonth.setMonth(today.getMonth() - 1);
 
     const nextYear = new Date();
-    nextYear.setYear(today.getFullYear() + 1);
+    nextYear.setFullYear(today.getFullYear() + 1);
 
     // 1. Last Month Expenses by Category
     const lastMonthTransactions = await this.prisma.transaction.findMany({
