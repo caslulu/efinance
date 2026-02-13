@@ -3,7 +3,6 @@ import { api } from '../../../api/api';
 import type { Transaction } from '../../../types/Transaction';
 import type { Subscription } from '../../../types/Subscription';
 import { TransactionList } from '../components/TransactionList';
-import { ChevronDown, ChevronRight, Calendar } from 'lucide-center'; // wait, it's lucide-react in previous files
 import { ChevronDown, ChevronRight, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
