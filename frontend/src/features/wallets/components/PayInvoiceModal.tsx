@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Wallet } from '../../../types/Wallet';
 
 interface PayInvoiceModalProps {
@@ -15,12 +16,25 @@ interface PayInvoiceModalProps {
 
 export const PayInvoiceModal = ({ isOpen, wallet, onClose, onSuccess }: PayInvoiceModalProps) => {
   const [amount, setAmount] = useState('');
+  const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [sourceWalletId, setSourceWalletId] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (isOpen) {
+      api.get('/wallets').then(res => {
+        setWallets(res.data);
+        // Default to first bank account or first wallet that is not the current one
+        const defaultSource = res.data.find((w: Wallet) => w.id !== wallet?.id && w.type === 'BANK') 
+          || res.data.find((w: Wallet) => w.id !== wallet?.id);
+        if (defaultSource) setSourceWalletId(String(defaultSource.id));
+      });
+    }
+  }, [isOpen, wallet]);
+
+  useEffect(() => {
     if (wallet && isOpen) {
-      // Default to paying the Closed Invoice if available, else Current Invoice
       const due = Number(wallet.due_invoice || 0);
       const current = Number(wallet.current_invoice || 0);
       setAmount(due > 0 ? String(due) : String(current));
@@ -28,9 +42,11 @@ export const PayInvoiceModal = ({ isOpen, wallet, onClose, onSuccess }: PayInvoi
     }
   }, [wallet, isOpen]);
 
+  const sourceWallet = wallets.find(w => String(w.id) === sourceWalletId);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!wallet || !amount) return;
+    if (!wallet || !amount || !sourceWalletId) return;
 
     const val = Number(amount);
     if (val <= 0) {
@@ -38,8 +54,8 @@ export const PayInvoiceModal = ({ isOpen, wallet, onClose, onSuccess }: PayInvoi
       return;
     }
 
-    if (val > wallet.actual_cash) {
-      setError('Saldo insuficiente na carteira para realizar o pagamento.');
+    if (sourceWallet && val > Number(sourceWallet.actual_cash)) {
+      setError('Saldo insuficiente na carteira de origem.');
       return;
     }
 
@@ -47,20 +63,17 @@ export const PayInvoiceModal = ({ isOpen, wallet, onClose, onSuccess }: PayInvoi
     setError('');
 
     try {
-      // 1. Create Expense (Debit) to reduce Wallet Balance
+      // 1. Create Expense (Debit) in the Source Wallet
       await api.post('/transactions', {
-        wallet_id: wallet.id,
+        wallet_id: Number(sourceWalletId),
         value: val,
         transaction_type: 'EXPENSE',
-        payment_method: 'DEBIT', // Or Transfer/Money
+        payment_method: 'DEBIT',
         transaction_date: new Date().toISOString(),
         is_recurring: false,
-        // Category? Maybe "Pagamento de Fatura" needs a category?
-        // Let's leave undefined (default "Outro") or we should fetch categories.
-        // For simplicity, let it default.
       });
 
-      // 2. Create Income (Credit) to reduce Invoice Debt
+      // 2. Create Income (Credit) in the Target Credit Wallet to reduce its invoice
       await api.post('/transactions', {
         wallet_id: wallet.id,
         value: val,
@@ -87,11 +100,27 @@ export const PayInvoiceModal = ({ isOpen, wallet, onClose, onSuccess }: PayInvoi
         <DialogHeader>
           <DialogTitle>Pagar Fatura: {wallet.name}</DialogTitle>
           <DialogDescription>
-            Isso debitará do saldo da carteira e abaterá da fatura do cartão.
+            Escolha de onde sairá o dinheiro para pagar esta fatura.
           </DialogDescription>
         </DialogHeader>
         {error && <div className="mb-2 rounded bg-red-100 p-2 text-sm text-red-600">{error}</div>}
         <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+          <div className="grid gap-2">
+            <Label htmlFor="sourceWallet">Carteira de Origem (Onde sai o dinheiro)</Label>
+            <Select value={sourceWalletId} onValueChange={setSourceWalletId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione uma carteira" />
+              </SelectTrigger>
+              <SelectContent>
+                {wallets.map(w => (
+                  <SelectItem key={w.id} value={String(w.id)}>
+                    {w.name} (R$ {Number(w.actual_cash).toFixed(2)})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="grid gap-2">
             <Label htmlFor="amount">Valor do Pagamento</Label>
             <Input
@@ -104,13 +133,10 @@ export const PayInvoiceModal = ({ isOpen, wallet, onClose, onSuccess }: PayInvoi
               min="0.01"
             />
           </div>
-          <div className="text-sm text-muted-foreground">
-            Saldo Disponível: R$ {Number(wallet.actual_cash).toFixed(2)}
-          </div>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || !sourceWalletId}>
               {loading ? 'Processando...' : 'Confirmar Pagamento'}
             </Button>
           </DialogFooter>

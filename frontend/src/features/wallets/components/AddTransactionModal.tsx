@@ -19,11 +19,12 @@ interface AddTransactionModalProps {
   type: 'INCOME' | 'EXPENSE' | null;
   walletId: number | null;
   walletType?: string;
+  hasClosingDay?: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export const AddTransactionModal = ({ isOpen, type, walletId, walletType, onClose, onSuccess }: AddTransactionModalProps) => {
+export const AddTransactionModal = ({ isOpen, type, walletId, walletType, hasClosingDay, onClose, onSuccess }: AddTransactionModalProps) => {
   const [amount, setAmount] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -37,12 +38,12 @@ export const AddTransactionModal = ({ isOpen, type, walletId, walletType, onClos
   useEffect(() => {
     if (isOpen) {
       setError('');
-      setPaymentMethod('');
+      setPaymentMethod(hasClosingDay ? 'CREDIT' : '');
       api.get('/categories').then(res => {
         if (Array.isArray(res.data)) setCategories(res.data);
       });
     }
-  }, [isOpen]);
+  }, [isOpen, hasClosingDay]);
 
   const getAvailableMethods = () => {
     if (!walletType) return [];

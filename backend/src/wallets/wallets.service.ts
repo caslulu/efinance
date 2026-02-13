@@ -50,64 +50,57 @@ export class WalletsService {
     const dueDay = wallet.due_day;
 
     // 1. Determine "Open" (Accumulating) Cycle
+    // Best Day to Buy: If today is closingDay, it should already belong to the NEXT cycle.
     let openCloseDate = new Date(today.getFullYear(), today.getMonth(), closingDay);
-    if (currentDay > closingDay) {
+    if (currentDay >= closingDay) {
       openCloseDate = new Date(today.getFullYear(), today.getMonth() + 1, closingDay);
     }
     openCloseDate.setHours(23, 59, 59, 999);
 
     const openStartDate = new Date(openCloseDate);
     openStartDate.setMonth(openStartDate.getMonth() - 1);
-    openStartDate.setDate(openStartDate.getDate() + 1);
+    // openStartDate is the same day as closingDay, but one month before.
+    // e.g. if openCloseDate is March 10, openStartDate is Feb 10.
+    // Transactions from Feb 10 00:00 to March 10 23:59 go to March invoice.
     openStartDate.setHours(0, 0, 0, 0);
 
-    // 2. Determine "Closed" (Due) Cycle (if applicable)
-    let closedInvoiceValue = 0;
-    if (dueDay) {
-      const closedCloseDate = new Date(openCloseDate);
-      closedCloseDate.setMonth(closedCloseDate.getMonth() - 1);
-      closedCloseDate.setHours(23, 59, 59, 999);
+    // 2. Determine "Closed" (Due) Cycle
+    const closedCloseDate = new Date(openStartDate);
+    closedCloseDate.setMilliseconds(-1); // One millisecond before openStartDate
 
-      const closedStartDate = new Date(closedCloseDate);
-      closedStartDate.setMonth(closedStartDate.getMonth() - 1);
-      closedStartDate.setDate(closedStartDate.getDate() + 1);
-      closedStartDate.setHours(0, 0, 0, 0);
+    const closedStartDate = new Date(closedCloseDate);
+    closedStartDate.setMonth(closedStartDate.getMonth() - 1);
+    closedStartDate.setMilliseconds(1);
+    closedStartDate.setHours(0, 0, 0, 0);
 
-      let dueDate = new Date(closedCloseDate);
-      if (dueDay > closingDay) {
-        dueDate.setDate(dueDay);
-      } else {
-        dueDate.setMonth(dueDate.getMonth() + 1);
-        dueDate.setDate(dueDay);
-      }
-      dueDate.setHours(23, 59, 59, 999);
-
-      if (today <= dueDate) {
-        const [exp, inc] = await Promise.all([
-          this.prisma.transaction.aggregate({
-            where: {
-              wallet_id: wallet.id,
-              transaction_type: 'EXPENSE',
-              payment_method: 'CREDIT',
-              transaction_date: { gte: closedStartDate, lte: closedCloseDate },
-            },
-            _sum: { value: true },
-          }),
-          this.prisma.transaction.aggregate({
-            where: {
-              wallet_id: wallet.id,
-              transaction_type: 'INCOME',
-              payment_method: 'CREDIT',
-              transaction_date: { gte: closedStartDate, lte: closedCloseDate },
-            },
-            _sum: { value: true },
-          }),
-        ]);
-        closedInvoiceValue = Number(exp._sum.value || 0) - Number(inc._sum.value || 0);
-      }
-    }
-
-    const [openExp, openInc, totalExp, totalInc] = await Promise.all([
+    // 3. Get totals to calculate due and current invoices correctly
+    const [
+      allPastExpenses,
+      allIncomes,
+      currentExpenses,
+      totalExp,
+      totalInc
+    ] = await Promise.all([
+      // Sum of ALL expenses up to the end of the closed cycle
+      this.prisma.transaction.aggregate({
+        where: {
+          wallet_id: wallet.id,
+          transaction_type: 'EXPENSE',
+          payment_method: 'CREDIT',
+          transaction_date: { lte: closedCloseDate },
+        },
+        _sum: { value: true },
+      }),
+      // Sum of ALL incomes (payments) to this day
+      this.prisma.transaction.aggregate({
+        where: {
+          wallet_id: wallet.id,
+          transaction_type: 'INCOME',
+          payment_method: 'CREDIT',
+        },
+        _sum: { value: true },
+      }),
+      // Sum of expenses in the current open cycle
       this.prisma.transaction.aggregate({
         where: {
           wallet_id: wallet.id,
@@ -117,15 +110,7 @@ export class WalletsService {
         },
         _sum: { value: true },
       }),
-      this.prisma.transaction.aggregate({
-        where: {
-          wallet_id: wallet.id,
-          transaction_type: 'INCOME',
-          payment_method: 'CREDIT',
-          transaction_date: { gte: openStartDate, lte: openCloseDate },
-        },
-        _sum: { value: true },
-      }),
+      // For total balance
       this.prisma.transaction.aggregate({
         where: {
           wallet_id: wallet.id,
@@ -144,10 +129,23 @@ export class WalletsService {
       }),
     ]);
 
+    const pastExp = Number(allPastExpenses._sum.value || 0);
+    const incomes = Number(allIncomes._sum.value || 0);
+    const currExp = Number(currentExpenses._sum.value || 0);
+
+    // due_invoice: What was owed from past cycles minus what was paid in total
+    const dueInvoiceValue = Math.max(0, pastExp - incomes);
+    
+    // remainingIncomes: What's left of payments after covering past cycles
+    const remainingIncomes = Math.max(0, incomes - pastExp);
+
+    // current_invoice: Current cycle expenses minus remaining payments
+    const currentInvoiceValue = Math.max(0, currExp - remainingIncomes);
+
     return {
       ...wallet,
-      current_invoice: Number(openExp._sum.value || 0) - Number(openInc._sum.value || 0),
-      due_invoice: closedInvoiceValue,
+      current_invoice: currentInvoiceValue,
+      due_invoice: dueInvoiceValue,
       total_invoice: Number(totalExp._sum.value || 0) - Number(totalInc._sum.value || 0),
     };
   }

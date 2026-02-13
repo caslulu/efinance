@@ -25,15 +25,17 @@ export class TransactionsService {
       updateTransactionDto.wallet_id !== undefined ||
       updateTransactionDto.payment_method !== undefined
     ) {
+      const multiplier = oldTransaction.installment_id ? (oldTransaction.installment_total || 12) : 1;
+
       // Revert old transaction impact
       if (oldTransaction.transaction_type === 'EXPENSE') {
         if (oldTransaction.payment_method !== 'CREDIT') {
-          await this.walletsService.addIncoming(oldTransaction.wallet_id, userId, Number(oldTransaction.value));
+          await this.walletsService.addIncoming(oldTransaction.wallet_id, userId, Number(oldTransaction.value) * multiplier);
         }
       } else {
         // INCOME
         if (oldTransaction.payment_method !== 'CREDIT') {
-          await this.walletsService.addExpense(oldTransaction.wallet_id, userId, Number(oldTransaction.value));
+          await this.walletsService.addExpense(oldTransaction.wallet_id, userId, Number(oldTransaction.value) * multiplier);
         }
       }
 
@@ -42,15 +44,17 @@ export class TransactionsService {
       const newType = updateTransactionDto.transaction_type || oldTransaction.transaction_type;
       const newWalletId = updateTransactionDto.wallet_id || oldTransaction.wallet_id;
       const newMethod = updateTransactionDto.payment_method !== undefined ? updateTransactionDto.payment_method : oldTransaction.payment_method;
+      
+      const newMultiplier = oldTransaction.installment_id ? (updateTransactionDto.installment_total || oldTransaction.installment_total || 12) : 1;
 
       if (newType === 'EXPENSE') {
         if (newMethod !== 'CREDIT') {
-          await this.walletsService.addExpense(newWalletId, userId, newValue);
+          await this.walletsService.addExpense(newWalletId, userId, newValue * newMultiplier);
         }
       } else {
         // INCOME
         if (newMethod !== 'CREDIT') {
-          await this.walletsService.addIncoming(newWalletId, userId, newValue);
+          await this.walletsService.addIncoming(newWalletId, userId, newValue * newMultiplier);
         }
       }
     }
@@ -168,11 +172,11 @@ export class TransactionsService {
 
     if (dto.transaction_type === 'EXPENSE') {
       if (dto.payment_method !== 'CREDIT') {
-        await this.walletsService.addExpense(dto.wallet_id, userId, monthlyValue);
+        await this.walletsService.addExpense(dto.wallet_id, userId, monthlyValue * PREDICTION_MONTHS);
       }
     } else {
       if (dto.payment_method !== 'CREDIT') {
-        await this.walletsService.addIncoming(dto.wallet_id, userId, monthlyValue);
+        await this.walletsService.addIncoming(dto.wallet_id, userId, monthlyValue * PREDICTION_MONTHS);
       }
     }
 
@@ -220,11 +224,11 @@ export class TransactionsService {
 
     if (dto.transaction_type === 'EXPENSE') {
       if (dto.payment_method !== 'CREDIT') {
-        await this.walletsService.addExpense(dto.wallet_id, userId, installmentValue);
+        await this.walletsService.addExpense(dto.wallet_id, userId, dto.value);
       }
     } else {
       if (dto.payment_method !== 'CREDIT') {
-        await this.walletsService.addIncoming(dto.wallet_id, userId, installmentValue);
+        await this.walletsService.addIncoming(dto.wallet_id, userId, dto.value);
       }
     }
 
@@ -263,15 +267,17 @@ export class TransactionsService {
       throw new NotFoundException('Transaction not found');
     }
 
+    const multiplier = transaction.installment_id ? (transaction.installment_total || 12) : 1;
+
     // Revert balance impact
     if (transaction.transaction_type === 'EXPENSE') {
       if (transaction.payment_method !== 'CREDIT') {
-        await this.walletsService.addIncoming(transaction.wallet_id, userId, Number(transaction.value));
+        await this.walletsService.addIncoming(transaction.wallet_id, userId, Number(transaction.value) * multiplier);
       }
     } else {
       // INCOME
       if (transaction.payment_method !== 'CREDIT') {
-        await this.walletsService.addExpense(transaction.wallet_id, userId, Number(transaction.value));
+        await this.walletsService.addExpense(transaction.wallet_id, userId, Number(transaction.value) * multiplier);
       }
     }
 

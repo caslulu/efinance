@@ -19,6 +19,7 @@ export const WalletsPage = () => {
     type: 'INCOME' | 'EXPENSE' | null;
     walletId: number | null;
     walletType?: string;
+    hasClosingDay?: boolean;
   }>({ isOpen: false, type: null, walletId: null });
 
   const fetchData = async () => {
@@ -43,8 +44,8 @@ export const WalletsPage = () => {
     fetchData();
   }, []);
 
-  const openTransaction = (walletId: number, type: 'INCOME' | 'EXPENSE', walletType: string) => {
-    setTransactionModal({ isOpen: true, type, walletId, walletType });
+  const openTransaction = (walletId: number, type: 'INCOME' | 'EXPENSE', walletType: string, hasClosingDay: boolean) => {
+    setTransactionModal({ isOpen: true, type, walletId, walletType, hasClosingDay });
   };
 
   return (
@@ -82,8 +83,8 @@ export const WalletsPage = () => {
             <WalletCard
               key={wallet.id}
               wallet={walletWithProjection}
-              onAddFunds={() => openTransaction(wallet.id, 'INCOME', wallet.type)}
-              onAddExpense={() => openTransaction(wallet.id, 'EXPENSE', wallet.type)}
+              onAddFunds={() => openTransaction(wallet.id, 'INCOME', wallet.type, !!wallet.closing_day)}
+              onAddExpense={() => openTransaction(wallet.id, 'EXPENSE', wallet.type, !!wallet.closing_day)}
               onEdit={() => setEditWallet(wallet)}
               onPayInvoice={() => setPayInvoiceWallet(wallet)}
             />
@@ -122,6 +123,7 @@ export const WalletsPage = () => {
         type={transactionModal.type}
         walletId={transactionModal.walletId}
         walletType={transactionModal.walletType}
+        hasClosingDay={transactionModal.hasClosingDay}
         onClose={() => setTransactionModal({ ...transactionModal, isOpen: false })}
         onSuccess={fetchData}
       />
