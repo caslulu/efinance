@@ -4,7 +4,7 @@ import type { Transaction } from '../../../types/Transaction';
 import type { Subscription } from '../../../types/Subscription';
 import type { Wallet } from '../../../types/Wallet';
 import { TransactionList } from '../components/TransactionList';
-import { ChevronDown, ChevronRight, Calendar, Search, Filter, X, Wallet } from 'lucide-react';
+import { ChevronDown, ChevronRight, Calendar, Search, Filter, X, Wallet as WalletIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -254,7 +254,7 @@ export const TransactionsPage = () => {
 
           <Select value={filterWallet} onValueChange={setFilterWallet}>
             <SelectTrigger>
-              <Wallet className="h-4 w-4 mr-2 text-muted-foreground" />
+              <WalletIcon className="h-4 w-4 mr-2 text-muted-foreground" />
               <SelectValue placeholder="Carteira" />
             </SelectTrigger>
             <SelectContent>
