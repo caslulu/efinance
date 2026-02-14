@@ -17,6 +17,9 @@ export class BudgetsService {
   }
 
   async upsert(userId: number, categoryId: number, limit: number) {
+    const category = await this.prisma.transactionCategory.findUnique({ where: { id: categoryId } });
+    if (!category || category.user_id !== userId) throw new NotFoundException('Category not found');
+
     const budget = await this.prisma.budget.upsert({
       where: {
         user_id_category_id: {

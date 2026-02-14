@@ -9,12 +9,14 @@ import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ResendTokenDto } from './dto/resend-token.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { UsersService } from '../users/users.service';
+import { ConfigService } from '@nestjs/config';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly usersService: UsersService,
+    private readonly configService: ConfigService,
   ) {}
 
   @Get('google')
@@ -26,16 +28,18 @@ export class AuthController {
   @Get('google/redirect')
   @UseGuards(AuthGuard('google'))
   async googleAuthRedirect(@Request() req, @Res() res) {
+    const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:5173';
+    
     if (req.user.isNewUser) {
-       return res.redirect(`http://localhost:5173/register?email=${req.user.email}&username=${req.user.firstName}&googleToken=${req.user.registerToken}`);
+       return res.redirect(`${frontendUrl}/register?email=${req.user.email}&username=${req.user.firstName}&googleToken=${req.user.registerToken}`);
     }
 
     const loginResult: any = await this.authService.login(req.user);
     
     if (loginResult.requires2FA) {
-       res.redirect(`http://localhost:5173/login?userId=${loginResult.id}&requires2FA=true`);
+       res.redirect(`${frontendUrl}/login?userId=${loginResult.id}&requires2FA=true`);
     } else {
-       res.redirect(`http://localhost:5173/login?token=${loginResult.access_token}`);
+       res.redirect(`${frontendUrl}/login?token=${loginResult.access_token}`);
     }
   }
 
@@ -105,7 +109,17 @@ export class AuthController {
   @Get('profile')
   async getProfile(@Request() req) {
     const user = await this.usersService.findOne(req.user.userId);
-    const { password, twoFactorToken, ...result } = user;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { 
+      password, 
+      twoFactorToken, 
+      twoFactorTokenExpiry,
+      resetToken,
+      resetTokenExpiry,
+      emailVerificationToken,
+      emailVerificationTokenExpiry,
+      ...result 
+    } = user;
     return result;
   }
 }

@@ -18,6 +18,16 @@ export class TransactionsService {
       throw new NotFoundException('Transaction not found');
     }
 
+    if (updateTransactionDto.wallet_id) {
+      const wallet = await this.prisma.wallet.findUnique({ where: { id: updateTransactionDto.wallet_id } });
+      if (!wallet || wallet.user_id !== userId) throw new NotFoundException('Wallet not found');
+    }
+
+    if (updateTransactionDto.category_id) {
+      const category = await this.prisma.transactionCategory.findUnique({ where: { id: updateTransactionDto.category_id } });
+      if (!category || category.user_id !== userId) throw new NotFoundException('Category not found');
+    }
+
     // Check if balance update is needed
     if (
       updateTransactionDto.value !== undefined || 
@@ -81,6 +91,9 @@ export class TransactionsService {
   }
 
   async create(userId: number, createTransactionDto: CreateTransactionDto) {
+    const wallet = await this.prisma.wallet.findUnique({ where: { id: createTransactionDto.wallet_id } });
+    if (!wallet || wallet.user_id !== userId) throw new NotFoundException('Wallet not found');
+
     let categoryId = createTransactionDto.category_id;
 
     if (!categoryId) {
@@ -97,6 +110,9 @@ export class TransactionsService {
         categoryId = newCategory.id;
       }
       createTransactionDto.category_id = categoryId;
+    } else {
+      const category = await this.prisma.transactionCategory.findUnique({ where: { id: categoryId } });
+      if (!category || category.user_id !== userId) throw new NotFoundException('Category not found');
     }
 
     const { installment_total, is_recurring, subscription_id, ...data } = createTransactionDto;

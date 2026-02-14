@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException, BadRequestException, NotFoundExcepti
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { MailerService } from '@nestjs-modules/mailer';
+import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from './dto/create-user.dto';
 import { randomBytes, randomInt } from 'crypto';
@@ -12,6 +13,7 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     private mailerService: MailerService,
+    private configService: ConfigService,
   ) {}
 
   generateRegisterToken(profile: any) {
@@ -157,31 +159,33 @@ export class AuthService {
 
   async forgotPassword(email: string) {
     const user = await this.usersService.findByUsername(email);
-    if (!user) {
-      throw new NotFoundException('Usuário não encontrado.');
-    }
-
-    const resetToken = randomBytes(32).toString('hex');
-    const resetTokenExpiry = new Date(Date.now() + 3600000);
-    const resetLink = `http://localhost:5173/reset-password?token=${resetToken}`;
-
-    await this.usersService.setResetToken(user.id, resetToken, resetTokenExpiry);
     
-    try {
-      await this.mailerService.sendMail({
-        to: email,
-        subject: 'Recuperação de Senha - FinanceApp',
-        html: `
-          <h3>Recuperação de Senha</h3>
-          <p>Você solicitou a redefinição de sua senha.</p>
-          <p>Clique no link abaixo para criar uma nova senha:</p>
-          <a href="${resetLink}">Redefinir Senha</a>
-          <p>Este link expira em 1 hora.</p>
-        `,
-      });
-    } catch (error) {
-      console.error('Failed to send email:', error);
-      console.log(`[DEV FALLBACK] Reset Link: ${resetLink}`);
+    if (user) {
+      const resetToken = randomBytes(32).toString('hex');
+      const resetTokenExpiry = new Date(Date.now() + 3600000);
+      const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:5173';
+      const resetLink = `${frontendUrl}/reset-password?token=${resetToken}`;
+
+      await this.usersService.setResetToken(user.id, resetToken, resetTokenExpiry);
+      
+      try {
+        await this.mailerService.sendMail({
+          to: email,
+          subject: 'Recuperação de Senha - FinanceApp',
+          html: `
+            <h3>Recuperação de Senha</h3>
+            <p>Você solicitou a redefinição de sua senha.</p>
+            <p>Clique no link abaixo para criar uma nova senha:</p>
+            <a href="${resetLink}">Redefinir Senha</a>
+            <p>Este link expira em 1 hora.</p>
+          `,
+        });
+      } catch (error) {
+        console.error('Failed to send email:', error);
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`[DEV FALLBACK] Reset Link: ${resetLink}`);
+        }
+      }
     }
 
     return { message: 'Se o email existir, um link de recuperação foi enviado.' };
@@ -237,7 +241,9 @@ export class AuthService {
       });
     } catch (error) {
       console.error('Failed to send 2FA email:', error);
-      console.log(`[DEV FALLBACK] 2FA Token: ${token}`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[DEV FALLBACK] 2FA Token: ${token}`);
+      }
     }
   }
 
@@ -275,7 +281,9 @@ export class AuthService {
       });
     } catch (error) {
       console.error('Failed to send verification email:', error);
-      console.log(`[DEV FALLBACK] Verification Token: ${token}`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[DEV FALLBACK] Verification Token: ${token}`);
+      }
     }
   }
 }

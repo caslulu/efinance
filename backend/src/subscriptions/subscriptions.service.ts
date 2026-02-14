@@ -13,6 +13,12 @@ export class SubscriptionsService {
   ) {}
 
   async create(userId: number, createSubscriptionDto: CreateSubscriptionDto) {
+    const wallet = await this.prisma.wallet.findUnique({ where: { id: createSubscriptionDto.wallet_id } });
+    if (!wallet || wallet.user_id !== userId) throw new NotFoundException('Wallet not found');
+
+    const category = await this.prisma.transactionCategory.findUnique({ where: { id: createSubscriptionDto.category_id } });
+    if (!category || category.user_id !== userId) throw new NotFoundException('Category not found');
+
     const nextDate = new Date(createSubscriptionDto.start_date);
     
     const sub = await this.prisma.subscription.create({

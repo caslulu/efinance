@@ -17,8 +17,9 @@ export class CreateUserDto {
 
   @IsString()
   @IsNotEmpty({ message: 'A senha é obrigatória.' })
-  @MinLength(6, { message: 'A senha deve ter pelo menos 6 caracteres.' })
+  @MinLength(8, { message: 'A senha deve ter pelo menos 8 caracteres.' })
   @MaxLength(32, { message: 'A senha deve ter no máximo 32 caracteres.' })
+  @Matches(/((?=.*\d)|(?=.*\W+))(?![.\n])(?=.*[A-Z])(?=.*[a-z]).*$/, { message: 'A senha deve conter pelo menos uma letra maiúscula, uma minúscula e um número ou caractere especial.' })
   password: string;
 
   @IsString()
