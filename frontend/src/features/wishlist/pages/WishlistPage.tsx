@@ -28,13 +28,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { WishlistStore, WishlistStoreSearchResult } from '@/types/Wishlist';
-import { ExternalLink, Gift, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { ExternalLink, Gift, Link, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 
 const STORE_LABELS: Record<WishlistStore, string> = {
   AMAZON: 'Amazon',
   MERCADOLIVRE: 'Mercado Livre',
-  SHOPEE: 'Shopee',
-  SHEIN: 'Shein',
 };
 
 export const WishlistPage = () => {
@@ -52,9 +50,11 @@ export const WishlistPage = () => {
 
   const [newProductName, setNewProductName] = useState('');
   const [newProductPrice, setNewProductPrice] = useState('');
+  const [newProductUrl, setNewProductUrl] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchStore, setSearchStore] = useState<WishlistStore>('MERCADOLIVRE');
   const [searchResults, setSearchResults] = useState<WishlistStoreSearchResult[]>([]);
+  const [showSearch, setShowSearch] = useState(false);
 
   const activeWishlistId = useMemo(() => {
     if (wishlists.length === 0) return null;
@@ -118,11 +118,13 @@ export const WishlistPage = () => {
         data: {
           name_product: newProductName.trim(),
           price: Number(newProductPrice),
+          ...(newProductUrl.trim() ? { url: newProductUrl.trim() } : {}),
         },
       });
 
       setNewProductName('');
       setNewProductPrice('');
+      setNewProductUrl('');
     } catch {
       alert('Falha ao adicionar item na wishlist');
     }
@@ -173,6 +175,7 @@ export const WishlistPage = () => {
         data: {
           name_product: `${product.name} (${STORE_LABELS[product.store]})`,
           price: priceToUse,
+          url: product.url,
         },
       });
     } catch {
@@ -260,7 +263,7 @@ export const WishlistPage = () => {
             </CardHeader>
             <CardContent className="space-y-2">
               {wishlists.map((wishlist) => {
-                const isActive = wishlist.id === selectedWishlistId;
+                const isActive = wishlist.id === activeWishlistId;
 
                 return (
                   <div
@@ -312,114 +315,146 @@ export const WishlistPage = () => {
                 Total estimado: {formatCurrency(wishlistTotal)}
               </p>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <form
-                onSubmit={handleSearchProducts}
-                className="grid gap-3 rounded-lg border p-3 bg-slate-50 sm:grid-cols-[170px_1fr_auto]"
-              >
-                <Select
-                  value={searchStore}
-                  onValueChange={(value) => setSearchStore(value as WishlistStore)}
+            <CardContent className="space-y-6">
+              {/* Formulário para adicionar produto manualmente */}
+              <div className="rounded-lg border p-4 bg-slate-50 space-y-3">
+                <p className="text-sm font-medium text-slate-700">Adicionar produto</p>
+                <form onSubmit={handleCreateProduct} className="space-y-3">
+                  <div className="grid gap-3 sm:grid-cols-[1fr_140px]">
+                    <Input
+                      value={newProductName}
+                      onChange={(event) => setNewProductName(event.target.value)}
+                      placeholder="Nome do produto"
+                    />
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      value={newProductPrice}
+                      onChange={(event) => setNewProductPrice(event.target.value)}
+                      placeholder="Preço (R$)"
+                    />
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                    <div className="relative">
+                      <Link className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        value={newProductUrl}
+                        onChange={(event) => setNewProductUrl(event.target.value)}
+                        placeholder="URL do produto (opcional)"
+                        className="pl-9"
+                      />
+                    </div>
+                    <Button type="submit" disabled={!activeWishlistId || createProduct.isPending}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Adicionar
+                    </Button>
+                  </div>
+                </form>
+              </div>
+
+              {/* Buscar na loja (expansível) */}
+              <div className="rounded-lg border p-4 space-y-3">
+                <button
+                  type="button"
+                  className="flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-blue-600 transition"
+                  onClick={() => {
+                    setShowSearch(!showSearch);
+                    if (showSearch) setSearchResults([]);
+                  }}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Loja" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="AMAZON">Amazon</SelectItem>
-                    <SelectItem value="MERCADOLIVRE">Mercado Livre</SelectItem>
-                    <SelectItem value="SHOPEE">Shopee</SelectItem>
-                    <SelectItem value="SHEIN">Shein</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Input
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="Pesquisar por nome do produto"
-                />
-                <Button type="submit" disabled={searchStoreProducts.isPending}>
-                  <Search className="mr-2 h-4 w-4" />
-                  Buscar
-                </Button>
-              </form>
+                  <Search className="h-4 w-4" />
+                  Buscar produto na loja
+                  <span className="text-xs text-muted-foreground">(Amazon / Mercado Livre)</span>
+                </button>
 
-              {searchResults.length > 0 && (
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                  {searchResults.map((result) => (
-                    <Card key={`${result.store}-${result.url}`} className="overflow-hidden">
-                      <CardContent className="p-0">
-                        <div className="aspect-square bg-slate-100 border-b overflow-hidden">
-                          {result.image ? (
-                            <img
-                              src={result.image}
-                              alt={result.name}
-                              className="h-full w-full object-cover"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div className="h-full w-full flex items-center justify-center text-sm text-muted-foreground">
-                              Sem imagem
-                            </div>
-                          )}
-                        </div>
-                        <div className="p-4 space-y-3">
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-1">{STORE_LABELS[result.store]}</p>
-                            <p className="font-medium text-sm line-clamp-2">{result.name}</p>
-                            <p className="text-xs text-muted-foreground line-clamp-3 mt-1">
-                              {result.description}
-                            </p>
-                          </div>
+                {showSearch && (
+                  <div className="space-y-4">
+                    <form
+                      onSubmit={handleSearchProducts}
+                      className="grid gap-3 sm:grid-cols-[160px_1fr_auto]"
+                    >
+                      <Select
+                        value={searchStore}
+                        onValueChange={(value) => setSearchStore(value as WishlistStore)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Loja" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="MERCADOLIVRE">Mercado Livre</SelectItem>
+                          <SelectItem value="AMAZON">Amazon</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        value={searchQuery}
+                        onChange={(event) => setSearchQuery(event.target.value)}
+                        placeholder="Nome do produto"
+                      />
+                      <Button type="submit" disabled={searchStoreProducts.isPending}>
+                        <Search className="mr-2 h-4 w-4" />
+                        {searchStoreProducts.isPending ? 'Buscando...' : 'Buscar'}
+                      </Button>
+                    </form>
 
-                          <p className="text-lg font-bold text-slate-900">
-                            {result.price ? formatCurrency(result.price) : 'Preço não encontrado'}
-                          </p>
+                    {searchResults.length > 0 && (
+                      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                        {searchResults.map((result) => (
+                          <Card key={`${result.store}-${result.url}`} className="overflow-hidden">
+                            <CardContent className="p-0">
+                              <div className="aspect-square bg-slate-100 border-b overflow-hidden">
+                                {result.image ? (
+                                  <img
+                                    src={result.image}
+                                    alt={result.name}
+                                    className="h-full w-full object-cover"
+                                    loading="lazy"
+                                  />
+                                ) : (
+                                  <div className="h-full w-full flex items-center justify-center text-sm text-muted-foreground">
+                                    Sem imagem
+                                  </div>
+                                )}
+                              </div>
+                              <div className="p-4 space-y-3">
+                                <div>
+                                  <p className="text-xs text-muted-foreground mb-1">{STORE_LABELS[result.store]}</p>
+                                  <p className="font-medium text-sm line-clamp-2">{result.name}</p>
+                                </div>
 
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex-1"
-                              onClick={() => window.open(result.url, '_blank', 'noopener,noreferrer')}
-                            >
-                              <ExternalLink className="mr-2 h-4 w-4" />
-                              Abrir
-                            </Button>
-                            <Button
-                              size="sm"
-                              className="flex-1"
-                              onClick={() => handleAddSearchedProduct(result)}
-                              disabled={!activeWishlistId || createProduct.isPending}
-                            >
-                              <Plus className="mr-2 h-4 w-4" />
-                              Adicionar
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
+                                <p className="text-lg font-bold text-slate-900">
+                                  {result.price ? formatCurrency(result.price) : 'Preço não encontrado'}
+                                </p>
 
-              <form onSubmit={handleCreateProduct} className="grid gap-3 sm:grid-cols-[1fr_160px_auto]">
-                <Input
-                  value={newProductName}
-                  onChange={(event) => setNewProductName(event.target.value)}
-                  placeholder="Nome do item"
-                />
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  value={newProductPrice}
-                  onChange={(event) => setNewProductPrice(event.target.value)}
-                  placeholder="Preço"
-                />
-                <Button type="submit" disabled={!activeWishlistId || createProduct.isPending}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Adicionar
-                </Button>
-              </form>
+                                <div className="flex gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex-1"
+                                    onClick={() => window.open(result.url, '_blank', 'noopener,noreferrer')}
+                                  >
+                                    <ExternalLink className="mr-2 h-4 w-4" />
+                                    Abrir
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    className="flex-1"
+                                    onClick={() => handleAddSearchedProduct(result)}
+                                    disabled={!activeWishlistId || createProduct.isPending}
+                                  >
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Adicionar
+                                  </Button>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
               <div className="rounded-md border bg-white">
                 <Table>
@@ -433,7 +468,22 @@ export const WishlistPage = () => {
                   <TableBody>
                     {selectedWishlist?.products.map((product) => (
                       <TableRow key={product.id}>
-                        <TableCell className="font-medium">{product.name_product}</TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <p className="font-medium">{product.name_product}</p>
+                            {product.url && (
+                              <a
+                                href={product.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                Ver na loja
+                              </a>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell>{formatCurrency(Number(product.price))}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">

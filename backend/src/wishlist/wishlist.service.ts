@@ -99,6 +99,7 @@ export class WishlistService {
         id_wishlist: wishlistId,
         name_product: createWishlistProductDto.name_product,
         price: createWishlistProductDto.price,
+        url: createWishlistProductDto.url || null,
       },
     });
   }
@@ -154,10 +155,6 @@ export class WishlistService {
           return this.searchMercadoLivre(searchDto.query);
         case WishlistStore.AMAZON:
           return this.searchAmazon(searchDto.query);
-        case WishlistStore.SHOPEE:
-          return this.searchShopee(searchDto.query);
-        case WishlistStore.SHEIN:
-          return this.searchWithWebScraping(searchDto.query, searchDto.store);
         default:
           return [];
       }
@@ -268,7 +265,7 @@ export class WishlistService {
     );
 
     if (!html) {
-      return this.searchWithWebScraping(query, WishlistStore.AMAZON);
+      return this.searchWithBraveSearch(query, WishlistStore.AMAZON);
     }
 
     const chunks = html
@@ -286,7 +283,13 @@ export class WishlistService {
         }
 
         const relativeUrl =
-          chunk.match(/<a[^>]*href="([^"]+)"[^>]*a-link-normal/i)?.[1] || '';
+          chunk.match(
+            /<a[^>]*class="[^"]*a-link-normal[^"]*"[^>]*href="([^"]+)"/i,
+          )?.[1] ||
+          chunk.match(
+            /<a[^>]*href="([^"]+)"[^>]*class="[^"]*a-link-normal/i,
+          )?.[1] ||
+          '';
 
         const image =
           chunk.match(
@@ -312,162 +315,7 @@ export class WishlistService {
       return parsed;
     }
 
-    return this.searchWithWebScraping(query, WishlistStore.AMAZON);
-  }
-
-  private async searchShopee(query: string): Promise<StoreSearchResult[]> {
-    const url = `https://shopee.com.br/api/v4/search/search_items?by=relevancy&keyword=${encodeURIComponent(query)}&limit=12&newest=0&order=desc&page_type=search&scenario=PAGE_GLOBAL_SEARCH&version=2`;
-    const response = await fetch(url, {
-      headers: {
-        Accept: 'application/json',
-        Referer: `https://shopee.com.br/search?keyword=${encodeURIComponent(query)}`,
-        'User-Agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'x-api-source': 'pc',
-      },
-    });
-
-    if (response.ok) {
-      const data = (await response.json()) as {
-        items?: Array<{
-          item_basic?: {
-            name?: string;
-            price?: number;
-            price_min?: number;
-            image?: string;
-            shopid?: number;
-            itemid?: number;
-          };
-        }>;
-      };
-
-      const apiItems = (data.items || [])
-        .map((entry) => entry.item_basic)
-        .filter((item) => item?.name && item.shopid && item.itemid)
-        .map((item) => {
-          const rawPrice =
-            typeof item?.price_min === 'number'
-              ? item.price_min
-              : typeof item?.price === 'number'
-                ? item.price
-                : null;
-
-          const normalizedPrice = rawPrice ? rawPrice / 100000 : null;
-
-          return {
-            name: item?.name || 'Produto sem nome',
-            description: item?.name || 'Produto sem descrição',
-            price: normalizedPrice,
-            url: `https://shopee.com.br/product/${item?.shopid}/${item?.itemid}`,
-            image: item?.image
-              ? `https://down-br.img.susercontent.com/file/${item.image}`
-              : null,
-            store: WishlistStore.SHOPEE,
-          } satisfies StoreSearchResult;
-        });
-
-      if (apiItems.length > 0) {
-        return apiItems;
-      }
-    }
-
-    const htmlFallback = await this.searchShopeeHtmlFallback(query);
-    if (htmlFallback.length > 0) {
-      return htmlFallback;
-    }
-
-    return this.searchWithWebScraping(query, WishlistStore.SHOPEE);
-  }
-
-  private async searchShopeeHtmlFallback(
-    query: string,
-  ): Promise<StoreSearchResult[]> {
-    const html = await this.fetchText(
-      `https://shopee.com.br/search?keyword=${encodeURIComponent(query)}`,
-    );
-
-    if (!html) {
-      return [];
-    }
-
-    const productLinks = Array.from(
-      new Set(
-        [...html.matchAll(/\/product\/(\d+)\/(\d+)/g)]
-          .map(
-            (match) => `https://shopee.com.br/product/${match[1]}/${match[2]}`,
-          )
-          .slice(0, 12),
-      ),
-    );
-
-    return productLinks.map((url) => ({
-      name: 'Produto Shopee',
-      description: 'Resultado encontrado na Shopee',
-      price: null,
-      url,
-      image: null,
-      store: WishlistStore.SHOPEE,
-    }));
-  }
-
-  private async searchWithWebScraping(
-    query: string,
-    store: WishlistStore,
-  ): Promise<StoreSearchResult[]> {
-    const domainByStore: Record<WishlistStore, string> = {
-      [WishlistStore.AMAZON]: 'amazon.com.br',
-      [WishlistStore.MERCADOLIVRE]: 'mercadolivre.com.br',
-      [WishlistStore.SHOPEE]: 'shopee.com.br',
-      [WishlistStore.SHEIN]: 'br.shein.com',
-    };
-
-    const domain = domainByStore[store];
-    const searchUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent(`site:${domain} ${query}`)}`;
-    const html = await this.fetchText(searchUrl);
-
-    if (!html) {
-      return [];
-    }
-
-    const matches = [
-      ...html.matchAll(
-        /<a[^>]*class="[^"]*result__a[^"]*"[^>]*href="([^"]+)"[^>]*>(.*?)<\/a>/gi,
-      ),
-    ];
-    const rawItems = matches
-      .slice(0, 12)
-      .map((match) => {
-        const ddgHref = match[1] || '';
-        const url = this.extractDuckDuckGoTargetUrl(ddgHref);
-        const title = this.stripHtml(match[2] || '');
-        return { url, title };
-      })
-      .filter((item) => item.url && this.isUrlFromStore(item.url, store));
-
-    const uniqueByUrl = Array.from(
-      new Map(rawItems.map((item) => [item.url, item])).values(),
-    );
-
-    const details = await Promise.all(
-      uniqueByUrl.slice(0, 8).map(async (item) => {
-        const productHtml = await this.fetchText(item.url);
-        const extractedPrice = productHtml
-          ? this.extractPrice(productHtml)
-          : null;
-        const image = productHtml ? this.extractImage(productHtml) : null;
-
-        return {
-          name: item.title,
-          description: item.title,
-          price: extractedPrice,
-          url: item.url,
-          image,
-          store,
-        } satisfies StoreSearchResult;
-      }),
-    );
-
-    return details;
+    return [];
   }
 
   private toAbsoluteUrl(pathOrUrl: string, base: string) {
@@ -485,7 +333,7 @@ export class WishlistService {
   private async fetchText(url: string): Promise<string | null> {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 7000);
+      const timeout = setTimeout(() => controller.abort(), 12000);
       const response = await fetch(url, {
         headers: {
           'User-Agent':
@@ -512,54 +360,6 @@ export class WishlistService {
       .replace(/&amp;/g, '&')
       .replace(/\s+/g, ' ')
       .trim();
-  }
-
-  private extractDuckDuckGoTargetUrl(ddgHref: string) {
-    try {
-      if (ddgHref.startsWith('http://') || ddgHref.startsWith('https://'))
-        return ddgHref;
-      const parsed = new URL(ddgHref, 'https://duckduckgo.com');
-      const uddg = parsed.searchParams.get('uddg');
-      return uddg ? decodeURIComponent(uddg) : ddgHref;
-    } catch {
-      return ddgHref;
-    }
-  }
-
-  private isUrlFromStore(url: string, store: WishlistStore) {
-    const validators: Record<WishlistStore, (host: string) => boolean> = {
-      [WishlistStore.AMAZON]: (host) => host.includes('amazon.'),
-      [WishlistStore.MERCADOLIVRE]: (host) => host.includes('mercadolivre.'),
-      [WishlistStore.SHOPEE]: (host) => host.includes('shopee.'),
-      [WishlistStore.SHEIN]: (host) => host.includes('shein.'),
-    };
-
-    try {
-      const host = new URL(url).hostname.toLowerCase();
-      return validators[store](host);
-    } catch {
-      return false;
-    }
-  }
-
-  private extractPrice(html: string): number | null {
-    const patterns = [
-      /"price"\s*:\s*"?(\d+[.,]\d{2})"?/i,
-      /R\$\s*(\d{1,3}(?:\.\d{3})*,\d{2})/i,
-      /content="(\d+[.,]\d{2})"\s*itemprop="price"/i,
-      /"amount"\s*:\s*"?(\d+[.,]\d{2})"?/i,
-    ];
-
-    for (const pattern of patterns) {
-      const match = html.match(pattern);
-      if (!match?.[1]) continue;
-
-      const normalized = match[1].replace(/\./g, '').replace(',', '.');
-      const parsed = Number(normalized);
-      if (!Number.isNaN(parsed) && parsed > 0) return parsed;
-    }
-
-    return null;
   }
 
   private extractAmazonCardPrice(chunk: string): number | null {
@@ -614,21 +414,5 @@ export class WishlistService {
     }
 
     return parsed;
-  }
-
-  private extractImage(html: string): string | null {
-    const imagePatterns = [
-      /<meta[^>]*property="og:image"[^>]*content="([^"]+)"/i,
-      /<meta[^>]*name="twitter:image"[^>]*content="([^"]+)"/i,
-    ];
-
-    for (const pattern of imagePatterns) {
-      const match = html.match(pattern);
-      if (match?.[1]) {
-        return match[1];
-      }
-    }
-
-    return null;
   }
 }

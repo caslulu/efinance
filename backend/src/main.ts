@@ -16,11 +16,33 @@ async function bootstrap() {
     prefix: '/uploads/',
   });
 
+  const configuredOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  const allowedOrigins = new Set<string>([
+    ...configuredOrigins,
+    'http://127.0.0.1:5173',
+  ]);
+
   app.enableCors({
-    origin: [
-      process.env.FRONTEND_URL || 'http://localhost:5173',
-      'http://127.0.0.1:5173',
-    ],
+    origin: (origin, callback) => {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      if (
+        allowedOrigins.has(origin) ||
+        /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)
+      ) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`Origin ${origin} is not allowed by CORS`), false);
+    },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });

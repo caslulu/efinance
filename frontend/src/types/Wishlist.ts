@@ -3,9 +3,10 @@ export interface WishlistProduct {
   id_wishlist: number;
   name_product: string;
   price: number;
+  url: string | null;
 }
 
-export type WishlistStore = 'AMAZON' | 'MERCADOLIVRE' | 'SHOPEE' | 'SHEIN';
+export type WishlistStore = 'AMAZON' | 'MERCADOLIVRE';
 
 export interface WishlistStoreSearchResult {
   name: string;

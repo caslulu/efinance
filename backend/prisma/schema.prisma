@@ -165,4 +165,5 @@ model WishlistProduct {
   wishlist     Wishlist @relation(fields: [id_wishlist], references: [id])
   name_product String
   price        Decimal  @db.Decimal(10, 2)
+  url          String?
 }

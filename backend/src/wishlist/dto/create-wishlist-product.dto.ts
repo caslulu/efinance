@@ -1,4 +1,11 @@
-import { IsNotEmpty, IsNumber, IsString, Min } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUrl,
+  Min,
+} from 'class-validator';
 
 export class CreateWishlistProductDto {
   @IsString()
@@ -8,4 +15,9 @@ export class CreateWishlistProductDto {
   @IsNumber()
   @Min(0.01)
   price: number;
+
+  @IsOptional()
+  @IsString()
+  @IsUrl({}, { message: 'URL inválida' })
+  url?: string;
 }

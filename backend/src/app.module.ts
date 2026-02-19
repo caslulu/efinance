@@ -16,6 +16,7 @@ import { BudgetsModule } from './budgets/budgets.module';
 import { WishlistModule } from './wishlist/wishlist.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { JwtAuthGuard } from './auth/jwt-auth.guard';
 
 @Module({
   imports: [
@@ -57,6 +58,10 @@ import { APP_GUARD } from '@nestjs/core';
   controllers: [AppController],
   providers: [
     AppService,
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,

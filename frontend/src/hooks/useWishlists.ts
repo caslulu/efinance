@@ -68,7 +68,7 @@ export function useCreateWishlistProduct() {
       data,
     }: {
       wishlistId: number;
-      data: Pick<WishlistProduct, 'name_product' | 'price'>;
+      data: Pick<WishlistProduct, 'name_product' | 'price'> & { url?: string };
     }) => {
       const res = await api.post(`/wishlists/${wishlistId}/products`, data);
       return res.data;
@@ -90,7 +90,7 @@ export function useUpdateWishlistProduct() {
     }: {
       wishlistId: number;
       productId: number;
-      data: Partial<Pick<WishlistProduct, 'name_product' | 'price'>>;
+      data: Partial<Pick<WishlistProduct, 'name_product' | 'price'>> & { url?: string };
     }) => {
       const res = await api.patch(`/wishlists/${wishlistId}/products/${productId}`, data);
       return res.data;
