@@ -11,8 +11,10 @@ import { TransactionsPage } from './features/transactions/pages/TransactionsPage
 import { SubscriptionsPage } from './features/subscriptions/pages/SubscriptionsPage';
 import { CategoriesPage } from './features/categories/pages/CategoriesPage';
 import { SettingsPage } from './features/settings/pages/SettingsPage';
+import { ProfilePage } from './features/profile/pages/ProfilePage';
 import { BudgetsPage } from './features/budgets/pages/BudgetsPage';
-import { ChevronDown, LogOut, Settings, LayoutDashboard, Target } from 'lucide-react';
+import { WishlistPage } from './features/wishlist/pages/WishlistPage';
+import { ChevronDown, LogOut, Settings, LayoutDashboard, User } from 'lucide-react';
 
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const { isAuthenticated } = useAuth();
@@ -48,6 +50,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               <Link to="/wallets" className="text-gray-600 hover:text-gray-900">Carteiras</Link>
               <Link to="/transactions" className="text-gray-600 hover:text-gray-900">Transações</Link>
               <Link to="/budgets" className="text-gray-600 hover:text-gray-900">Metas</Link>
+              <Link to="/wishlists" className="text-gray-600 hover:text-gray-900">Wishlist</Link>
               <Link to="/subscriptions" className="text-gray-600 hover:text-gray-900">Recorrências</Link>
               <Link to="/categories" className="text-gray-600 hover:text-gray-900">Categorias</Link>
             </div>
@@ -58,8 +61,12 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none"
             >
-              <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
-                {user?.username?.charAt(0).toUpperCase()}
+              <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold overflow-hidden border border-gray-200">
+                {user?.avatarUrl ? (
+                  <img src={`${user.avatarUrl}?t=${new Date().getTime()}`} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  user?.username?.charAt(0).toUpperCase()
+                )}
               </div>
               <span className="hidden sm:inline">{user?.username}</span>
               <ChevronDown size={16} />
@@ -68,6 +75,14 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             {isDropdownOpen && (
               <div className="absolute right-0 mt-2 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
                 <div className="py-1">
+                  <Link
+                    to="/profile"
+                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    onClick={() => setIsDropdownOpen(false)}
+                  >
+                    <User size={16} />
+                    Perfil
+                  </Link>
                   <Link
                     to="/settings"
                     className="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -165,6 +180,31 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/wishlists"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <WishlistPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <ProfilePage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/perfil" element={<Navigate to="/profile" replace />} />
+          <Route path="/configuracoes" element={<Navigate to="/settings" replace />} />
+          <Route path="/settings/profile" element={<Navigate to="/profile" replace />} />
+          <Route path="/configuracoes/perfil" element={<Navigate to="/profile" replace />} />
+          <Route path="/settings/security" element={<Navigate to="/settings" replace />} />
           <Route
             path="/settings"
             element={

@@ -13,6 +13,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { BudgetsModule } from './budgets/budgets.module';
+import { WishlistModule } from './wishlist/wishlist.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 
@@ -48,7 +49,10 @@ import { APP_GUARD } from '@nestjs/core';
     TransactionsModule, 
     CategoriesModule, 
     SubscriptionsModule, 
-    InvestmentsModule, DashboardModule, BudgetsModule
+    InvestmentsModule,
+    DashboardModule,
+    BudgetsModule,
+    WishlistModule,
   ],
   controllers: [AppController],
   providers: [

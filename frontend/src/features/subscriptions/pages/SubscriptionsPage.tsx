@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { api } from '../../../api/api';
+import { useState } from 'react';
+import { useSubscriptions, useDeleteSubscription, useUpdateSubscription, useTriggerSubscriptionCheck } from '@/hooks';
 import type { Subscription } from '../../../types/Subscription';
 import { CreateSubscriptionModal } from '../components/CreateSubscriptionModal';
 import { Button } from '@/components/ui/button';
@@ -14,32 +14,19 @@ import {
 } from "@/components/ui/table"
 import clsx from 'clsx';
 import { Play, Plus, Trash, PauseCircle, PlayCircle } from 'lucide-react';
+import { CategoryIcon } from '@/components/IconPicker';
 
 export const SubscriptionsPage = () => {
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const { data: subscriptions = [], isLoading: loading, refetch: refetchSubscriptions } = useSubscriptions();
+  const deleteSubscription = useDeleteSubscription();
+  const updateSubscription = useUpdateSubscription();
+  const triggerCheck = useTriggerSubscriptionCheck();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
 
-  const fetchSubscriptions = async () => {
+  const handleTriggerCheck = async () => {
     try {
-      const res = await api.get('/subscriptions');
-      if (Array.isArray(res.data)) {
-        setSubscriptions(res.data);
-      } else {
-        setSubscriptions([]);
-      }
-    } catch (error) {
-      console.error('Failed to fetch subscriptions');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const triggerCheck = async () => {
-    try {
-      await api.post('/subscriptions/trigger');
+      await triggerCheck.mutateAsync();
       alert('Verificação de recorrência disparada com sucesso');
-      fetchSubscriptions();
     } catch (error) {
       alert('Falha ao disparar verificação');
     }
@@ -49,8 +36,7 @@ export const SubscriptionsPage = () => {
     if (!confirm('Tem certeza que deseja excluir esta recorrência? Todas as transações geradas por ela também serão excluídas.')) return;
     
     try {
-      await api.delete(`/subscriptions/${id}`);
-      fetchSubscriptions();
+      await deleteSubscription.mutateAsync(id);
     } catch (error) {
       alert('Falha ao excluir recorrência');
     }
@@ -59,23 +45,18 @@ export const SubscriptionsPage = () => {
   const handleToggleStatus = async (sub: Subscription) => {
     const newStatus = sub.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
     try {
-      await api.patch(`/subscriptions/${sub.id}`, { status: newStatus });
-      fetchSubscriptions();
+      await updateSubscription.mutateAsync({ id: sub.id, data: { status: newStatus } });
     } catch (error) {
       alert('Falha ao atualizar status');
     }
   };
-
-  useEffect(() => {
-    fetchSubscriptions();
-  }, []);
 
   return (
     <div className="p-8 space-y-8">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Recorrências</h1>
         <div className="flex gap-4">
-          <Button variant="outline" onClick={triggerCheck}>
+          <Button variant="outline" onClick={handleTriggerCheck}>
             <Play className="mr-2 h-4 w-4" /> Processar Pendentes
           </Button>
           <Button onClick={() => setIsCreateOpen(true)}>
@@ -100,7 +81,14 @@ export const SubscriptionsPage = () => {
           <TableBody>
             {subscriptions.map((sub) => (
               <TableRow key={sub.id}>
-                <TableCell className="font-medium">{sub.name}</TableCell>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded bg-slate-100">
+                      <CategoryIcon name={sub.category?.icon} className="h-4 w-4 text-slate-600" />
+                    </div>
+                    <span>{sub.name}</span>
+                  </div>
+                </TableCell>
                 <TableCell className="text-sm text-muted-foreground truncate max-w-[120px]" title={sub.description}>
                   {sub.description || '-'}
                 </TableCell>
@@ -149,7 +137,7 @@ export const SubscriptionsPage = () => {
       <CreateSubscriptionModal
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
-        onSuccess={fetchSubscriptions}
+        onSuccess={() => refetchSubscriptions()}
       />
     </div>
   );

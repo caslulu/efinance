@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
-import { api } from '../../../api/api';
-import type { Category } from '../../../types/Category';
-import { CreateCategoryModal } from '../components/CreateCategoryModal';
+import { useState } from 'react';
+import { useCategories, useDeleteCategory } from '@/hooks';
+import type { Category } from '@/types/Category';
+import { UpsertCategoryModal } from '../components/UpsertCategoryModal';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -11,47 +11,39 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Trash2 } from 'lucide-react';
+import { Trash2, Pencil } from 'lucide-react';
+import { CategoryIcon } from '@/components/IconPicker';
 
 export const CategoriesPage = () => {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  const fetchCategories = async () => {
-    try {
-      const res = await api.get('/categories');
-      if (Array.isArray(res.data)) {
-        setCategories(res.data);
-      } else {
-        setCategories([]);
-      }
-    } catch (error) {
-      console.error('Falha ao buscar categorias');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCategories();
-  }, []);
+  const { data: categories = [], isLoading: loading, refetch: refetchCategories } = useCategories();
+  const deleteCategory = useDeleteCategory();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
   const handleDelete = async (id: number) => {
     if (!confirm('Tem certeza? Isso pode afetar transações existentes.')) return;
     try {
-      await api.delete(`/categories/${id}`);
-      fetchCategories();
+      await deleteCategory.mutateAsync(id);
     } catch (error) {
       alert('Falha ao excluir categoria');
     }
+  };
+
+  const handleEdit = (category: Category) => {
+    setEditingCategory(category);
+    setIsModalOpen(true);
+  };
+
+  const handleCreate = () => {
+    setEditingCategory(null);
+    setIsModalOpen(true);
   };
 
   return (
     <div className="p-8 space-y-8">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Categorias</h1>
-        <Button onClick={() => setIsCreateOpen(true)}>
+        <Button onClick={handleCreate}>
           + Nova Categoria
         </Button>
       </div>
@@ -60,6 +52,7 @@ export const CategoriesPage = () => {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Ícone</TableHead>
               <TableHead>Nome</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -67,22 +60,36 @@ export const CategoriesPage = () => {
           <TableBody>
             {categories.map((category) => (
               <TableRow key={category.id}>
+                <TableCell>
+                  <div className="p-2 w-fit rounded-lg bg-slate-100">
+                    <CategoryIcon name={category.icon} className="h-5 w-5 text-slate-600" />
+                  </div>
+                </TableCell>
                 <TableCell className="font-medium">{category.name}</TableCell>
                 <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    onClick={() => handleDelete(category.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEdit(category)}
+                    >
+                      <Pencil className="h-4 w-4 text-slate-600" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      onClick={() => handleDelete(category.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
             {categories.length === 0 && !loading && (
               <TableRow>
-                <TableCell colSpan={2} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
                   Nenhuma categoria encontrada.
                 </TableCell>
               </TableRow>
@@ -91,10 +98,11 @@ export const CategoriesPage = () => {
         </Table>
       </div>
 
-      <CreateCategoryModal
-        isOpen={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-        onSuccess={fetchCategories}
+      <UpsertCategoryModal
+        isOpen={isModalOpen}
+        category={editingCategory}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={() => refetchCategories()}
       />
     </div>
   );

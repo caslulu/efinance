@@ -71,6 +71,7 @@ export class BudgetsService {
         id: budget.id,
         category_id: budget.category_id,
         categoryName: budget.category.name,
+        categoryIcon: budget.category.icon,
         limit: budget.limit,
         spent,
         remaining: Math.max(0, budget.limit - spent),

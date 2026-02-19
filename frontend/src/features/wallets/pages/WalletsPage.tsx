@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react';
-import { api } from '../../../api/api';
+import { useState } from 'react';
 import type { Wallet } from '../../../types/Wallet';
-import type { Subscription } from '../../../types/Subscription';
+import { useWallets, useSubscriptions } from '@/hooks';
 import { WalletCard } from '../components/WalletCard';
 import { CreateWalletModal } from '../components/CreateWalletModal';
 import { AddTransactionModal } from '../components/AddTransactionModal';
@@ -12,8 +11,8 @@ import { Button } from '@/components/ui/button';
 import { ArrowRightLeft } from 'lucide-react';
 
 export const WalletsPage = () => {
-  const [wallets, setWallets] = useState<Wallet[]>([]);
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const { data: wallets = [], refetch: refetchWallets } = useWallets();
+  const { data: subscriptions = [], refetch: refetchSubscriptions } = useSubscriptions();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [editWallet, setEditWallet] = useState<Wallet | null>(null);
@@ -26,27 +25,10 @@ export const WalletsPage = () => {
     hasClosingDay?: boolean;
   }>({ isOpen: false, type: null, walletId: null });
 
-  const fetchData = async () => {
-    try {
-      const [walletsRes, subsRes] = await Promise.all([
-        api.get('/wallets'),
-        api.get('/subscriptions')
-      ]);
-
-      if (Array.isArray(walletsRes.data)) {
-        setWallets(walletsRes.data);
-      }
-      if (Array.isArray(subsRes.data)) {
-        setSubscriptions(subsRes.data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch data');
-    }
+  const refetchData = () => {
+    refetchWallets();
+    refetchSubscriptions();
   };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
 
   const openTransaction = (walletId: number, type: 'INCOME' | 'EXPENSE', walletType: string, hasClosingDay: boolean) => {
     setTransactionModal({ isOpen: true, type, walletId, walletType, hasClosingDay });
@@ -115,27 +97,27 @@ export const WalletsPage = () => {
       <CreateWalletModal
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
-        onSuccess={fetchData}
+        onSuccess={refetchData}
       />
 
       <EditWalletModal
         isOpen={!!editWallet}
         wallet={editWallet}
         onClose={() => setEditWallet(null)}
-        onSuccess={fetchData}
+        onSuccess={refetchData}
       />
 
       <PayInvoiceModal
         isOpen={!!payInvoiceWallet}
         wallet={payInvoiceWallet}
         onClose={() => setPayInvoiceWallet(null)}
-        onSuccess={fetchData}
+        onSuccess={refetchData}
       />
 
       <TransferModal
         isOpen={isTransferOpen}
         onClose={() => setIsTransferOpen(false)}
-        onSuccess={fetchData}
+        onSuccess={refetchData}
       />
 
       <AddTransactionModal
@@ -145,7 +127,7 @@ export const WalletsPage = () => {
         walletType={transactionModal.walletType}
         hasClosingDay={transactionModal.hasClosingDay}
         onClose={() => setTransactionModal({ ...transactionModal, isOpen: false })}
-        onSuccess={fetchData}
+        onSuccess={refetchData}
       />
     </div>
   );

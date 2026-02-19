@@ -1,7 +1,5 @@
-import { useState, useEffect } from 'react';
-import { api } from '../../../api/api';
-import type { Wallet } from '../../../types/Wallet';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import * as React from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,6 +11,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { ALLOWED_METHODS, PAYMENT_METHODS, WALLET_TYPES } from '../../../constants/paymentMethods';
+import { CategoryIcon } from '@/components/IconPicker';
+import { api } from '@/api/api';
+import type { Wallet } from '@/types/Wallet';
 
 interface CreateSubscriptionModalProps {
   isOpen: boolean;
@@ -21,21 +22,21 @@ interface CreateSubscriptionModalProps {
 }
 
 export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSubscriptionModalProps) => {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [value, setValue] = useState('');
-  const [type, setType] = useState('EXPENSE');
-  const [frequency, setFrequency] = useState('MONTHLY');
-  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
-  const [walletId, setWalletId] = useState('');
-  const [categoryId, setCategoryId] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('');
+  const [name, setName] = React.useState('');
+  const [description, setDescription] = React.useState('');
+  const [value, setValue] = React.useState('');
+  const [type, setType] = React.useState('EXPENSE');
+  const [frequency, setFrequency] = React.useState('MONTHLY');
+  const [startDate, setStartDate] = React.useState(new Date().toISOString().split('T')[0]);
+  const [walletId, setWalletId] = React.useState('');
+  const [categoryId, setCategoryId] = React.useState('');
+  const [paymentMethod, setPaymentMethod] = React.useState('');
   
-  const [wallets, setWallets] = useState<Wallet[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [wallets, setWallets] = React.useState<Wallet[]>([]);
+  const [categories, setCategories] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(false);
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (isOpen) {
       setPaymentMethod('');
       setDescription('');
@@ -104,6 +105,9 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Novo Item Recorrente</DialogTitle>
+          <DialogDescription>
+            Configure uma nova transação recorrente ou assinatura abaixo.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-4 py-4 max-h-[80vh] overflow-y-auto pr-2">
           <div className="grid gap-2">
@@ -118,7 +122,7 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
             <Label htmlFor="type">Tipo</Label>
             <Select value={type} onValueChange={setType}>
               <SelectTrigger id="type">
-                <SelectValue placeholder="Selecione o tipo" />
+                <SelectValue placeholder="Selecione the tipo" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="EXPENSE">Despesa</SelectItem>
@@ -187,7 +191,14 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
                 <SelectValue placeholder="Selecione a Categoria" />
               </SelectTrigger>
               <SelectContent>
-                {categories.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
+                {categories.map(c => (
+                  <SelectItem key={c.id} value={String(c.id)}>
+                    <div className="flex items-center gap-2">
+                      <CategoryIcon name={c.icon} className="h-4 w-4" />
+                      <span>{c.name}</span>
+                    </div>
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

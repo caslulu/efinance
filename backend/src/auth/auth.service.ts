@@ -101,9 +101,13 @@ export class AuthService {
     }
 
     const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+    const { fullName, birthDate, ...userData } = createUserDto;
+    
     const user = await this.usersService.create({
-      ...createUserDto,
+      ...userData,
       password: hashedPassword,
+      fullName,
+      birthDate: birthDate ? new Date(birthDate) : undefined,
     });
 
     if (isVerified) {

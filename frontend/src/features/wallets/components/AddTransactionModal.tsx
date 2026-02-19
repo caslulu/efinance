@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { ALLOWED_METHODS, PAYMENT_METHODS, WALLET_TYPES } from '../../../constants/paymentMethods';
+import { CategoryIcon } from '@/components/IconPicker';
 
 interface AddTransactionModalProps {
   isOpen: boolean;
@@ -186,7 +187,12 @@ export const AddTransactionModal = ({ isOpen, type, walletId, walletType, hasClo
               </SelectTrigger>
               <SelectContent>
                 {categories.map(c => (
-                  <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                  <SelectItem key={c.id} value={String(c.id)}>
+                    <div className="flex items-center gap-2">
+                      <CategoryIcon name={c.icon} className="h-4 w-4" />
+                      <span>{c.name}</span>
+                    </div>
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>

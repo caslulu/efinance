@@ -11,6 +11,8 @@ import { useAuth } from '../../../context/AuthContext';
 export const RegisterPage = () => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [birthDate, setBirthDate] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -56,7 +58,7 @@ export const RegisterPage = () => {
     setError('');
     
     try {
-      const payload: any = { username, email, password };
+      const payload: any = { username, email, password, fullName, birthDate };
       if (registerToken) payload.registerToken = registerToken;
 
       const res = await api.post('/auth/register', payload);
@@ -159,6 +161,25 @@ export const RegisterPage = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="fullName">Nome Completo (Opcional)</Label>
+                <Input
+                  id="fullName"
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Seu Nome Completo"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="birthDate">Data de Nascimento (Opcional)</Label>
+                <Input
+                  id="birthDate"
+                  type="date"
+                  value={birthDate}
+                  onChange={(e) => setBirthDate(e.target.value)}
                 />
               </div>
               <div className="space-y-2 relative">

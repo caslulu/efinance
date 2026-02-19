@@ -1,8 +1,6 @@
-import { useEffect, useState, useMemo, useRef } from 'react';
-import { api } from '../../../api/api';
+import { useState, useMemo, useRef, useEffect } from 'react';
+import { useTransactions, useSubscriptions, useWallets, useCategories } from '@/hooks';
 import type { Transaction } from '../../../types/Transaction';
-import type { Subscription } from '../../../types/Subscription';
-import type { Wallet } from '../../../types/Wallet';
 import { TransactionList } from '../components/TransactionList';
 import { ChevronDown, ChevronRight, Calendar, Search, Filter, X, Wallet as WalletIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,11 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export const TransactionsPage = () => {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
-  const [wallets, setWallets] = useState<Wallet[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: transactions = [], isLoading: loadingTx, refetch: refetchTransactions } = useTransactions();
+  const { data: subscriptions = [] } = useSubscriptions();
+  const { data: wallets = [] } = useWallets();
+  const { data: categories = [] } = useCategories();
+  const loading = loadingTx;
   const [expandedMonths, setExpandedMonths] = useState<string[]>([]);
   const hasInitialExpanded = useRef(false);
 
@@ -24,29 +22,9 @@ export const TransactionsPage = () => {
   const [filterWallet, setFilterWallet] = useState('ALL');
   const [filterType, setFilterType] = useState('ALL');
 
-  const fetchData = async () => {
-    try {
-      const [txRes, subRes, walletRes, catRes] = await Promise.all([
-        api.get('/transactions'),
-        api.get('/subscriptions'),
-        api.get('/wallets'),
-        api.get('/categories')
-      ]);
-      
-      if (Array.isArray(txRes.data)) setTransactions(txRes.data);
-      if (Array.isArray(subRes.data)) setSubscriptions(subRes.data);
-      if (Array.isArray(walletRes.data)) setWallets(walletRes.data);
-      if (Array.isArray(catRes.data)) setCategories(catRes.data);
-    } catch (error) {
-      console.error('Failed to fetch data');
-    } finally {
-      setLoading(false);
-    }
+  const fetchData = () => {
+    refetchTransactions();
   };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
 
   const clearFilters = () => {
     setSearchTerm('');

@@ -1,3 +1,5 @@
+import type { Category } from './Category';
+
 export type Frequency = 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
 export type SubscriptionStatus = 'ACTIVE' | 'PAUSED' | 'CANCELLED';
 
@@ -13,4 +15,5 @@ export interface Subscription {
   next_billing_date: string;
   wallet_id: number;
   category_id: number;
+  category?: Category;
 }

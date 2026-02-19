@@ -6,6 +6,7 @@ interface AuthContextType {
   user: any | null;
   login: (token: string, user: any) => void;
   logout: () => void;
+  refreshUser: () => Promise<void>;
   isAuthenticated: boolean;
 }
 
@@ -15,12 +16,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [user, setUser] = useState<any | null>(null);
 
-  useEffect(() => {
+  const refreshUser = async () => {
     if (token) {
-      api.get('/auth/profile')
-        .then((res) => setUser(res.data))
-        .catch(() => logout());
+      try {
+        const res = await api.get('/auth/profile');
+        setUser(res.data);
+      } catch (error) {
+        console.error('Failed to refresh user');
+      }
     }
+  };
+
+  useEffect(() => {
+    refreshUser();
   }, [token]);
 
   const login = (newToken: string, newUser: any) => {
@@ -36,7 +44,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ token, user, login, logout, isAuthenticated: !!token }}>
+    <AuthContext.Provider value={{ token, user, login, logout, refreshUser, isAuthenticated: !!token }}>
       {children}
     </AuthContext.Provider>
   );

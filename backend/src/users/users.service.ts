@@ -2,12 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from '../prisma/prisma.service';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(createUserDto: CreateUserDto) {
+  async create(createUserDto: any) {
     const user = await this.prisma.user.create({
       data: createUserDto,
     });
@@ -124,8 +125,33 @@ export class UsersService {
     });
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
+  async update(id: number, updateUserDto: UpdateUserDto) {
+    const { password, currentPassword, birthDate, ...data } = updateUserDto;
+    
+    const updateData: any = { ...data };
+
+    if (birthDate) {
+      updateData.birthDate = new Date(birthDate);
+    }
+
+    if (password) {
+      const user = await this.prisma.user.findUnique({ where: { id } });
+      if (user.password) {
+        if (!currentPassword) {
+          throw new Error('A senha atual é necessária para alterar a senha.');
+        }
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        if (!isMatch) {
+          throw new Error('A senha atual está incorreta.');
+        }
+      }
+      updateData.password = await bcrypt.hash(password, 10);
+    }
+
+    return this.prisma.user.update({
+      where: { id },
+      data: updateData,
+    });
   }
 
   remove(id: number) {

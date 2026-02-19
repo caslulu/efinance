@@ -25,6 +25,9 @@ model User {
   username              String
   email                 String                @unique
   password              String?
+  fullName              String?
+  avatarUrl             String?
+  birthDate             DateTime?
   resetToken            String?
   resetTokenExpiry      DateTime?
   twoFactorToken        String?
@@ -100,6 +103,7 @@ model TransactionCategory {
   user         User          @relation(fields: [user_id], references: [id])
   user_id      Int
   name         String
+  icon         String?
   transactions Transaction[]
   subscriptions Subscription[]
   budgets      Budget[]

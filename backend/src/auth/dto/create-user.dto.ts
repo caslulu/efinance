@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, MinLength, MaxLength, Matches, IsEmail, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, MinLength, MaxLength, Matches, IsEmail, IsOptional, IsDateString } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class CreateUserDto {
@@ -25,4 +25,12 @@ export class CreateUserDto {
   @IsString()
   @IsOptional()
   registerToken?: string;
+
+  @IsString()
+  @IsOptional()
+  fullName?: string;
+
+  @IsDateString()
+  @IsOptional()
+  birthDate?: string;
 }

@@ -1,36 +1,21 @@
-import { useState, useEffect } from 'react';
-import { api } from '../../../api/api';
+import { useState } from 'react';
+import { useBudgetStatus, useDeleteBudget } from '@/hooks';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, Target, Pencil, Trash2 } from 'lucide-react';
 import { UpsertBudgetModal } from '../components/UpsertBudgetModal';
+import { CategoryIcon } from '@/components/IconPicker';
 
 export const BudgetsPage = () => {
-  const [budgets, setBudgets] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: budgets = [], isLoading: loading, refetch: refetchBudgets } = useBudgetStatus();
+  const deleteBudget = useDeleteBudget();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<any>(null);
-
-  const fetchData = async () => {
-    try {
-      const res = await api.get('/budgets/status');
-      setBudgets(res.data);
-    } catch (error) {
-      console.error('Failed to fetch budgets');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
 
   const handleDelete = async (id: number) => {
     if (!confirm('Deseja excluir esta meta?')) return;
     try {
-      await api.delete(`/budgets/${id}`);
-      fetchData();
+      await deleteBudget.mutateAsync(id);
     } catch (error) {
       alert('Falha ao excluir meta');
     }
@@ -56,10 +41,16 @@ export const BudgetsPage = () => {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {budgets.map((budget) => (
-            <Card key={budget.id} className="relative group">
+            <Card key={budget.id} className="relative group overflow-hidden">
+              <div className={budget.percentage >= 100 ? 'h-1 bg-red-500 w-full' : 'h-1 bg-blue-500 w-full'} style={{ width: `${Math.min(100, budget.percentage)}%` }} />
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
-                  <CardTitle className="text-lg font-bold">{budget.categoryName}</CardTitle>
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-slate-100">
+                      <CategoryIcon name={budget.categoryIcon} className="h-5 w-5 text-slate-600" />
+                    </div>
+                    <CardTitle className="text-lg font-bold">{budget.categoryName}</CardTitle>
+                  </div>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingBudget(budget); setIsModalOpen(true); }}>
                       <Pencil className="h-4 w-4 text-blue-600" />
@@ -115,7 +106,7 @@ export const BudgetsPage = () => {
         isOpen={isModalOpen}
         budget={editingBudget}
         onClose={() => setIsModalOpen(false)}
-        onSuccess={fetchData}
+        onSuccess={() => refetchBudgets()}
       />
     </div>
   );

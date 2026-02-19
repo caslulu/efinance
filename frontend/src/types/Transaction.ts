@@ -1,3 +1,5 @@
+import type { Category } from './Category';
+
 export interface Transaction {
   id: number;
   transaction_date: string;
@@ -12,8 +14,5 @@ export interface Transaction {
   installment_number?: number;
   installment_id?: string;
   subscription_id?: number;
-  TransactionCategory?: {
-    id: number;
-    name: string;
-  };
+  TransactionCategory?: Category;
 }

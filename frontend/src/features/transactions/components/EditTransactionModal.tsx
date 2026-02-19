@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../../api/api';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type { Transaction } from '../../../types/Transaction';
+import { CategoryIcon } from '@/components/IconPicker';
 
 interface EditTransactionModalProps {
   isOpen: boolean;
@@ -108,6 +109,9 @@ export const EditTransactionModal = ({ isOpen, transaction, onClose, onSuccess }
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Editar Transação</DialogTitle>
+          <DialogDescription>
+            Atualize os detalhes desta transação abaixo.
+          </DialogDescription>
         </DialogHeader>
         {error && <div className="mb-2 rounded bg-red-100 p-2 text-sm text-red-600">{error}</div>}
         <form onSubmit={handleSubmit} className="grid gap-4 py-4">
@@ -151,7 +155,12 @@ export const EditTransactionModal = ({ isOpen, transaction, onClose, onSuccess }
               </SelectTrigger>
               <SelectContent>
                 {categories.map(c => (
-                  <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                  <SelectItem key={c.id} value={String(c.id)}>
+                    <div className="flex items-center gap-2">
+                      <CategoryIcon name={c.icon} className="h-4 w-4" />
+                      <span>{c.name}</span>
+                    </div>
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>

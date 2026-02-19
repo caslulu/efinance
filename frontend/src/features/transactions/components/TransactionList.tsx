@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { Edit2 } from 'lucide-react';
 import { EditTransactionModal } from './EditTransactionModal';
 import { PAYMENT_METHODS } from '../../../constants/paymentMethods';
+import { CategoryIcon } from '@/components/IconPicker';
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -49,7 +50,12 @@ export const TransactionList = ({ transactions, onTransactionUpdated }: Transact
                   {tx.description || '-'}
                 </TableCell>
                 <TableCell>
-                  {tx.TransactionCategory?.name || 'Sem Categoria'}
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded bg-slate-100">
+                      <CategoryIcon name={tx.TransactionCategory?.icon} className="h-3.5 w-3.5 text-slate-600" />
+                    </div>
+                    <span>{tx.TransactionCategory?.name || 'Sem Categoria'}</span>
+                  </div>
                 </TableCell>
                 <TableCell>
                   {tx.payment_method ? PAYMENT_METHODS[tx.payment_method as keyof typeof PAYMENT_METHODS] || tx.payment_method : '-'}
