@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, type ReactElement, type ReactNode } from 'react';
 import { Toaster } from 'sonner';
 import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -36,7 +36,7 @@ import {
   Bell
 } from 'lucide-react';
 
-const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
+const ProtectedRoute = ({ children }: { children: ReactElement }) => {
   const { isAuthenticated, isAuthLoading } = useAuth();
 
   if (isAuthLoading) {
@@ -97,7 +97,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/settings': 'Configurações',
 };
 
-const Layout = ({ children }: { children: React.ReactNode }) => {
+const Layout = ({ children }: { children: ReactNode }) => {
   const { logout, user } = useAuth();
   const { data: priceAlerts } = usePriceAlertNotifications();
   const markAsRead = useMarkPriceAlertAsRead();

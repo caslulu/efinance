@@ -50,7 +50,7 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
     const selectedWallet = wallets.find(w => String(w.id) === walletId);
     if (!selectedWallet) return [];
 
-    let normalizedType = selectedWallet.type;
+    let normalizedType: string = selectedWallet.type;
     // Assuming backend returns ENUM keys (BANK, PHYSICAL...), map to constants if needed
     // But WALLET_TYPES constants ARE the labels (Conta Bancária).
     // The backend returns 'BANK'.

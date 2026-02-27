@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { useBudgetStatus, useDeleteBudget } from '@/hooks';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Plus, Target, Pencil, Trash2 } from 'lucide-react';
 import { UpsertBudgetModal } from '../components/UpsertBudgetModal';
 import { ConfirmDialog } from '@/components/ConfirmDialog';

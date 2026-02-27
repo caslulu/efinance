@@ -39,7 +39,6 @@ export const EditWalletModal = ({ isOpen, wallet, onClose, onSuccess }: EditWall
   const [dueDay, setDueDay] = useState('');
   const [loading, setLoading] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (wallet) {
@@ -73,7 +72,6 @@ export const EditWalletModal = ({ isOpen, wallet, onClose, onSuccess }: EditWall
 
   const handleDelete = async () => {
     if (!wallet) return;
-    setDeleting(true);
     try {
       await api.delete(`/wallets/${wallet.id}`);
       toast.success('Carteira excluída com sucesso');
@@ -81,8 +79,6 @@ export const EditWalletModal = ({ isOpen, wallet, onClose, onSuccess }: EditWall
       onClose();
     } catch (error) {
       toast.error('Falha ao excluir carteira');
-    } finally {
-      setDeleting(false);
     }
   };
 

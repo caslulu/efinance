@@ -24,6 +24,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Gift, Loader2, Pencil, Plus, Trash2, ExternalLink, Bell, BellOff, History } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useWishlistProductHistory } from '@/hooks/useWishlists';
@@ -624,7 +625,7 @@ export const WishlistPage = () => {
                       width={80}
                     />
                     <Tooltip
-                      formatter={(value: number) => [formatCurrency(value), 'Preço']}
+                      formatter={(value) => [formatCurrency(Number(value)), 'Preço']}
                       labelFormatter={(label) => format(new Date(label), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
                     />
                     <Line

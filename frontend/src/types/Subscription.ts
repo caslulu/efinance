@@ -7,7 +7,7 @@ export interface Subscription {
   id: number;
   name: string;
   description?: string;
-  value: string;
+  value: number;
   transaction_type: 'INCOME' | 'EXPENSE';
   frequency: Frequency;
   status: SubscriptionStatus;
@@ -15,5 +15,6 @@ export interface Subscription {
   next_billing_date: string;
   wallet_id: number;
   category_id: number;
+  payment_method?: 'CREDIT' | 'DEBIT' | 'PIX' | 'MONEY' | 'TRANSFER' | 'DEPOSIT';
   category?: Category;
 }

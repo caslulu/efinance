@@ -468,13 +468,13 @@ export const DashboardPage = () => {
                         dataKey="value"
                         onClick={onPieClick}
                         className="cursor-pointer"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                       >
-                        {data.expensesByCategory.map((entry: any, index: number) => (
+                        {data.expensesByCategory.map((_: any, index: number) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                      <Tooltip formatter={(value) => formatCurrency(Number(value))} />
                       <Legend iconSize={10} wrapperStyle={{ fontSize: '12px' }} />
                     </PieChart>
                   </ResponsiveContainer>
@@ -495,7 +495,7 @@ export const DashboardPage = () => {
                     <XAxis dataKey="name" fontSize={10} tickLine={false} axisLine={false} />
                     <YAxis hide />
                     <Tooltip
-                      formatter={(value: number) => formatCurrency(value)}
+                      formatter={(value) => formatCurrency(Number(value))}
                       cursor={{ fill: '#f1f5f9' }}
                       contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                     />

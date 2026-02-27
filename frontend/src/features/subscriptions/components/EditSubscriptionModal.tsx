@@ -34,7 +34,7 @@ export const EditSubscriptionModal = ({ isOpen, subscription, onClose, onSuccess
     const [startDate, setStartDate] = React.useState('');
     const [walletId, setWalletId] = React.useState('');
     const [categoryId, setCategoryId] = React.useState('');
-    const [paymentMethod, setPaymentMethod] = React.useState('');
+    const [paymentMethod, setPaymentMethod] = React.useState<Subscription['payment_method'] | ''>('');
 
     const [wallets, setWallets] = React.useState<Wallet[]>([]);
     const [categories, setCategories] = React.useState<any[]>([]);
@@ -70,7 +70,7 @@ export const EditSubscriptionModal = ({ isOpen, subscription, onClose, onSuccess
         const selectedWallet = wallets.find(w => String(w.id) === walletId);
         if (!selectedWallet) return [];
 
-        let normalizedType = selectedWallet.type;
+        let normalizedType: string = selectedWallet.type;
 
         if (selectedWallet.type === 'BANK') normalizedType = WALLET_TYPES.BANK_ACCOUNT;
         if (selectedWallet.type === 'PHYSICAL') normalizedType = WALLET_TYPES.PHYSICAL;
@@ -186,7 +186,7 @@ export const EditSubscriptionModal = ({ isOpen, subscription, onClose, onSuccess
                     {availableMethods.length > 0 && (
                         <div className="grid gap-2">
                             <Label htmlFor="edit-method">Método de Pagamento</Label>
-                            <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                            <Select value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as Subscription['payment_method'])}>
                                 <SelectTrigger id="edit-method">
                                     <SelectValue placeholder="Selecione o método" />
                                 </SelectTrigger>

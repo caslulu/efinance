@@ -452,6 +452,16 @@ export const TransactionsPage = () => {
           )}
         </div>
       )}
+
+      <ConfirmDialog
+        open={isBulkDeleteModalOpen}
+        title="Apagar transações"
+        description="Tem certeza que deseja apagar as transações selecionadas? Esta ação não pode ser desfeita."
+        confirmLabel="Apagar"
+        destructive
+        onConfirm={handleBulkDelete}
+        onCancel={() => setIsBulkDeleteModalOpen(false)}
+      />
     </div>
   );
 };
