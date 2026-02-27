@@ -16,6 +16,8 @@ RUN npm run build
 # ---- Production Stage ----
 FROM node:20-alpine AS runner
 
+RUN apk add --no-cache openssl
+
 WORKDIR /app
 
 # Copy only what's needed for production

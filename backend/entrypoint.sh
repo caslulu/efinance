@@ -11,4 +11,4 @@ npx prisma migrate deploy
 echo "Migrations completed successfully."
 
 echo "Starting application on port ${PORT:-3000}..."
-exec node dist/main
+exec node dist/src/main
