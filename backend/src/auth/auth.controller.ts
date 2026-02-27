@@ -10,7 +10,10 @@ import { ResendTokenDto } from './dto/resend-token.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { UsersService } from '../users/users.service';
 import { ConfigService } from '@nestjs/config';
+import { Public } from './public.decorator';
+import { Response } from 'express';
 
+@Public()
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -18,6 +21,29 @@ export class AuthController {
     private readonly usersService: UsersService,
     private readonly configService: ConfigService,
   ) {}
+
+  private setAuthCookie(res: Response, token: string, rememberMe = false) {
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    res.cookie('access_token', token, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      maxAge: rememberMe ? 7 * 24 * 60 * 60 * 1000 : 60 * 60 * 1000,
+      path: '/',
+    });
+  }
+
+  private clearAuthCookie(res: Response) {
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    res.clearCookie('access_token', {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      path: '/',
+    });
+  }
 
   @Get('google')
   @UseGuards(AuthGuard('google'))
@@ -39,13 +65,20 @@ export class AuthController {
     if (loginResult.requires2FA) {
        res.redirect(`${frontendUrl}/login?userId=${loginResult.id}&requires2FA=true`);
     } else {
-       res.redirect(`${frontendUrl}/login?token=${loginResult.access_token}`);
+       this.setAuthCookie(res, loginResult.access_token, false);
+       res.redirect(`${frontendUrl}/`);
     }
   }
 
   @Post('verify-email')
-  async verifyEmail(@Body() dto: VerifyEmailDto) {
-    return this.authService.verifyEmail(dto.userId, dto.token);
+  async verifyEmail(@Body() dto: VerifyEmailDto, @Res({ passthrough: true }) res: Response) {
+    const result: any = await this.authService.verifyEmail(dto.userId, dto.token);
+
+    if (result?.access_token) {
+      this.setAuthCookie(res, result.access_token, false);
+    }
+
+    return result;
   }
 
   @Post('resend-verification')
@@ -54,7 +87,7 @@ export class AuthController {
   }
 
   @Post('login')
-  async login(@Body() loginDto: LoginDto) {
+  async login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) res: Response) {
     const user = await this.authService.validateUser(
       loginDto.username,
       loginDto.password,
@@ -62,12 +95,31 @@ export class AuthController {
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
-    return this.authService.login(user, !!loginDto.rememberMe);
+
+    const result: any = await this.authService.login(user, !!loginDto.rememberMe);
+
+    if (result?.access_token) {
+      this.setAuthCookie(res, result.access_token, !!loginDto.rememberMe);
+    }
+
+    return result;
   }
 
   @Post('2fa/login')
-  async login2fa(@Body() dto: LoginTwoFactorDto) {
-    return this.authService.login2fa(dto.userId, dto.token, !!dto.rememberMe);
+  async login2fa(@Body() dto: LoginTwoFactorDto, @Res({ passthrough: true }) res: Response) {
+    const result: any = await this.authService.login2fa(dto.userId, dto.token, !!dto.rememberMe);
+
+    if (result?.access_token) {
+      this.setAuthCookie(res, result.access_token, !!dto.rememberMe);
+    }
+
+    return result;
+  }
+
+  @Post('logout')
+  async logout(@Res({ passthrough: true }) res: Response) {
+    this.clearAuthCookie(res);
+    return { message: 'Logout efetuado com sucesso.' };
   }
 
   @Post('2fa/resend')

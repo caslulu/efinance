@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { useBudgetStatus, useDeleteBudget } from '@/hooks';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, Target, Pencil, Trash2 } from 'lucide-react';
 import { UpsertBudgetModal } from '../components/UpsertBudgetModal';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { CategoryIcon } from '@/components/IconPicker';
 
 export const BudgetsPage = () => {
@@ -11,17 +13,17 @@ export const BudgetsPage = () => {
   const deleteBudget = useDeleteBudget();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<any>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Deseja excluir esta meta?')) return;
     try {
       await deleteBudget.mutateAsync(id);
     } catch (error) {
-      alert('Falha ao excluir meta');
+      toast.error('Falha ao excluir meta');
     }
   };
 
-  const formatCurrency = (val: number) => 
+  const formatCurrency = (val: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
   return (
@@ -37,7 +39,11 @@ export const BudgetsPage = () => {
       </div>
 
       {loading ? (
-        <div className="text-center py-10">Carregando metas...</div>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <Skeleton className="h-[200px] w-full" />
+          <Skeleton className="h-[200px] w-full" />
+          <Skeleton className="h-[200px] w-full" />
+        </div>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {budgets.map((budget) => (
@@ -55,7 +61,7 @@ export const BudgetsPage = () => {
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingBudget(budget); setIsModalOpen(true); }}>
                       <Pencil className="h-4 w-4 text-blue-600" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600" onClick={() => handleDelete(budget.id)}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600" onClick={() => setConfirmDeleteId(budget.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -66,7 +72,7 @@ export const BudgetsPage = () => {
                   <span className="text-muted-foreground">Limite Mensal</span>
                   <span className="font-bold">{formatCurrency(budget.limit)}</span>
                 </div>
-                
+
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs">
                     <span>Gasto atual</span>
@@ -75,10 +81,9 @@ export const BudgetsPage = () => {
                     </span>
                   </div>
                   <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full transition-all ${
-                        budget.percentage >= 100 ? 'bg-red-500' : budget.percentage >= 80 ? 'bg-orange-500' : 'bg-blue-500'
-                      }`}
+                    <div
+                      className={`h-full transition-all ${budget.percentage >= 100 ? 'bg-red-500' : budget.percentage >= 80 ? 'bg-orange-500' : 'bg-blue-500'
+                        }`}
                       style={{ width: `${Math.min(100, budget.percentage)}%` }}
                     />
                   </div>
@@ -107,6 +112,19 @@ export const BudgetsPage = () => {
         budget={editingBudget}
         onClose={() => setIsModalOpen(false)}
         onSuccess={() => refetchBudgets()}
+      />
+
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        title="Excluir Meta"
+        description="Deseja excluir esta meta de gasto?"
+        confirmLabel="Excluir"
+        destructive
+        onConfirm={() => {
+          if (confirmDeleteId !== null) handleDelete(confirmDeleteId);
+          setConfirmDeleteId(null);
+        }}
+        onCancel={() => setConfirmDeleteId(null)}
       />
     </div>
   );

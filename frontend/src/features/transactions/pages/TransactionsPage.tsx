@@ -1,11 +1,14 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { useTransactions, useSubscriptions, useWallets, useCategories } from '@/hooks';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useTransactions, useSubscriptions, useWallets, useCategories, useDeleteTransaction } from '@/hooks';
 import type { Transaction } from '../../../types/Transaction';
 import { TransactionList } from '../components/TransactionList';
-import { ChevronDown, ChevronRight, Calendar, Search, Filter, X, Wallet as WalletIcon } from 'lucide-react';
+import { ChevronDown, ChevronRight, Calendar, Search, Filter, X, Wallet as WalletIcon, Download, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { toast } from 'sonner';
 
 export const TransactionsPage = () => {
   const { data: transactions = [], isLoading: loadingTx, refetch: refetchTransactions } = useTransactions();
@@ -21,6 +24,13 @@ export const TransactionsPage = () => {
   const [filterCategory, setFilterCategory] = useState('ALL');
   const [filterWallet, setFilterWallet] = useState('ALL');
   const [filterType, setFilterType] = useState('ALL');
+  const [filterStartDate, setFilterStartDate] = useState('');
+  const [filterEndDate, setFilterEndDate] = useState('');
+
+  // Bulk Actions
+  const [selectedTxIds, setSelectedTxIds] = useState<Set<number>>(new Set());
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+  const deleteMutation = useDeleteTransaction();
 
   const fetchData = () => {
     refetchTransactions();
@@ -31,6 +41,8 @@ export const TransactionsPage = () => {
     setFilterCategory('ALL');
     setFilterWallet('ALL');
     setFilterType('ALL');
+    setFilterStartDate('');
+    setFilterEndDate('');
   };
 
   const groupedData = useMemo(() => {
@@ -72,17 +84,21 @@ export const TransactionsPage = () => {
 
     // 2. Apply Filters
     const filteredTx = [...transactions, ...virtualTransactions].filter(tx => {
-      const matchesSearch = 
-        (tx.description?.toLowerCase().includes(searchTerm.toLowerCase())) || 
+      const matchesSearch =
+        (tx.description?.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (tx.TransactionCategory?.name.toLowerCase().includes(searchTerm.toLowerCase()));
-      
+
       const matchesCategory = filterCategory === 'ALL' || tx.category_id === Number(filterCategory);
       const matchesWallet = filterWallet === 'ALL' || tx.wallet_id === Number(filterWallet);
       const matchesType = filterType === 'ALL' || tx.transaction_type === filterType;
 
-      return matchesSearch && matchesCategory && matchesWallet && matchesType;
+      const txDate = new Date(tx.transaction_date);
+      const matchesStart = filterStartDate ? txDate >= new Date(filterStartDate + 'T00:00:00') : true;
+      const matchesEnd = filterEndDate ? txDate <= new Date(filterEndDate + 'T23:59:59') : true;
+
+      return matchesSearch && matchesCategory && matchesWallet && matchesType && matchesStart && matchesEnd;
     });
-    
+
     // 3. Group by Month/Year
     const groups: Record<string, { label: string; transactions: Transaction[]; totalExpense: number; totalIncome: number; orderKey: number }> = {};
 
@@ -92,12 +108,12 @@ export const TransactionsPage = () => {
       const orderKey = d.getFullYear() * 100 + d.getMonth();
 
       if (!groups[monthLabel]) {
-        groups[monthLabel] = { 
-          label: monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1), 
-          transactions: [], 
-          totalExpense: 0, 
+        groups[monthLabel] = {
+          label: monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1),
+          transactions: [],
+          totalExpense: 0,
           totalIncome: 0,
-          orderKey 
+          orderKey
         };
       }
 
@@ -115,14 +131,14 @@ export const TransactionsPage = () => {
       .sort((a, b) => a.orderKey - b.orderKey)
       .map(group => ({
         ...group,
-        transactions: group.transactions.sort((a, b) => 
+        transactions: group.transactions.sort((a, b) =>
           new Date(a.transaction_date).getTime() - new Date(b.transaction_date).getTime()
         )
       }));
 
     // 5. Split into Past, Current, Future
     const currentOrderKey = today.getFullYear() * 100 + today.getMonth();
-    
+
     return {
       past: sortedGroups.filter(g => g.orderKey < currentOrderKey),
       current: sortedGroups.find(g => g.orderKey === currentOrderKey) || null,
@@ -139,12 +155,78 @@ export const TransactionsPage = () => {
   }, [groupedData.current]);
 
   const toggleMonth = (label: string) => {
-    setExpandedMonths(prev => 
+    setExpandedMonths(prev =>
       prev.includes(label) ? prev.filter(m => m !== label) : [...prev, label]
     );
   };
 
-  const formatCurrency = (val: number) => 
+  const handleExportCSV = () => {
+    const txToExport: Transaction[] = [];
+    groupedData.past.forEach(g => txToExport.push(...g.transactions));
+    if (groupedData.current) txToExport.push(...groupedData.current.transactions);
+    groupedData.future.forEach(g => txToExport.push(...g.transactions));
+
+    if (txToExport.length === 0) {
+      toast.error('Nenhuma transação para exportar.');
+      return;
+    }
+
+    const headers = ['Data', 'Nome', 'Categoria', 'Carteira ID', 'Método', 'Tipo', 'Valor'];
+    const rows = txToExport.map(tx => [
+      new Date(tx.transaction_date).toLocaleDateString('pt-BR'),
+      `"${(tx.description || '').replace(/"/g, '""')}"`,
+      `"${tx.TransactionCategory?.name || ''}"`,
+      tx.wallet_id,
+      tx.payment_method || '',
+      tx.transaction_type,
+      tx.value
+    ]);
+
+    // Use \ufeff for Excel UTF-8 BOM
+    const csvContent = "data:text/csv;charset=utf-8,\ufeff"
+      + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `extrato_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
+  const handleBulkDelete = async () => {
+    const idsToDelete = Array.from(selectedTxIds).filter(id => id > 0); // Ignore virtual futures
+    if (idsToDelete.length === 0) {
+      toast.error('Nenhuma transação real selecionada.');
+      setIsBulkDeleteModalOpen(false);
+      return;
+    }
+
+    try {
+      for (const id of idsToDelete) {
+        await deleteMutation.mutateAsync(id);
+      }
+      toast.success(`${idsToDelete.length} transações apagadas.`);
+      setSelectedTxIds(new Set());
+      refetchTransactions();
+    } catch (error) {
+      toast.error('Erro ao apagar algumas transações.');
+    } finally {
+      setIsBulkDeleteModalOpen(false);
+    }
+  };
+
+  const toggleSelection = (id: number) => {
+    setSelectedTxIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const formatCurrency = (val: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
   const renderGroup = (group: any) => {
@@ -153,7 +235,7 @@ export const TransactionsPage = () => {
 
     return (
       <div key={group.label} className="border rounded-xl bg-white overflow-hidden shadow-sm transition-all hover:shadow-md">
-        <button 
+        <button
           onClick={() => toggleMonth(group.label)}
           className="w-full flex items-center justify-between p-4 bg-gray-50/50 hover:bg-gray-50 transition-colors border-b"
         >
@@ -184,14 +266,19 @@ export const TransactionsPage = () => {
 
         {isExpanded && (
           <div className="p-2 animate-in fade-in slide-in-from-top-1 duration-200">
-            <TransactionList transactions={group.transactions} onTransactionUpdated={fetchData} />
+            <TransactionList
+              transactions={group.transactions}
+              onTransactionUpdated={fetchData}
+              selectedIds={selectedTxIds}
+              onToggleSelect={toggleSelection}
+            />
           </div>
         )}
       </div>
     );
   };
 
-  const isFiltered = searchTerm !== '' || filterCategory !== 'ALL' || filterWallet !== 'ALL' || filterType !== 'ALL';
+  const isFiltered = searchTerm !== '' || filterCategory !== 'ALL' || filterWallet !== 'ALL' || filterType !== 'ALL' || filterStartDate !== '' || filterEndDate !== '';
 
   return (
     <div className="p-8 space-y-8">
@@ -209,8 +296,8 @@ export const TransactionsPage = () => {
         <div className="grid gap-4 md:grid-cols-4 bg-white p-4 rounded-xl border shadow-sm">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Buscar por nome..." 
+            <Input
+              placeholder="Buscar por nome..."
               className="pl-9"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -253,11 +340,59 @@ export const TransactionsPage = () => {
               <SelectItem value="EXPENSE">Apenas Despesas</SelectItem>
             </SelectContent>
           </Select>
+
+          <div className="flex gap-2 w-full md:col-span-4 flex-wrap md:flex-nowrap">
+            <div className="flex items-center gap-2 flex-1 relative">
+              <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">De:</span>
+              <Input
+                type="date"
+                value={filterStartDate}
+                onChange={(e) => setFilterStartDate(e.target.value)}
+                className="w-full"
+              />
+            </div>
+            <div className="flex items-center gap-2 flex-1 relative">
+              <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">Até:</span>
+              <Input
+                type="date"
+                value={filterEndDate}
+                onChange={(e) => setFilterEndDate(e.target.value)}
+                className="w-full"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Bulk Action / Export Bar */}
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            {selectedTxIds.size > 0 && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setIsBulkDeleteModalOpen(true)}
+              >
+                <Trash2 size={16} className="mr-2" />
+                Apagar {selectedTxIds.size} selecionadas
+              </Button>
+            )}
+          </div>
+          <Button variant="outline" size="sm" onClick={handleExportCSV}>
+            <Download size={16} className="mr-2" />
+            Exportar CSV
+          </Button>
         </div>
       </div>
 
       {loading ? (
-        <div className="text-center py-10 text-muted-foreground">Carregando transações...</div>
+        <div className="space-y-4 pt-4">
+          <Skeleton className="h-6 w-32" />
+          <div className="space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-16 w-full" />
+            ))}
+          </div>
+        </div>
       ) : (
         <div className="space-y-12">
           {/* 1. CURRENT SECTION (TOP) */}
@@ -305,8 +440,8 @@ export const TransactionsPage = () => {
 
           {isFiltered && (groupedData.past.length > 0 || groupedData.future.length > 0) && (
             <div className="space-y-4">
-               {groupedData.future.map(renderGroup)}
-               {groupedData.past.map(renderGroup)}
+              {groupedData.future.map(renderGroup)}
+              {groupedData.past.map(renderGroup)}
             </div>
           )}
 

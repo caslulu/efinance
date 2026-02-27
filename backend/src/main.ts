@@ -20,6 +20,7 @@ async function bootstrap() {
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
+  const isProduction = process.env.NODE_ENV === 'production';
 
   const allowedOrigins = new Set<string>([
     ...configuredOrigins,
@@ -35,7 +36,7 @@ async function bootstrap() {
 
       if (
         allowedOrigins.has(origin) ||
-        /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)
+        (!isProduction && /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin))
       ) {
         callback(null, true);
         return;

@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -18,6 +19,9 @@ export class CreateWishlistProductDto {
 
   @IsOptional()
   @IsString()
-  @IsUrl({}, { message: 'URL inválida' })
   url?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  send_price_alerts?: boolean;
 }

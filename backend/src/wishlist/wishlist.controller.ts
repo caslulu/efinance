@@ -18,7 +18,7 @@ import { CreateWishlistDto } from './dto/create-wishlist.dto';
 import { UpdateWishlistDto } from './dto/update-wishlist.dto';
 import { CreateWishlistProductDto } from './dto/create-wishlist-product.dto';
 import { UpdateWishlistProductDto } from './dto/update-wishlist-product.dto';
-import { SearchStoreProductsDto } from './dto/search-store-products.dto';
+import { ScrapeUrlDto } from './dto/scrape-url.dto';
 
 type AuthenticatedRequest = ExpressRequest & {
   user: {
@@ -44,9 +44,25 @@ export class WishlistController {
     return this.wishlistService.findAll(req.user.userId);
   }
 
-  @Get('search-products')
-  searchProducts(@Query() searchStoreProductsDto: SearchStoreProductsDto) {
-    return this.wishlistService.searchProducts(searchStoreProductsDto);
+  @Get('scrape-url')
+  scrapeUrl(@Query() scrapeUrlDto: ScrapeUrlDto) {
+    return this.wishlistService.scrapeProductUrl(scrapeUrlDto.url);
+  }
+
+  @Get('price-alert-notifications')
+  getPriceAlertNotifications(@Request() req: AuthenticatedRequest) {
+    return this.wishlistService.getPriceAlertNotifications(req.user.userId);
+  }
+
+  @Post('price-alert-notifications/:notificationId/read')
+  markPriceAlertAsRead(
+    @Request() req: AuthenticatedRequest,
+    @Param('notificationId', ParseIntPipe) notificationId: number,
+  ) {
+    return this.wishlistService.markPriceAlertAsRead(
+      req.user.userId,
+      notificationId,
+    );
   }
 
   @Get(':id')

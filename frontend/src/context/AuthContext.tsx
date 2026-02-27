@@ -1,50 +1,103 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { api } from '../api/api';
+import { api, setApiAuthToken } from '../api/api';
+import type { User } from '../types/User';
 
 interface AuthContextType {
   token: string | null;
-  user: any | null;
-  login: (token: string, user: any) => void;
-  logout: () => void;
+  user: User | null;
+  login: (token?: string, user?: Partial<User>, rememberMe?: boolean) => Promise<void>;
+  logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   isAuthenticated: boolean;
+  isAuthLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+const getStoredToken = (): string | null => {
+  return localStorage.getItem('session_token') || sessionStorage.getItem('session_token');
+};
+
+const clearStoredToken = () => {
+  localStorage.removeItem('session_token');
+  sessionStorage.removeItem('session_token');
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
-  const [user, setUser] = useState<any | null>(null);
+  const [token, setToken] = useState<string | null>(getStoredToken);
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   const refreshUser = async () => {
-    if (token) {
-      try {
-        const res = await api.get('/auth/profile');
-        setUser(res.data);
-      } catch (error) {
-        console.error('Failed to refresh user');
-      }
+    try {
+      const res = await api.get('/auth/profile');
+      setUser(res.data);
+    } catch (error) {
+      setUser(null);
+      setToken(null);
+      setApiAuthToken(null);
+      clearStoredToken();
     }
   };
 
   useEffect(() => {
-    refreshUser();
+    let mounted = true;
+
+    if (token) {
+      setApiAuthToken(token);
+    } else {
+      setIsAuthLoading(false);
+      return () => {
+        mounted = false;
+      };
+    }
+
+    const initializeAuth = async () => {
+      await refreshUser();
+      if (mounted) {
+        setIsAuthLoading(false);
+      }
+    };
+
+    initializeAuth();
+
+    return () => {
+      mounted = false;
+    };
   }, [token]);
 
-  const login = (newToken: string, newUser: any) => {
-    localStorage.setItem('token', newToken);
-    setToken(newToken);
-    setUser(newUser);
+  const login = async (newToken?: string, newUser?: Partial<User>, rememberMe?: boolean) => {
+    if (newToken) {
+      setToken(newToken);
+      setApiAuthToken(newToken);
+      clearStoredToken();
+      if (rememberMe) {
+        localStorage.setItem('session_token', newToken);
+      } else {
+        sessionStorage.setItem('session_token', newToken);
+      }
+    }
+    if (newUser) {
+      setUser(newUser as User);
+    }
+
+    await refreshUser();
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
+  const logout = async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch (error) {
+      console.error('Failed to call logout endpoint');
+    }
     setToken(null);
     setUser(null);
+    setApiAuthToken(null);
+    clearStoredToken();
   };
 
   return (
-    <AuthContext.Provider value={{ token, user, login, logout, refreshUser, isAuthenticated: !!token }}>
+    <AuthContext.Provider value={{ token, user, login, logout, refreshUser, isAuthenticated: !!user, isAuthLoading }}>
       {children}
     </AuthContext.Provider>
   );

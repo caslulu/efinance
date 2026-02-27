@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select"
 import type { Transaction } from '../../../types/Transaction';
 import { CategoryIcon } from '@/components/IconPicker';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 
 interface EditTransactionModalProps {
   isOpen: boolean;
@@ -29,6 +30,8 @@ export const EditTransactionModal = ({ isOpen, transaction, onClose, onSuccess }
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteMessage, setDeleteMessage] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -50,11 +53,11 @@ export const EditTransactionModal = ({ isOpen, transaction, onClose, onSuccess }
     }
   }, [transaction]);
 
-  const handleDelete = async () => {
+  const handleDeleteClick = () => {
     if (!transaction) return;
-    
+
     let message = 'Tem certeza que deseja excluir esta transação?';
-    
+
     if (transaction.is_recurring && transaction.installment_id) {
       message = 'Esta é uma transação recorrente (Série). Excluir apagará todas as recorrências desta série. Confirmar?';
     } else if (transaction.is_recurring) {
@@ -63,8 +66,14 @@ export const EditTransactionModal = ({ isOpen, transaction, onClose, onSuccess }
       message = 'Esta é uma compra parcelada. Excluir apagará todas as parcelas. Confirmar?';
     }
 
-    if (!window.confirm(message)) return;
+    setDeleteMessage(message);
+    setShowDeleteConfirm(true);
+  };
 
+  const handleDelete = async () => {
+    if (!transaction) return;
+
+    setShowDeleteConfirm(false);
     setLoading(true);
     try {
       await api.delete(`/transactions/${transaction.id}`);
@@ -83,7 +92,7 @@ export const EditTransactionModal = ({ isOpen, transaction, onClose, onSuccess }
 
     setLoading(true);
     setError('');
-    
+
     try {
       const payload = {
         value: Number(amount),
@@ -91,7 +100,7 @@ export const EditTransactionModal = ({ isOpen, transaction, onClose, onSuccess }
         category_id: categoryId ? Number(categoryId) : undefined,
         transaction_date: new Date(date).toISOString(),
       };
-      
+
       await api.patch(`/transactions/${transaction.id}`, payload);
       onSuccess();
       onClose();
@@ -105,80 +114,92 @@ export const EditTransactionModal = ({ isOpen, transaction, onClose, onSuccess }
   if (!transaction) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Editar Transação</DialogTitle>
-          <DialogDescription>
-            Atualize os detalhes desta transação abaixo.
-          </DialogDescription>
-        </DialogHeader>
-        {error && <div className="mb-2 rounded bg-red-100 p-2 text-sm text-red-600">{error}</div>}
-        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="description">Nome / Descrição (Opcional)</Label>
-            <Input
-              id="description"
-              type="text"
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              placeholder="Ex: Aluguel, Supermercado..."
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="amount">Valor</Label>
-            <Input
-              id="amount"
-              type="number"
-              step="0.01"
-              value={amount}
-              onChange={e => setAmount(e.target.value)}
-              required
-              min="0.01"
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="date">Data</Label>
-            <Input
-              id="date"
-              type="date"
-              value={date}
-              onChange={e => setDate(e.target.value)}
-              required
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="category">Categoria</Label>
-            <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger id="category">
-                <SelectValue placeholder="Selecione (Padrão: Outro)" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map(c => (
-                  <SelectItem key={c.id} value={String(c.id)}>
-                    <div className="flex items-center gap-2">
-                      <CategoryIcon name={c.icon} className="h-4 w-4" />
-                      <span>{c.name}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <DialogFooter className="sm:justify-between">
-            <Button type="button" variant="destructive" onClick={handleDelete} disabled={loading}>
-              Excluir
-            </Button>
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-              <Button type="submit" disabled={loading}>
-                {loading ? 'Salvando...' : 'Salvar Alterações'}
-              </Button>
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Editar Transação</DialogTitle>
+            <DialogDescription>
+              Atualize os detalhes desta transação abaixo.
+            </DialogDescription>
+          </DialogHeader>
+          {error && <div className="mb-2 rounded bg-red-100 p-2 text-sm text-red-600">{error}</div>}
+          <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="description">Nome / Descrição (Opcional)</Label>
+              <Input
+                id="description"
+                type="text"
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                placeholder="Ex: Aluguel, Supermercado..."
+              />
             </div>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+            <div className="grid gap-2">
+              <Label htmlFor="amount">Valor</Label>
+              <Input
+                id="amount"
+                type="number"
+                step="0.01"
+                value={amount}
+                onChange={e => setAmount(e.target.value)}
+                required
+                min="0.01"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="date">Data</Label>
+              <Input
+                id="date"
+                type="date"
+                value={date}
+                onChange={e => setDate(e.target.value)}
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="category">Categoria</Label>
+              <Select value={categoryId} onValueChange={setCategoryId}>
+                <SelectTrigger id="category">
+                  <SelectValue placeholder="Selecione (Padrão: Outro)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map(c => (
+                    <SelectItem key={c.id} value={String(c.id)}>
+                      <div className="flex items-center gap-2">
+                        <CategoryIcon name={c.icon} className="h-4 w-4" />
+                        <span>{c.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <DialogFooter className="sm:justify-between">
+              <Button type="button" variant="destructive" onClick={handleDeleteClick} disabled={loading}>
+                Excluir
+              </Button>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+                <Button type="submit" disabled={loading}>
+                  {loading ? 'Salvando...' : 'Salvar Alterações'}
+                </Button>
+              </div>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        title="Excluir Transação"
+        description={deleteMessage}
+        confirmLabel="Excluir"
+        destructive
+        onConfirm={handleDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
+    </>
   );
 };

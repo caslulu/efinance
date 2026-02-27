@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { api } from '../../../api/api';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -43,7 +44,7 @@ export const UpsertCategoryModal = ({ isOpen, category, onClose, onSuccess }: Up
       onSuccess();
       onClose();
     } catch (error) {
-      alert(`Falha ao ${category ? 'atualizar' : 'criar'} categoria`);
+      toast.error(`Falha ao ${category ? 'atualizar' : 'criar'} categoria`);
     } finally {
       setLoading(false);
     }

@@ -22,7 +22,15 @@ export const WalletCard = ({ wallet, onAddFunds, onAddExpense, onEdit, onPayInvo
     OTHER: 'bg-gray-500 hover:bg-gray-600',
   };
 
-  const formatCurrency = (val: number) => 
+  const typeLabels: Record<string, string> = {
+    BANK: 'Banco',
+    PHYSICAL: 'Dinheiro',
+    MEAL_VOUCHER: 'Vale Refeição',
+    INVESTMENT: 'Investimento',
+    OTHER: 'Outro',
+  };
+
+  const formatCurrency = (val: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
   return (
@@ -34,11 +42,11 @@ export const WalletCard = ({ wallet, onAddFunds, onAddExpense, onEdit, onPayInvo
         </CardTitle>
         <div className="flex items-center gap-2">
           <Badge className={clsx('text-white', typeColors[wallet.type] || 'bg-gray-500')}>
-            {wallet.type.replace('_', ' ')}
+            {typeLabels[wallet.type] || wallet.type}
           </Badge>
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
             onClick={onEdit}
           >
@@ -57,9 +65,9 @@ export const WalletCard = ({ wallet, onAddFunds, onAddExpense, onEdit, onPayInvo
                 </div>
               </div>
               {onPayInvoice && (Number(wallet.due_invoice) > 0 || Number(wallet.current_invoice) > 0) && (
-                <Button 
-                  size="sm" 
-                  className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm flex items-center gap-2 h-8 px-3" 
+                <Button
+                  size="sm"
+                  className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm flex items-center gap-2 h-8 px-3"
                   onClick={onPayInvoice}
                 >
                   <ReceiptText className="h-4 w-4" />
@@ -67,7 +75,7 @@ export const WalletCard = ({ wallet, onAddFunds, onAddExpense, onEdit, onPayInvo
                 </Button>
               )}
             </div>
-            
+
             <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-gray-50 border border-gray-100">
               <div className="space-y-1">
                 <p className="text-[9px] uppercase font-bold text-muted-foreground">Fatura Fechada</p>
@@ -101,15 +109,15 @@ export const WalletCard = ({ wallet, onAddFunds, onAddExpense, onEdit, onPayInvo
         )}
       </CardContent>
       <CardFooter className="flex gap-2 pt-2">
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           className="flex-1 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
           onClick={() => onAddFunds(wallet.id)}
         >
           <Plus className="mr-2 h-4 w-4" /> Adicionar
         </Button>
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           className="flex-1 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
           onClick={() => onAddExpense(wallet.id)}
         >

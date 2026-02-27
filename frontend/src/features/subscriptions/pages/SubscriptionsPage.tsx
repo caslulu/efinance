@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { toast } from 'sonner';
 import { useSubscriptions, useDeleteSubscription, useUpdateSubscription, useTriggerSubscriptionCheck } from '@/hooks';
 import type { Subscription } from '../../../types/Subscription';
 import { CreateSubscriptionModal } from '../components/CreateSubscriptionModal';
+import { EditSubscriptionModal } from '../components/EditSubscriptionModal';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -13,8 +16,15 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import clsx from 'clsx';
-import { Play, Plus, Trash, PauseCircle, PlayCircle } from 'lucide-react';
+import { Plus, Trash, PauseCircle, PlayCircle, RefreshCw, Edit2 } from 'lucide-react';
 import { CategoryIcon } from '@/components/IconPicker';
+
+const frequencyLabels: Record<string, string> = {
+  WEEKLY: 'Semanal',
+  MONTHLY: 'Mensal',
+  QUARTERLY: 'Trimestral',
+  YEARLY: 'Anual',
+};
 
 export const SubscriptionsPage = () => {
   const { data: subscriptions = [], isLoading: loading, refetch: refetchSubscriptions } = useSubscriptions();
@@ -22,23 +32,42 @@ export const SubscriptionsPage = () => {
   const updateSubscription = useUpdateSubscription();
   const triggerCheck = useTriggerSubscriptionCheck();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+
+  const summary = useMemo(() => {
+    const active = subscriptions.filter(s => s.status === 'ACTIVE');
+    const paused = subscriptions.filter(s => s.status === 'PAUSED');
+    const monthlyTotal = active.reduce((sum, s) => {
+      const val = Number(s.value);
+      switch (s.frequency) {
+        case 'WEEKLY': return sum + val * 4;
+        case 'MONTHLY': return sum + val;
+        case 'QUARTERLY': return sum + val / 3;
+        case 'YEARLY': return sum + val / 12;
+        default: return sum + val;
+      }
+    }, 0);
+    return { activeCount: active.length, pausedCount: paused.length, monthlyTotal };
+  }, [subscriptions]);
+
+  const formatCurrency = (val: number) =>
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
   const handleTriggerCheck = async () => {
     try {
       await triggerCheck.mutateAsync();
-      alert('Verificação de recorrência disparada com sucesso');
+      toast.success('Verificação de recorrência disparada com sucesso');
     } catch (error) {
-      alert('Falha ao disparar verificação');
+      toast.error('Falha ao disparar verificação');
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Tem certeza que deseja excluir esta recorrência? Todas as transações geradas por ela também serão excluídas.')) return;
-    
     try {
       await deleteSubscription.mutateAsync(id);
     } catch (error) {
-      alert('Falha ao excluir recorrência');
+      toast.error('Falha ao excluir recorrência');
     }
   };
 
@@ -47,7 +76,7 @@ export const SubscriptionsPage = () => {
     try {
       await updateSubscription.mutateAsync({ id: sub.id, data: { status: newStatus } });
     } catch (error) {
-      alert('Falha ao atualizar status');
+      toast.error('Falha ao atualizar status');
     }
   };
 
@@ -56,14 +85,37 @@ export const SubscriptionsPage = () => {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Recorrências</h1>
         <div className="flex gap-4">
-          <Button variant="outline" onClick={handleTriggerCheck}>
-            <Play className="mr-2 h-4 w-4" /> Processar Pendentes
+          <Button variant="ghost" size="sm" onClick={handleTriggerCheck} className="text-muted-foreground" title="Verificar e gerar transações pendentes das recorrências ativas">
+            <RefreshCw className="mr-2 h-4 w-4" /> Sincronizar
           </Button>
           <Button onClick={() => setIsCreateOpen(true)}>
             <Plus className="mr-2 h-4 w-4" /> Novo Recorrente
           </Button>
         </div>
       </div>
+
+      {subscriptions.length > 0 && (
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="rounded-lg border bg-white p-4">
+            <p className="text-sm text-muted-foreground">Custo Mensal Estimado</p>
+            <p className="text-2xl font-bold text-gray-900">{formatCurrency(summary.monthlyTotal)}</p>
+          </div>
+          <div className="rounded-lg border bg-white p-4">
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-green-500" />
+              <p className="text-sm text-muted-foreground">Ativas</p>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{summary.activeCount}</p>
+          </div>
+          <div className="rounded-lg border bg-white p-4">
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-yellow-500" />
+              <p className="text-sm text-muted-foreground">Pausadas</p>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{summary.pausedCount}</p>
+          </div>
+        </div>
+      )}
 
       <div className="rounded-md border bg-white">
         <Table>
@@ -93,19 +145,19 @@ export const SubscriptionsPage = () => {
                   {sub.description || '-'}
                 </TableCell>
                 <TableCell>R$ {Number(sub.value).toFixed(2)}</TableCell>
-                <TableCell>{sub.frequency}</TableCell>
+                <TableCell>{frequencyLabels[sub.frequency] || sub.frequency}</TableCell>
                 <TableCell>
-                  <Badge 
+                  <Badge
                     variant="outline"
                     className={clsx(
-                        sub.status === 'ACTIVE' ? 'border-green-500 text-green-600 bg-green-50' : 'border-yellow-500 text-yellow-600 bg-yellow-50'
+                      sub.status === 'ACTIVE' ? 'border-green-500 text-green-600 bg-green-50' : 'border-yellow-500 text-yellow-600 bg-yellow-50'
                     )}
                   >
                     {sub.status === 'ACTIVE' ? 'Ativo' : 'Pausado'}
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  {new Date(sub.next_billing_date).toLocaleDateString()}
+                  {new Date(sub.next_billing_date).toLocaleDateString('pt-BR')}
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center">
@@ -116,7 +168,10 @@ export const SubscriptionsPage = () => {
                         <PlayCircle className="h-4 w-4 text-green-500" />
                       )}
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(sub.id)} title="Excluir">
+                    <Button variant="ghost" size="icon" onClick={() => setEditingSubscription(sub)} title="Editar">
+                      <Edit2 className="h-4 w-4 text-blue-500" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => setConfirmDeleteId(sub.id)} title="Excluir">
                       <Trash className="h-4 w-4 text-red-500" />
                     </Button>
                   </div>
@@ -138,6 +193,26 @@ export const SubscriptionsPage = () => {
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
         onSuccess={() => refetchSubscriptions()}
+      />
+
+      <EditSubscriptionModal
+        isOpen={!!editingSubscription}
+        subscription={editingSubscription}
+        onClose={() => setEditingSubscription(null)}
+        onSuccess={() => refetchSubscriptions()}
+      />
+
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        title="Excluir Recorrência"
+        description="Tem certeza que deseja excluir esta recorrência? Todas as transações geradas por ela também serão excluídas."
+        confirmLabel="Excluir"
+        destructive
+        onConfirm={() => {
+          if (confirmDeleteId !== null) handleDelete(confirmDeleteId);
+          setConfirmDeleteId(null);
+        }}
+        onCancel={() => setConfirmDeleteId(null)}
       />
     </div>
   );

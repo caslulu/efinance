@@ -1,24 +1,20 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import {
   useCreateWishlist,
   useCreateWishlistProduct,
   useDeleteWishlist,
   useDeleteWishlistProduct,
-  useSearchStoreProducts,
+  useScrapeProductUrl,
   useUpdateWishlist,
   useUpdateWishlistProduct,
   useWishlists,
 } from '@/hooks';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import {
   Table,
   TableBody,
@@ -27,13 +23,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { WishlistStore, WishlistStoreSearchResult } from '@/types/Wishlist';
-import { ExternalLink, Gift, Link, Pencil, Plus, Search, Trash2 } from 'lucide-react';
-
-const STORE_LABELS: Record<WishlistStore, string> = {
-  AMAZON: 'Amazon',
-  MERCADOLIVRE: 'Mercado Livre',
-};
+import { Badge } from '@/components/ui/badge';
+import { Gift, Loader2, Pencil, Plus, Trash2, ExternalLink, Bell, BellOff } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 
 export const WishlistPage = () => {
   const { data: wishlists = [], isLoading } = useWishlists();
@@ -43,7 +35,7 @@ export const WishlistPage = () => {
   const createProduct = useCreateWishlistProduct();
   const updateProduct = useUpdateWishlistProduct();
   const deleteProduct = useDeleteWishlistProduct();
-  const searchStoreProducts = useSearchStoreProducts();
+  const scrapeUrl = useScrapeProductUrl();
 
   const [newWishlistName, setNewWishlistName] = useState('');
   const [selectedWishlistId, setSelectedWishlistId] = useState<number | null>(null);
@@ -51,10 +43,65 @@ export const WishlistPage = () => {
   const [newProductName, setNewProductName] = useState('');
   const [newProductPrice, setNewProductPrice] = useState('');
   const [newProductUrl, setNewProductUrl] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchStore, setSearchStore] = useState<WishlistStore>('MERCADOLIVRE');
-  const [searchResults, setSearchResults] = useState<WishlistStoreSearchResult[]>([]);
-  const [showSearch, setShowSearch] = useState(false);
+  const [newProductSendPriceAlerts, setNewProductSendPriceAlerts] = useState(false);
+  const [scrapeLoading, setScrapeLoading] = useState(false);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [confirmDeleteWishlistId, setConfirmDeleteWishlistId] = useState<number | null>(null);
+  const [confirmDeleteProduct, setConfirmDeleteProduct] = useState<{ wishlistId: number; productId: number } | null>(null);
+
+  // Rename wishlist modal state
+  const [renameModal, setRenameModal] = useState<{ wishlistId: number; currentName: string } | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+
+  // Edit product modal state
+  const [editProductModal, setEditProductModal] = useState<{
+    wishlistId: number;
+    productId: number;
+    currentName: string;
+    currentPrice: number;
+    currentUrl: string | null;
+    currentAlerts: boolean;
+  } | null>(null);
+  const [editProductName, setEditProductName] = useState('');
+  const [editProductPrice, setEditProductPrice] = useState('');
+  const [editProductUrl, setEditProductUrl] = useState('');
+  const [editProductSendPriceAlerts, setEditProductSendPriceAlerts] = useState(false);
+
+  const handleUrlChange = useCallback(
+    (url: string) => {
+      setNewProductUrl(url);
+
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+
+      const trimmed = url.trim();
+      if (!trimmed || !trimmed.startsWith('http')) return;
+
+      // Only scrape Amazon and Mercado Livre URLs
+      const isSupported =
+        /amazon\.com\.br/i.test(trimmed) || /mercadolivre\.com\.br|mercadolibre\.com/i.test(trimmed);
+      if (!isSupported) return;
+
+      debounceTimerRef.current = setTimeout(async () => {
+        setScrapeLoading(true);
+        try {
+          const result = await scrapeUrl.mutateAsync(trimmed);
+          if (result.price && result.price > 0) {
+            setNewProductPrice(String(result.price));
+          }
+          if (result.name && !newProductName.trim()) {
+            setNewProductName(result.name);
+          }
+        } catch (error) {
+          console.error('Falha no preenchimento automático:', error);
+        } finally {
+          setScrapeLoading(false);
+        }
+      }, 600);
+    },
+    [scrapeUrl, newProductName],
+  );
 
   const activeWishlistId = useMemo(() => {
     if (wishlists.length === 0) return null;
@@ -82,28 +129,30 @@ export const WishlistPage = () => {
       await createWishlist.mutateAsync({ name: newWishlistName.trim() });
       setNewWishlistName('');
     } catch {
-      alert('Falha ao criar lista de desejo');
+      toast.error('Falha ao criar lista de desejo');
     }
   };
 
-  const handleRenameWishlist = async (wishlistId: number, currentName: string) => {
-    const nextName = prompt('Novo nome da lista:', currentName);
-    if (!nextName || !nextName.trim()) return;
+  const openRenameModal = (wishlistId: number, currentName: string) => {
+    setRenameValue(currentName);
+    setRenameModal({ wishlistId, currentName });
+  };
 
+  const handleRenameWishlist = async () => {
+    if (!renameModal || !renameValue.trim()) return;
     try {
-      await updateWishlist.mutateAsync({ id: wishlistId, data: { name: nextName.trim() } });
+      await updateWishlist.mutateAsync({ id: renameModal.wishlistId, data: { name: renameValue.trim() } });
+      setRenameModal(null);
     } catch {
-      alert('Falha ao atualizar lista de desejo');
+      toast.error('Falha ao atualizar lista de desejo');
     }
   };
 
   const handleDeleteWishlist = async (wishlistId: number) => {
-    if (!confirm('Deseja excluir esta lista de desejo e todos os itens dela?')) return;
-
     try {
       await deleteWishlist.mutateAsync(wishlistId);
     } catch {
-      alert('Falha ao excluir lista de desejo');
+      toast.error('Falha ao excluir lista de desejo');
     }
   };
 
@@ -118,6 +167,7 @@ export const WishlistPage = () => {
         data: {
           name_product: newProductName.trim(),
           price: Number(newProductPrice),
+          send_price_alerts: newProductSendPriceAlerts,
           ...(newProductUrl.trim() ? { url: newProductUrl.trim() } : {}),
         },
       });
@@ -125,103 +175,58 @@ export const WishlistPage = () => {
       setNewProductName('');
       setNewProductPrice('');
       setNewProductUrl('');
+      setNewProductSendPriceAlerts(false);
     } catch {
-      alert('Falha ao adicionar item na wishlist');
+      toast.error('Falha ao adicionar item na wishlist');
     }
   };
 
-  const handleSearchProducts = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!searchQuery.trim()) return;
-
-    try {
-      const results = await searchStoreProducts.mutateAsync({
-        query: searchQuery.trim(),
-        store: searchStore,
-      });
-
-      setSearchResults(results);
-    } catch {
-      alert('Falha ao pesquisar produtos na loja');
-    }
-  };
-
-  const handleAddSearchedProduct = async (product: WishlistStoreSearchResult) => {
-    if (!activeWishlistId) {
-      alert('Selecione uma lista de desejo primeiro');
-      return;
-    }
-
-    let priceToUse = product.price;
-
-    if (!priceToUse || priceToUse <= 0) {
-      const typedPrice = prompt(
-        `Preço não encontrado para ${product.name}. Informe o preço manualmente:`,
-      );
-      if (!typedPrice) return;
-
-      const parsedPrice = Number(typedPrice.replace(',', '.'));
-      if (Number.isNaN(parsedPrice) || parsedPrice <= 0) {
-        alert('Preço inválido');
-        return;
-      }
-
-      priceToUse = parsedPrice;
-    }
-
-    try {
-      await createProduct.mutateAsync({
-        wishlistId: activeWishlistId,
-        data: {
-          name_product: `${product.name} (${STORE_LABELS[product.store]})`,
-          price: priceToUse,
-          url: product.url,
-        },
-      });
-    } catch {
-      alert('Falha ao adicionar produto pesquisado na wishlist');
-    }
-  };
-
-  const handleUpdateProduct = async (
+  const openEditProductModal = (
     wishlistId: number,
     productId: number,
     currentName: string,
     currentPrice: number,
+    currentUrl: string | null,
+    currentAlerts: boolean,
   ) => {
-    const nextName = prompt('Novo nome do item:', currentName);
-    if (!nextName || !nextName.trim()) return;
+    setEditProductName(currentName);
+    setEditProductPrice(String(currentPrice));
+    setEditProductUrl(currentUrl || '');
+    setEditProductSendPriceAlerts(currentAlerts);
+    setEditProductModal({ wishlistId, productId, currentName, currentPrice, currentUrl, currentAlerts });
+  };
 
-    const nextPriceRaw = prompt('Novo preço do item:', String(currentPrice));
-    if (!nextPriceRaw) return;
+  const handleUpdateProduct = async () => {
+    if (!editProductModal || !editProductName.trim()) return;
 
-    const parsedPrice = Number(nextPriceRaw);
+    const parsedPrice = Number(editProductPrice);
     if (Number.isNaN(parsedPrice) || parsedPrice <= 0) {
-      alert('Preço inválido');
+      toast.warning('Preço inválido');
       return;
     }
 
     try {
       await updateProduct.mutateAsync({
-        wishlistId,
-        productId,
+        wishlistId: editProductModal.wishlistId,
+        productId: editProductModal.productId,
         data: {
-          name_product: nextName.trim(),
+          name_product: editProductName.trim(),
           price: parsedPrice,
+          url: editProductUrl.trim() || undefined,
+          send_price_alerts: editProductSendPriceAlerts,
         },
       });
+      setEditProductModal(null);
     } catch {
-      alert('Falha ao atualizar item da wishlist');
+      toast.error('Falha ao atualizar item da wishlist');
     }
   };
 
   const handleDeleteProduct = async (wishlistId: number, productId: number) => {
-    if (!confirm('Deseja remover este item da wishlist?')) return;
-
     try {
       await deleteProduct.mutateAsync({ wishlistId, productId });
     } catch {
-      alert('Falha ao remover item da wishlist');
+      toast.error('Falha ao remover item da wishlist');
     }
   };
 
@@ -250,7 +255,10 @@ export const WishlistPage = () => {
       </form>
 
       {isLoading ? (
-        <div className="text-center py-10">Carregando wishlist...</div>
+        <div className="space-y-4 pt-4">
+          <Skeleton className="h-[50px] w-full" />
+          <Skeleton className="h-[250px] w-full" />
+        </div>
       ) : wishlists.length === 0 ? (
         <div className="py-20 text-center border-2 border-dashed rounded-xl text-muted-foreground">
           Você ainda não tem listas de desejo. Crie a primeira acima.
@@ -268,9 +276,8 @@ export const WishlistPage = () => {
                 return (
                   <div
                     key={wishlist.id}
-                    className={`rounded-lg border p-3 transition ${
-                      isActive ? 'border-blue-500 bg-blue-50' : 'hover:bg-slate-50'
-                    }`}
+                    className={`rounded-lg border p-3 transition ${isActive ? 'border-blue-500 bg-blue-50' : 'hover:bg-slate-50'
+                      }`}
                   >
                     <button
                       type="button"
@@ -287,7 +294,7 @@ export const WishlistPage = () => {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => handleRenameWishlist(wishlist.id, wishlist.name)}
+                        onClick={() => openRenameModal(wishlist.id, wishlist.name)}
                       >
                         <Pencil className="h-4 w-4 text-blue-600" />
                       </Button>
@@ -295,7 +302,7 @@ export const WishlistPage = () => {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-red-600"
-                        onClick={() => handleDeleteWishlist(wishlist.id)}
+                        onClick={() => setConfirmDeleteWishlistId(wishlist.id)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -315,146 +322,57 @@ export const WishlistPage = () => {
                 Total estimado: {formatCurrency(wishlistTotal)}
               </p>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Formulário para adicionar produto manualmente */}
-              <div className="rounded-lg border p-4 bg-slate-50 space-y-3">
-                <p className="text-sm font-medium text-slate-700">Adicionar produto</p>
-                <form onSubmit={handleCreateProduct} className="space-y-3">
-                  <div className="grid gap-3 sm:grid-cols-[1fr_140px]">
-                    <Input
-                      value={newProductName}
-                      onChange={(event) => setNewProductName(event.target.value)}
-                      placeholder="Nome do produto"
-                    />
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      value={newProductPrice}
-                      onChange={(event) => setNewProductPrice(event.target.value)}
-                      placeholder="Preço (R$)"
-                    />
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-                    <div className="relative">
-                      <Link className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        value={newProductUrl}
-                        onChange={(event) => setNewProductUrl(event.target.value)}
-                        placeholder="URL do produto (opcional)"
-                        className="pl-9"
-                      />
-                    </div>
-                    <Button type="submit" disabled={!activeWishlistId || createProduct.isPending}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Adicionar
-                    </Button>
-                  </div>
-                </form>
-              </div>
-
-              {/* Buscar na loja (expansível) */}
-              <div className="rounded-lg border p-4 space-y-3">
-                <button
-                  type="button"
-                  className="flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-blue-600 transition"
-                  onClick={() => {
-                    setShowSearch(!showSearch);
-                    if (showSearch) setSearchResults([]);
-                  }}
-                >
-                  <Search className="h-4 w-4" />
-                  Buscar produto na loja
-                  <span className="text-xs text-muted-foreground">(Amazon / Mercado Livre)</span>
-                </button>
-
-                {showSearch && (
-                  <div className="space-y-4">
-                    <form
-                      onSubmit={handleSearchProducts}
-                      className="grid gap-3 sm:grid-cols-[160px_1fr_auto]"
-                    >
-                      <Select
-                        value={searchStore}
-                        onValueChange={(value) => setSearchStore(value as WishlistStore)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Loja" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="MERCADOLIVRE">Mercado Livre</SelectItem>
-                          <SelectItem value="AMAZON">Amazon</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Input
-                        value={searchQuery}
-                        onChange={(event) => setSearchQuery(event.target.value)}
-                        placeholder="Nome do produto"
-                      />
-                      <Button type="submit" disabled={searchStoreProducts.isPending}>
-                        <Search className="mr-2 h-4 w-4" />
-                        {searchStoreProducts.isPending ? 'Buscando...' : 'Buscar'}
-                      </Button>
-                    </form>
-
-                    {searchResults.length > 0 && (
-                      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                        {searchResults.map((result) => (
-                          <Card key={`${result.store}-${result.url}`} className="overflow-hidden">
-                            <CardContent className="p-0">
-                              <div className="aspect-square bg-slate-100 border-b overflow-hidden">
-                                {result.image ? (
-                                  <img
-                                    src={result.image}
-                                    alt={result.name}
-                                    className="h-full w-full object-cover"
-                                    loading="lazy"
-                                  />
-                                ) : (
-                                  <div className="h-full w-full flex items-center justify-center text-sm text-muted-foreground">
-                                    Sem imagem
-                                  </div>
-                                )}
-                              </div>
-                              <div className="p-4 space-y-3">
-                                <div>
-                                  <p className="text-xs text-muted-foreground mb-1">{STORE_LABELS[result.store]}</p>
-                                  <p className="font-medium text-sm line-clamp-2">{result.name}</p>
-                                </div>
-
-                                <p className="text-lg font-bold text-slate-900">
-                                  {result.price ? formatCurrency(result.price) : 'Preço não encontrado'}
-                                </p>
-
-                                <div className="flex gap-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="flex-1"
-                                    onClick={() => window.open(result.url, '_blank', 'noopener,noreferrer')}
-                                  >
-                                    <ExternalLink className="mr-2 h-4 w-4" />
-                                    Abrir
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    className="flex-1"
-                                    onClick={() => handleAddSearchedProduct(result)}
-                                    disabled={!activeWishlistId || createProduct.isPending}
-                                  >
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    Adicionar
-                                  </Button>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+            <CardContent className="space-y-4">
+              <form onSubmit={handleCreateProduct} className="space-y-3 rounded-lg border p-4 bg-slate-50">
+                <p className="text-sm font-medium text-slate-700">Adicionar item</p>
+                <div className="relative">
+                  <Input
+                    value={newProductUrl}
+                    onChange={(event) => handleUrlChange(event.target.value)}
+                    onPaste={(event) => {
+                      const pasted = event.clipboardData.getData('text');
+                      if (pasted) {
+                        // Let the onChange fire, but also trigger immediately for paste
+                        setTimeout(() => handleUrlChange(pasted), 0);
+                      }
+                    }}
+                    placeholder="URL do produto (cole o link da Amazon ou Mercado Livre)"
+                    className="pr-10"
+                  />
+                  {scrapeLoading && (
+                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-blue-500" />
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Suporta links da Amazon e Mercado Livre para preenchimento automático.
+                </p>
+                <div className="grid gap-3 sm:grid-cols-[1fr_160px_auto]">
+                  <Input
+                    value={newProductName}
+                    onChange={(event) => setNewProductName(event.target.value)}
+                    placeholder="Nome do item"
+                  />
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={newProductPrice}
+                    onChange={(event) => setNewProductPrice(event.target.value)}
+                    placeholder="Preço"
+                  />
+                  <Button type="submit" disabled={!activeWishlistId || createProduct.isPending}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Adicionar
+                  </Button>
+                </div>
+                <label className="flex items-center gap-2 text-sm text-slate-700">
+                  <Checkbox
+                    checked={newProductSendPriceAlerts}
+                    onCheckedChange={(checked) => setNewProductSendPriceAlerts(Boolean(checked))}
+                  />
+                  Enviar alertas de preço
+                </label>
+              </form>
 
               <div className="rounded-md border bg-white">
                 <Table>
@@ -462,29 +380,42 @@ export const WishlistPage = () => {
                     <TableRow>
                       <TableHead>Item</TableHead>
                       <TableHead>Preço</TableHead>
+                      <TableHead>Link</TableHead>
+                      <TableHead>Alertas</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {selectedWishlist?.products.map((product) => (
                       <TableRow key={product.id}>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <p className="font-medium">{product.name_product}</p>
-                            {product.url && (
-                              <a
-                                href={product.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
-                              >
-                                <ExternalLink className="h-3 w-3" />
-                                Ver na loja
-                              </a>
-                            )}
-                          </div>
-                        </TableCell>
+                        <TableCell className="font-medium">{product.name_product}</TableCell>
                         <TableCell>{formatCurrency(Number(product.price))}</TableCell>
+                        <TableCell>
+                          {product.url ? (
+                            <a
+                              href={product.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-blue-500 hover:text-blue-700 flex items-center gap-1 text-sm"
+                              title={product.url}
+                            >
+                              <ExternalLink className="h-3 w-3" /> Acessar
+                            </a>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {product.send_price_alerts ? (
+                            <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">
+                              <Bell className="h-3 w-3 mr-1" /> Ativo
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-slate-50 text-slate-500 border-slate-200">
+                              <BellOff className="h-3 w-3 mr-1" /> Inativo
+                            </Badge>
+                          )}
+                        </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
                             <Button
@@ -492,11 +423,13 @@ export const WishlistPage = () => {
                               size="icon"
                               className="h-8 w-8"
                               onClick={() =>
-                                handleUpdateProduct(
+                                openEditProductModal(
                                   selectedWishlist.id,
                                   product.id,
                                   product.name_product,
                                   Number(product.price),
+                                  product.url,
+                                  product.send_price_alerts
                                 )
                               }
                             >
@@ -506,7 +439,7 @@ export const WishlistPage = () => {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 text-red-600"
-                              onClick={() => handleDeleteProduct(selectedWishlist.id, product.id)}
+                              onClick={() => setConfirmDeleteProduct({ wishlistId: selectedWishlist.id, productId: product.id })}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -516,7 +449,7 @@ export const WishlistPage = () => {
                     ))}
                     {!selectedWishlist?.products.length && (
                       <TableRow>
-                        <TableCell colSpan={3} className="h-20 text-center text-muted-foreground">
+                        <TableCell colSpan={5} className="h-20 text-center text-muted-foreground">
                           Nenhum item nesta lista ainda.
                         </TableCell>
                       </TableRow>
@@ -528,6 +461,106 @@ export const WishlistPage = () => {
           </Card>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmDeleteWishlistId !== null}
+        title="Excluir Lista de Desejo"
+        description="Deseja excluir esta lista de desejo e todos os itens dela?"
+        confirmLabel="Excluir"
+        destructive
+        onConfirm={() => {
+          if (confirmDeleteWishlistId !== null) handleDeleteWishlist(confirmDeleteWishlistId);
+          setConfirmDeleteWishlistId(null);
+        }}
+        onCancel={() => setConfirmDeleteWishlistId(null)}
+      />
+
+      <ConfirmDialog
+        open={confirmDeleteProduct !== null}
+        title="Remover Item"
+        description="Deseja remover este item da wishlist?"
+        confirmLabel="Remover"
+        destructive
+        onConfirm={() => {
+          if (confirmDeleteProduct) handleDeleteProduct(confirmDeleteProduct.wishlistId, confirmDeleteProduct.productId);
+          setConfirmDeleteProduct(null);
+        }}
+        onCancel={() => setConfirmDeleteProduct(null)}
+      />
+
+      {/* Rename Wishlist Modal */}
+      <Dialog open={renameModal !== null} onOpenChange={(open) => !open && setRenameModal(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Renomear Lista</DialogTitle>
+            <DialogDescription>Altere o nome da sua lista de desejo.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <Input
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              placeholder="Novo nome da lista"
+              autoFocus
+              onKeyDown={(e) => e.key === 'Enter' && handleRenameWishlist()}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameModal(null)}>Cancelar</Button>
+            <Button onClick={handleRenameWishlist} disabled={!renameValue.trim()}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Product Modal */}
+      <Dialog open={editProductModal !== null} onOpenChange={(open) => !open && setEditProductModal(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Editar Item</DialogTitle>
+            <DialogDescription>Atualize o nome e preço do item.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <label className="text-sm font-medium">Nome do item</label>
+              <Input
+                value={editProductName}
+                onChange={(e) => setEditProductName(e.target.value)}
+                placeholder="Nome do item"
+                autoFocus
+              />
+            </div>
+            <div className="grid gap-2">
+              <label className="text-sm font-medium">Preço</label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={editProductPrice}
+                onChange={(e) => setEditProductPrice(e.target.value)}
+                placeholder="Preço alvo"
+              />
+            </div>
+            <div className="grid gap-2">
+              <label className="text-sm font-medium">Link do Produto (Opcional)</label>
+              <Input
+                value={editProductUrl}
+                onChange={(e) => setEditProductUrl(e.target.value)}
+                placeholder="https://amazon.com.br/..."
+              />
+            </div>
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <Checkbox
+                checked={editProductSendPriceAlerts}
+                onCheckedChange={(checked) => setEditProductSendPriceAlerts(Boolean(checked))}
+              />
+              Enviar alertas de preço quando houver queda
+            </label>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditProductModal(null)}>Cancelar</Button>
+            <Button onClick={handleUpdateProduct} disabled={!editProductName.trim() || !editProductPrice}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

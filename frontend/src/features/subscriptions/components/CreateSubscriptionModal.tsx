@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,7 +32,7 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
   const [walletId, setWalletId] = React.useState('');
   const [categoryId, setCategoryId] = React.useState('');
   const [paymentMethod, setPaymentMethod] = React.useState('');
-  
+
   const [wallets, setWallets] = React.useState<Wallet[]>([]);
   const [categories, setCategories] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(false);
@@ -48,13 +49,13 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
   const getAvailableMethods = () => {
     const selectedWallet = wallets.find(w => String(w.id) === walletId);
     if (!selectedWallet) return [];
-    
+
     let normalizedType = selectedWallet.type;
     // Assuming backend returns ENUM keys (BANK, PHYSICAL...), map to constants if needed
     // But WALLET_TYPES constants ARE the labels (Conta Bancária).
     // The backend returns 'BANK'.
     // So we need to map 'BANK' -> 'Conta Bancária'.
-    
+
     if (selectedWallet.type === 'BANK') normalizedType = WALLET_TYPES.BANK_ACCOUNT;
     if (selectedWallet.type === 'PHYSICAL') normalizedType = WALLET_TYPES.PHYSICAL;
     if (selectedWallet.type === 'MEAL_VOUCHER') normalizedType = WALLET_TYPES.MEAL_VOUCHER;
@@ -68,9 +69,9 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (availableMethods.length > 0 && !paymentMethod) {
-      alert('Selecione um método de pagamento');
+      toast.warning('Selecione um método de pagamento');
       return;
     }
 
@@ -94,7 +95,7 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
       setValue('');
       setPaymentMethod('');
     } catch (error) {
-      alert('Falha ao criar item recorrente');
+      toast.error('Falha ao criar item recorrente');
     } finally {
       setLoading(false);
     }
@@ -165,7 +166,7 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
               </SelectContent>
             </Select>
           </div>
-          
+
           {availableMethods.length > 0 && (
             <div className="grid gap-2">
               <Label htmlFor="method">Método de Pagamento</Label>

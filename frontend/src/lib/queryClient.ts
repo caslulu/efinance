@@ -33,6 +33,7 @@ export const queryKeys = {
 
   wishlists: ['wishlists'] as const,
   wishlist: (id: number) => ['wishlists', id] as const,
+  priceAlertNotifications: ['price-alert-notifications'] as const,
   
   budgets: ['budgets'] as const,
   budgetStatus: ['budgets', 'status'] as const,

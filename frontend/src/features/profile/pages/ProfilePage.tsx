@@ -95,7 +95,7 @@ export const ProfilePage = () => {
             <div className="relative group">
               <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-100 border-2 border-gray-200 flex items-center justify-center">
                 {user?.avatarUrl ? (
-                  <img src={`${user.avatarUrl}?t=${new Date().getTime()}`} alt="Avatar" className="w-full h-full object-cover" />
+                  <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
                   <User size={40} className="text-gray-400" />
                 )}

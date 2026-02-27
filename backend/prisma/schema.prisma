@@ -41,6 +41,7 @@ model User {
   transactionCategories TransactionCategory[]
   subscriptions         Subscription[]
   budgets               Budget[]
+  priceAlertNotifications WishlistPriceAlertNotification[]
 }
 
 model Wallet {
@@ -166,4 +167,23 @@ model WishlistProduct {
   name_product String
   price        Decimal  @db.Decimal(10, 2)
   url          String?
+  send_price_alerts Boolean @default(false)
+  last_checked_price Decimal? @db.Decimal(10, 2)
+  priceAlertNotifications WishlistPriceAlertNotification[]
+}
+
+model WishlistPriceAlertNotification {
+  id                  Int             @id @default(autoincrement())
+  user_id             Int
+  user                User            @relation(fields: [user_id], references: [id])
+  wishlist_product_id Int
+  wishlistProduct     WishlistProduct @relation(fields: [wishlist_product_id], references: [id])
+  old_price           Decimal         @db.Decimal(10, 2)
+  new_price           Decimal         @db.Decimal(10, 2)
+  message             String
+  is_read             Boolean         @default(false)
+  notified_at         DateTime        @default(now())
+
+  @@index([user_id, is_read])
+  @@index([wishlist_product_id])
 }

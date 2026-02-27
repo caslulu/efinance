@@ -17,6 +17,7 @@ import { WishlistModule } from './wishlist/wishlist.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
       ttl: 60000,
       limit: 10,
     }]),
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({ isGlobal: true }),
     MailerModule.forRootAsync({
       imports: [ConfigModule],

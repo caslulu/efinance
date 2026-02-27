@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Shield, CheckCircle2 } from 'lucide-react';
+import { Shield, CheckCircle2, Eye, EyeOff } from 'lucide-react';
+import { PasswordStrengthIndicator } from '@/components/PasswordStrengthIndicator';
 
 export const SettingsPage = () => {
   const { user, refreshUser } = useAuth();
@@ -18,6 +19,9 @@ export const SettingsPage = () => {
     newPassword: '',
     confirmPassword: '',
   });
+  const [showCurrentPw, setShowCurrentPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
 
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,77 +77,93 @@ export const SettingsPage = () => {
         </div>
       )}
       <div className="grid gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Alterar Senha</CardTitle>
-              <CardDescription>Recomendamos o uso de uma senha forte que você não use em outros sites.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handlePasswordUpdate} className="space-y-4 max-w-md">
-                <div className="space-y-2">
-                  <Label htmlFor="currentPassword">Senha Atual</Label>
+        <Card>
+          <CardHeader>
+            <CardTitle>Alterar Senha</CardTitle>
+            <CardDescription>Recomendamos o uso de uma senha forte que você não use em outros sites.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handlePasswordUpdate} className="space-y-4 max-w-md">
+              <div className="space-y-2">
+                <Label htmlFor="currentPassword">Senha Atual</Label>
+                <div className="relative">
                   <Input
                     id="currentPassword"
-                    type="password"
+                    type={showCurrentPw ? 'text' : 'password'}
                     value={passwordData.currentPassword}
                     onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
                     required
                   />
+                  <button type="button" onClick={() => setShowCurrentPw(!showCurrentPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    {showCurrentPw ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="newPassword">Nova Senha</Label>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="newPassword">Nova Senha</Label>
+                <div className="relative">
                   <Input
                     id="newPassword"
-                    type="password"
+                    type={showNewPw ? 'text' : 'password'}
                     value={passwordData.newPassword}
                     onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
                     required
                   />
+                  <button type="button" onClick={() => setShowNewPw(!showNewPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    {showNewPw ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
+                <PasswordStrengthIndicator password={passwordData.newPassword} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
+                <div className="relative">
                   <Input
                     id="confirmPassword"
-                    type="password"
+                    type={showConfirmPw ? 'text' : 'password'}
                     value={passwordData.confirmPassword}
                     onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
                     required
                   />
+                  <button type="button" onClick={() => setShowConfirmPw(!showConfirmPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    {showConfirmPw ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
-                <div className="pt-2">
-                  <Button type="submit" disabled={loading}>
-                    {loading ? 'Atualizando...' : 'Atualizar Senha'}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="text-blue-600" size={20} />
-                Autenticação de Dois Fatores
-              </CardTitle>
-              <CardDescription>Adicione uma camada extra de segurança à sua conta.</CardDescription>
-            </CardHeader>
-            <CardContent className="flex items-center justify-between">
-              <div className="max-w-[80%]">
-                <p className="font-medium">2FA via Email</p>
-                <p className="text-sm text-gray-500">
-                  Ao ativar, solicitaremos um código enviado ao seu email sempre que você fizer login de um novo dispositivo.
-                </p>
               </div>
-              <Button 
-                variant={user?.isTwoFactorEnabled ? "destructive" : "default"}
-                onClick={handle2FAToggle}
-                disabled={loading}
-              >
-                {user?.isTwoFactorEnabled ? 'Desativar' : 'Ativar'}
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+              <div className="pt-2">
+                <Button type="submit" disabled={loading}>
+                  {loading ? 'Atualizando...' : 'Atualizar Senha'}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="text-blue-600" size={20} />
+              Autenticação de Dois Fatores
+            </CardTitle>
+            <CardDescription>Adicione uma camada extra de segurança à sua conta.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between">
+            <div className="max-w-[80%]">
+              <p className="font-medium">2FA via Email</p>
+              <p className="text-sm text-gray-500">
+                Ao ativar, solicitaremos um código enviado ao seu email sempre que você fizer login de um novo dispositivo.
+              </p>
+            </div>
+            <Button
+              variant={user?.isTwoFactorEnabled ? "destructive" : "default"}
+              onClick={handle2FAToggle}
+              disabled={loading}
+            >
+              {user?.isTwoFactorEnabled ? 'Desativar' : 'Ativar'}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

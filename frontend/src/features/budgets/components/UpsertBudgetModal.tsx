@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { api } from '../../../api/api';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -47,7 +48,7 @@ export const UpsertBudgetModal = ({ isOpen, budget, onClose, onSuccess }: Upsert
       onSuccess();
       onClose();
     } catch (error) {
-      alert('Falha ao salvar meta');
+      toast.error('Falha ao salvar meta');
     } finally {
       setLoading(false);
     }
@@ -62,8 +63,8 @@ export const UpsertBudgetModal = ({ isOpen, budget, onClose, onSuccess }: Upsert
         <form onSubmit={handleSubmit} className="grid gap-4 py-4">
           <div className="grid gap-2">
             <Label htmlFor="category">Categoria</Label>
-            <Select 
-              value={categoryId} 
+            <Select
+              value={categoryId}
               onValueChange={setCategoryId}
               disabled={!!budget} // Cannot change category of existing budget, must delete and recreate
             >
@@ -79,14 +80,14 @@ export const UpsertBudgetModal = ({ isOpen, budget, onClose, onSuccess }: Upsert
           </div>
           <div className="grid gap-2">
             <Label htmlFor="limit">Limite Mensal (R$)</Label>
-            <Input 
-              id="limit" 
-              type="number" 
-              step="0.01" 
-              value={limit} 
-              onChange={e => setLimit(e.target.value)} 
+            <Input
+              id="limit"
+              type="number"
+              step="0.01"
+              value={limit}
+              onChange={e => setLimit(e.target.value)}
               placeholder="Ex: 500.00"
-              required 
+              required
             />
           </div>
           <DialogFooter>

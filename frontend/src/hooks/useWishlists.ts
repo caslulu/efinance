@@ -2,10 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/api';
 import { queryKeys } from '@/lib/queryClient';
 import type {
+  PriceAlertNotificationsResponse,
   Wishlist,
   WishlistProduct,
-  WishlistStore,
-  WishlistStoreSearchResult,
 } from '@/types/Wishlist';
 
 export function useWishlists() {
@@ -68,7 +67,10 @@ export function useCreateWishlistProduct() {
       data,
     }: {
       wishlistId: number;
-      data: Pick<WishlistProduct, 'name_product' | 'price'> & { url?: string };
+      data: Pick<WishlistProduct, 'name_product' | 'price'> & {
+        url?: string;
+        send_price_alerts?: boolean;
+      };
     }) => {
       const res = await api.post(`/wishlists/${wishlistId}/products`, data);
       return res.data;
@@ -90,7 +92,10 @@ export function useUpdateWishlistProduct() {
     }: {
       wishlistId: number;
       productId: number;
-      data: Partial<Pick<WishlistProduct, 'name_product' | 'price'>> & { url?: string };
+      data: Partial<Pick<WishlistProduct, 'name_product' | 'price'>> & {
+        url?: string;
+        send_price_alerts?: boolean;
+      };
     }) => {
       const res = await api.patch(`/wishlists/${wishlistId}/products/${productId}`, data);
       return res.data;
@@ -114,20 +119,43 @@ export function useDeleteWishlistProduct() {
   });
 }
 
-export function useSearchStoreProducts() {
+export function useScrapeProductUrl() {
   return useMutation({
-    mutationFn: async ({
-      query,
-      store,
-    }: {
-      query: string;
-      store: WishlistStore;
-    }) => {
-      const res = await api.get<WishlistStoreSearchResult[]>('/wishlists/search-products', {
-        params: { query, store },
-      });
+    mutationFn: async (url: string) => {
+      const res = await api.get<{ name: string | null; price: number | null; image: string | null }>(
+        '/wishlists/scrape-url',
+        { params: { url } },
+      );
+      return res.data;
+    },
+  });
+}
 
-      return Array.isArray(res.data) ? res.data : [];
+export function usePriceAlertNotifications() {
+  return useQuery({
+    queryKey: queryKeys.priceAlertNotifications,
+    queryFn: async () => {
+      const res = await api.get<PriceAlertNotificationsResponse>(
+        '/wishlists/price-alert-notifications',
+      );
+      return res.data;
+    },
+    refetchInterval: 60_000,
+  });
+}
+
+export function useMarkPriceAlertAsRead() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (notificationId: number) => {
+      const res = await api.post(
+        `/wishlists/price-alert-notifications/${notificationId}/read`,
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.priceAlertNotifications });
     },
   });
 }

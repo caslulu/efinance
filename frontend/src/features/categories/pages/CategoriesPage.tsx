@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { useCategories, useDeleteCategory } from '@/hooks';
 import type { Category } from '@/types/Category';
 import { UpsertCategoryModal } from '../components/UpsertCategoryModal';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -19,13 +21,13 @@ export const CategoriesPage = () => {
   const deleteCategory = useDeleteCategory();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Tem certeza? Isso pode afetar transações existentes.')) return;
     try {
       await deleteCategory.mutateAsync(id);
     } catch (error) {
-      alert('Falha ao excluir categoria');
+      toast.error('Falha ao excluir categoria');
     }
   };
 
@@ -79,7 +81,7 @@ export const CategoriesPage = () => {
                       variant="ghost"
                       size="sm"
                       className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      onClick={() => handleDelete(category.id)}
+                      onClick={() => setConfirmDeleteId(category.id)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -103,6 +105,19 @@ export const CategoriesPage = () => {
         category={editingCategory}
         onClose={() => setIsModalOpen(false)}
         onSuccess={() => refetchCategories()}
+      />
+
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        title="Excluir Categoria"
+        description="Tem certeza? Isso pode afetar transações existentes."
+        confirmLabel="Excluir"
+        destructive
+        onConfirm={() => {
+          if (confirmDeleteId !== null) handleDelete(confirmDeleteId);
+          setConfirmDeleteId(null);
+        }}
+        onCancel={() => setConfirmDeleteId(null)}
       />
     </div>
   );

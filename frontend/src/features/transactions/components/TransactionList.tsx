@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Edit2 } from 'lucide-react';
 import { EditTransactionModal } from './EditTransactionModal';
 import { PAYMENT_METHODS } from '../../../constants/paymentMethods';
@@ -19,9 +20,16 @@ import { CategoryIcon } from '@/components/IconPicker';
 interface TransactionListProps {
   transactions: Transaction[];
   onTransactionUpdated: () => void;
+  selectedIds?: Set<number>;
+  onToggleSelect?: (id: number) => void;
 }
 
-export const TransactionList = ({ transactions, onTransactionUpdated }: TransactionListProps) => {
+export const TransactionList = ({
+  transactions,
+  onTransactionUpdated,
+  selectedIds = new Set(),
+  onToggleSelect
+}: TransactionListProps) => {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   return (
@@ -30,6 +38,7 @@ export const TransactionList = ({ transactions, onTransactionUpdated }: Transact
         <Table>
           <TableHeader>
             <TableRow>
+              {onToggleSelect && <TableHead className="w-[30px]"></TableHead>}
               <TableHead>Data</TableHead>
               <TableHead>Nome</TableHead>
               <TableHead>Categoria</TableHead>
@@ -42,7 +51,18 @@ export const TransactionList = ({ transactions, onTransactionUpdated }: Transact
           </TableHeader>
           <TableBody>
             {transactions.map((tx) => (
-              <TableRow key={tx.id}>
+              <TableRow key={tx.id} className={selectedIds.has(tx.id) ? "bg-muted/50" : ""}>
+                {onToggleSelect && (
+                  <TableCell>
+                    <div title={tx.id < 0 ? "Transações projetadas não podem ser apagadas." : ""}>
+                      <Checkbox
+                        checked={selectedIds.has(tx.id)}
+                        onCheckedChange={() => onToggleSelect(tx.id)}
+                        disabled={tx.id < 0}
+                      />
+                    </div>
+                  </TableCell>
+                )}
                 <TableCell>
                   {new Date(tx.transaction_date).toLocaleDateString()}
                 </TableCell>
@@ -61,11 +81,11 @@ export const TransactionList = ({ transactions, onTransactionUpdated }: Transact
                   {tx.payment_method ? PAYMENT_METHODS[tx.payment_method as keyof typeof PAYMENT_METHODS] || tx.payment_method : '-'}
                 </TableCell>
                 <TableCell>
-                  <Badge 
-                    variant="outline" 
+                  <Badge
+                    variant="outline"
                     className={clsx(
-                      tx.transaction_type === 'INCOME' 
-                        ? 'border-green-500 text-green-600 bg-green-50' 
+                      tx.transaction_type === 'INCOME'
+                        ? 'border-green-500 text-green-600 bg-green-50'
                         : 'border-red-500 text-red-600 bg-red-50'
                     )}
                   >
@@ -75,7 +95,7 @@ export const TransactionList = ({ transactions, onTransactionUpdated }: Transact
                 <TableCell>
                   {tx.installment_total ? `${tx.installment_number}/${tx.installment_total}` : '-'}
                 </TableCell>
-                <TableCell className={clsx("text-right font-bold", 
+                <TableCell className={clsx("text-right font-bold",
                   tx.transaction_type === 'INCOME' ? 'text-green-600' : 'text-red-600'
                 )}>
                   {tx.transaction_type === 'EXPENSE' ? '- ' : '+ '}
@@ -90,7 +110,7 @@ export const TransactionList = ({ transactions, onTransactionUpdated }: Transact
             ))}
             {transactions.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={onToggleSelect ? 9 : 8} className="h-24 text-center text-muted-foreground">
                   Nenhuma transação encontrada.
                 </TableCell>
               </TableRow>

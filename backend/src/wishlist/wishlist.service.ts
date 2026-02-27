@@ -1,26 +1,20 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { MailerService } from '@nestjs-modules/mailer';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateWishlistDto } from './dto/create-wishlist.dto';
 import { UpdateWishlistDto } from './dto/update-wishlist.dto';
 import { CreateWishlistProductDto } from './dto/create-wishlist-product.dto';
 import { UpdateWishlistProductDto } from './dto/update-wishlist-product.dto';
-import {
-  SearchStoreProductsDto,
-  WishlistStore,
-} from './dto/search-store-products.dto';
-
-type StoreSearchResult = {
-  name: string;
-  description: string;
-  price: number | null;
-  url: string;
-  image: string | null;
-  store: WishlistStore;
-};
 
 @Injectable()
 export class WishlistService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(WishlistService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mailerService: MailerService,
+  ) {}
 
   create(userId: number, createWishlistDto: CreateWishlistDto) {
     return this.prisma.wishlist.create({
@@ -78,6 +72,14 @@ export class WishlistService {
   async remove(id: number, userId: number) {
     await this.findOne(id, userId);
 
+    await this.prisma.wishlistPriceAlertNotification.deleteMany({
+      where: {
+        wishlistProduct: {
+          id_wishlist: id,
+        },
+      },
+    });
+
     await this.prisma.wishlistProduct.deleteMany({
       where: { id_wishlist: id },
     });
@@ -99,7 +101,9 @@ export class WishlistService {
         id_wishlist: wishlistId,
         name_product: createWishlistProductDto.name_product,
         price: createWishlistProductDto.price,
-        url: createWishlistProductDto.url || null,
+        url: createWishlistProductDto.url,
+        send_price_alerts: createWishlistProductDto.send_price_alerts ?? false,
+        last_checked_price: createWishlistProductDto.price,
       },
     });
   }
@@ -123,9 +127,19 @@ export class WishlistService {
       throw new NotFoundException('Wishlist product not found');
     }
 
+    const nextData: UpdateWishlistProductDto & {
+      last_checked_price?: number;
+    } = {
+      ...updateWishlistProductDto,
+    };
+
+    if (typeof updateWishlistProductDto.price === 'number') {
+      nextData.last_checked_price = updateWishlistProductDto.price;
+    }
+
     return this.prisma.wishlistProduct.update({
       where: { id: productId },
-      data: updateWishlistProductDto,
+      data: nextData,
     });
   }
 
@@ -143,191 +157,248 @@ export class WishlistService {
       throw new NotFoundException('Wishlist product not found');
     }
 
+    await this.prisma.wishlistPriceAlertNotification.deleteMany({
+      where: {
+        wishlist_product_id: productId,
+      },
+    });
+
     return this.prisma.wishlistProduct.delete({
       where: { id: productId },
     });
   }
 
-  async searchProducts(searchDto: SearchStoreProductsDto) {
-    try {
-      switch (searchDto.store) {
-        case WishlistStore.MERCADOLIVRE:
-          return this.searchMercadoLivre(searchDto.query);
-        case WishlistStore.AMAZON:
-          return this.searchAmazon(searchDto.query);
-        default:
-          return [];
-      }
-    } catch {
-      return [];
-    }
-  }
+  async getPriceAlertNotifications(userId: number) {
+    const notifications = await this.prisma.wishlistPriceAlertNotification.findMany({
+      where: { user_id: userId },
+      include: {
+        wishlistProduct: {
+          select: {
+            id: true,
+            name_product: true,
+            url: true,
+          },
+        },
+      },
+      orderBy: {
+        notified_at: 'desc',
+      },
+      take: 20,
+    });
 
-  private async searchMercadoLivre(
-    query: string,
-  ): Promise<StoreSearchResult[]> {
-    const url = `https://api.mercadolibre.com/sites/MLB/search?q=${encodeURIComponent(query)}&limit=12`;
-    const response = await fetch(url, {
-      headers: {
-        Accept: 'application/json',
-        'User-Agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+    const unreadCount = await this.prisma.wishlistPriceAlertNotification.count({
+      where: {
+        user_id: userId,
+        is_read: false,
       },
     });
 
-    if (!response.ok) {
-      return this.searchMercadoLivreFallback(query);
-    }
-
-    const data = (await response.json()) as {
-      results?: Array<{
-        title?: string;
-        price?: number;
-        sale_price?: number;
-        original_price?: number;
-        permalink?: string;
-        thumbnail?: string;
-      }>;
+    return {
+      unreadCount,
+      notifications,
     };
-
-    const normalizedResults = (data.results || [])
-      .filter((item) => item.title && item.permalink)
-      .map((item) => ({
-        name: item.title || 'Produto sem nome',
-        description: item.title || 'Produto sem descrição',
-        price: this.normalizeNumberPrice(
-          item.price,
-          item.sale_price,
-          item.original_price,
-        ),
-        url: item.permalink || '',
-        image: item.thumbnail || null,
-        store: WishlistStore.MERCADOLIVRE,
-      }))
-      .filter((item) => item.url);
-
-    if (normalizedResults.length > 0) {
-      return normalizedResults;
-    }
-
-    return this.searchMercadoLivreFallback(query);
   }
 
-  private async searchMercadoLivreFallback(
-    query: string,
-  ): Promise<StoreSearchResult[]> {
-    const html = await this.fetchText(
-      `https://lista.mercadolivre.com.br/${encodeURIComponent(query)}`,
-    );
+  async markPriceAlertAsRead(userId: number, notificationId: number) {
+    const existing = await this.prisma.wishlistPriceAlertNotification.findFirst({
+      where: {
+        id: notificationId,
+        user_id: userId,
+      },
+    });
 
-    if (!html) {
-      return [];
+    if (!existing) {
+      throw new NotFoundException('Notificação não encontrada');
     }
 
-    const cards = html.split('ui-search-layout__item').slice(1, 13);
-
-    return cards
-      .map((chunk) => {
-        const title = this.stripHtml(
-          chunk.match(/ui-search-item__title[^>]*>([\s\S]*?)<\/h3>/i)?.[1] ||
-            '',
-        );
-
-        const href =
-          chunk.match(/<a[^>]*href="([^"]+)"[^>]*ui-search-link/i)?.[1] ||
-          chunk.match(/<a[^>]*href="([^"]+)"/i)?.[1] ||
-          '';
-
-        const image =
-          chunk.match(/<img[^>]*src="([^"]+)"/i)?.[1] ||
-          chunk.match(/<img[^>]*data-src="([^"]+)"/i)?.[1] ||
-          null;
-
-        const price = this.parseBrazilianMoney(
-          chunk.match(/R\$\s*([\d.]+(?:,\d{2})?)/i)?.[1] || null,
-        );
-
-        return {
-          name: title || 'Produto sem nome',
-          description: title || 'Produto sem descrição',
-          price,
-          url: href,
-          image,
-          store: WishlistStore.MERCADOLIVRE,
-        } satisfies StoreSearchResult;
-      })
-      .filter((item) => item.url);
+    return this.prisma.wishlistPriceAlertNotification.update({
+      where: { id: notificationId },
+      data: { is_read: true },
+    });
   }
 
-  private async searchAmazon(query: string): Promise<StoreSearchResult[]> {
-    const html = await this.fetchText(
-      `https://www.amazon.com.br/s?k=${encodeURIComponent(query)}`,
-    );
+  @Cron(CronExpression.EVERY_HOUR)
+  async checkWishlistPriceDrops() {
+    const products = await this.prisma.wishlistProduct.findMany({
+      where: {
+        send_price_alerts: true,
+        url: {
+          not: null,
+        },
+      },
+      include: {
+        wishlist: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                username: true,
+              },
+            },
+          },
+        },
+      },
+    });
 
-    if (!html) {
-      return this.searchWithBraveSearch(query, WishlistStore.AMAZON);
-    }
+    for (const product of products) {
+      const targetUrl = product.url?.trim();
+      if (!targetUrl) continue;
 
-    const chunks = html
-      .split('data-component-type="s-search-result"')
-      .slice(1, 13);
+      try {
+        const scraped = await this.scrapeProductUrl(targetUrl);
+        if (!scraped.price || scraped.price <= 0) continue;
 
-    const parsed = chunks
-      .map((chunk) => {
-        const title = this.stripHtml(
-          chunk.match(/<h2[^>]*>([\s\S]*?)<\/h2>/i)?.[1] || '',
-        );
+        const previousPrice = Number(product.last_checked_price ?? product.price);
+        const currentPrice = scraped.price;
 
-        if (/\bseguro\b/i.test(title)) {
-          return null;
+        if (currentPrice < previousPrice) {
+          const message = `O preço de "${product.name_product}" caiu de R$ ${previousPrice.toFixed(2)} para R$ ${currentPrice.toFixed(2)}.`;
+
+          await this.prisma.wishlistPriceAlertNotification.create({
+            data: {
+              user_id: product.wishlist.user_id,
+              wishlist_product_id: product.id,
+              old_price: previousPrice,
+              new_price: currentPrice,
+              message,
+            },
+          });
+
+          if (product.wishlist.user?.email) {
+            await this.sendPriceDropEmail({
+              to: product.wishlist.user.email,
+              username: product.wishlist.user.username,
+              productName: product.name_product,
+              oldPrice: previousPrice,
+              newPrice: currentPrice,
+              url: targetUrl,
+            });
+          }
         }
 
-        const relativeUrl =
-          chunk.match(
-            /<a[^>]*class="[^"]*a-link-normal[^"]*"[^>]*href="([^"]+)"/i,
-          )?.[1] ||
-          chunk.match(
-            /<a[^>]*href="([^"]+)"[^>]*class="[^"]*a-link-normal/i,
-          )?.[1] ||
-          '';
-
-        const image =
-          chunk.match(
-            /<img[^>]*class="[^"]*s-image[^"]*"[^>]*src="([^"]+)"/i,
-          )?.[1] || null;
-
-        const price = this.extractAmazonCardPrice(chunk);
-
-        if (!relativeUrl || !title) return null;
-
-        return {
-          name: title,
-          description: title,
-          price,
-          url: this.toAbsoluteUrl(relativeUrl, 'https://www.amazon.com.br'),
-          image,
-          store: WishlistStore.AMAZON,
-        } satisfies StoreSearchResult;
-      })
-      .filter((item) => Boolean(item && item.url)) as StoreSearchResult[];
-
-    if (parsed.length > 0) {
-      return parsed;
+        await this.prisma.wishlistProduct.update({
+          where: { id: product.id },
+          data: {
+            price: currentPrice,
+            last_checked_price: currentPrice,
+          },
+        });
+      } catch (error) {
+        this.logger.warn(
+          `Falha ao processar alerta de preço para produto ${product.id}`,
+        );
+      }
     }
-
-    return [];
   }
 
-  private toAbsoluteUrl(pathOrUrl: string, base: string) {
-    if (pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://')) {
-      return pathOrUrl;
+  async scrapeProductUrl(
+    url: string,
+  ): Promise<{ name: string | null; price: number | null; image: string | null }> {
+    try {
+      if (this.isAmazonUrl(url)) {
+        return this.scrapeAmazonProduct(url);
+      }
+      if (this.isMercadoLivreUrl(url)) {
+        return this.scrapeMercadoLivreProduct(url);
+      }
+      return { name: null, price: null, image: null };
+    } catch {
+      return { name: null, price: null, image: null };
+    }
+  }
+
+  private isAmazonUrl(url: string): boolean {
+    return /amazon\.com\.br/i.test(url);
+  }
+
+  private isMercadoLivreUrl(url: string): boolean {
+    return /mercadolivre\.com\.br|mercadolibre\.com/i.test(url);
+  }
+
+  private async scrapeAmazonProduct(
+    url: string,
+  ): Promise<{ name: string | null; price: number | null; image: string | null }> {
+    const html = await this.fetchText(url);
+    if (!html) return { name: null, price: null, image: null };
+
+    const name = this.stripHtml(
+      html.match(/<span[^>]*id="productTitle"[^>]*>([\s\S]*?)<\/span>/i)?.[1] || '',
+    ) || null;
+
+    const price = this.extractAmazonCardPrice(html);
+
+    const image =
+      html.match(/<img[^>]*id="landingImage"[^>]*src="([^"]+)"/i)?.[1] ||
+      html.match(/<img[^>]*class="[^"]*a-dynamic-image[^"]*"[^>]*src="([^"]+)"/i)?.[1] ||
+      null;
+
+    return { name, price, image };
+  }
+
+  private async scrapeMercadoLivreProduct(
+    url: string,
+  ): Promise<{ name: string | null; price: number | null; image: string | null }> {
+    // Try the official API first if URL contains item ID (MLB-\d+)
+    const itemIdMatch = url.match(/MLB[-]?(\d+)/i);
+    if (itemIdMatch) {
+      const itemId = `MLB${itemIdMatch[1]}`;
+      try {
+        const apiResponse = await fetch(
+          `https://api.mercadolibre.com/items/${itemId}`,
+          {
+            headers: {
+              Accept: 'application/json',
+              'User-Agent':
+                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+            },
+          },
+        );
+        if (apiResponse.ok) {
+          const data = (await apiResponse.json()) as {
+            title?: string;
+            price?: number;
+            sale_price?: number;
+            original_price?: number;
+            pictures?: Array<{ url?: string; secure_url?: string }>;
+            thumbnail?: string;
+          };
+          return {
+            name: data.title || null,
+            price: this.normalizeNumberPrice(
+              data.price,
+              data.sale_price,
+              data.original_price,
+            ),
+            image:
+              data.pictures?.[0]?.secure_url ||
+              data.pictures?.[0]?.url ||
+              data.thumbnail ||
+              null,
+          };
+        }
+      } catch {
+        // Fall through to HTML scraping
+      }
     }
 
-    try {
-      return new URL(pathOrUrl, base).toString();
-    } catch {
-      return pathOrUrl;
-    }
+    // Fallback: scrape HTML
+    const html = await this.fetchText(url);
+    if (!html) return { name: null, price: null, image: null };
+
+    const name = this.stripHtml(
+      html.match(/<h1[^>]*class="[^"]*ui-pdp-title[^"]*"[^>]*>([\s\S]*?)<\/h1>/i)?.[1] || '',
+    ) || null;
+
+    const price = this.parseBrazilianMoney(
+      html.match(/R\$\s*([\d.]+(?:,\d{2})?)/i)?.[1] || null,
+    );
+
+    const image =
+      html.match(/<img[^>]*class="[^"]*ui-pdp-image[^"]*"[^>]*src="([^"]+)"/i)?.[1] ||
+      null;
+
+    return { name, price, image };
   }
 
   private async fetchText(url: string): Promise<string | null> {
@@ -350,6 +421,36 @@ export class WishlistService {
       return response.text();
     } catch {
       return null;
+    }
+  }
+
+  private async sendPriceDropEmail(params: {
+    to: string;
+    username?: string | null;
+    productName: string;
+    oldPrice: number;
+    newPrice: number;
+    url: string;
+  }) {
+    const { to, username, productName, oldPrice, newPrice, url } = params;
+
+    try {
+      await this.mailerService.sendMail({
+        to,
+        subject: 'Alerta de preço: produto da wishlist ficou mais barato',
+        html: `
+          <div style="font-family: Arial, sans-serif; color: #222;">
+            <h2>💸 Preço caiu na sua wishlist</h2>
+            <p>Olá, <strong>${username || 'usuário'}</strong>!</p>
+            <p>O produto <strong>${productName}</strong> teve redução de preço.</p>
+            <p><strong>Preço anterior:</strong> R$ ${oldPrice.toFixed(2)}</p>
+            <p><strong>Novo preço:</strong> R$ ${newPrice.toFixed(2)}</p>
+            <p><a href="${url}" target="_blank" rel="noopener noreferrer">Ver produto</a></p>
+          </div>
+        `,
+      });
+    } catch {
+      this.logger.warn(`Falha ao enviar email de alerta para ${to}`);
     }
   }
 

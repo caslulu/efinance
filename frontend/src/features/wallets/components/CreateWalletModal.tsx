@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { api } from '../../../api/api';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -54,7 +55,7 @@ export const CreateWalletModal = ({ isOpen, onClose, onSuccess }: CreateWalletMo
       setClosingDay('');
       setDueDay('');
     } catch (error) {
-      alert('Falha ao criar carteira');
+      toast.error('Falha ao criar carteira');
     } finally {
       setLoading(false);
     }
@@ -103,7 +104,7 @@ export const CreateWalletModal = ({ isOpen, onClose, onSuccess }: CreateWalletMo
               required
             />
           </div>
-          
+
           {type === 'BANK' && (
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
