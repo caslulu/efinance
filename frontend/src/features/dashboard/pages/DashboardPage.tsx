@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
 import { useDashboard, useDashboardCategory } from '@/hooks';
+import { DatePickerWithRange } from '@/components/ui/date-range-picker';
+import type { DateRange } from 'react-day-picker';
 import {
   BarChart,
   Bar,
@@ -49,7 +51,17 @@ const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'
 const KPI_TOOLTIP_DELAY_MS = 1000;
 
 export const DashboardPage = () => {
-  const { data, isLoading: loading } = useDashboard();
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+
+  const formattedStartDate = dateRange?.from ? dateRange.from.toISOString() : undefined;
+  // Set end date to end of day if selected
+  const formattedEndDate = dateRange?.to ? (() => {
+    const end = new Date(dateRange.to);
+    end.setHours(23, 59, 59, 999);
+    return end.toISOString();
+  })() : formattedStartDate; // if no end date selected, use start date again if it exists
+
+  const { data, isLoading: loading } = useDashboard(formattedStartDate, formattedEndDate);
   const navigate = useNavigate();
   const [drilldownCategory, setDrilldownCategory] = useState<string | null>(null);
   const { data: drilldownTransactions = [], isLoading: loadingDrilldown } = useDashboardCategory(drilldownCategory);
@@ -178,11 +190,17 @@ export const DashboardPage = () => {
 
   return (
     <div className="p-4 space-y-8 md:p-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <div className="text-sm text-muted-foreground bg-white px-3 py-1 rounded-full border shadow-sm flex items-center gap-2">
-          <CalendarDays size={14} />
-          {new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <DatePickerWithRange date={dateRange} setDate={setDateRange} />
+
+          <div className="text-sm text-muted-foreground bg-white px-3 py-1 rounded-md border shadow-sm flex items-center gap-2 h-10 w-fit">
+            <CalendarDays size={14} />
+            {dateRange?.from
+              ? `Personalizado`
+              : new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+          </div>
         </div>
       </div>
 

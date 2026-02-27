@@ -7,14 +7,25 @@ export class DashboardService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly budgetsService: BudgetsService
-  ) {}
+  ) { }
 
-  async getOverview(userId: number) {
+  async getOverview(userId: number, startDateStr?: string, endDateStr?: string) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+
     const oneMonthAgo = new Date();
     oneMonthAgo.setMonth(today.getMonth() - 1);
+    oneMonthAgo.setHours(0, 0, 0, 0);
+
+    const periodStart = startDateStr ? new Date(startDateStr) : oneMonthAgo;
+    const periodEnd = endDateStr ? new Date(endDateStr) : endOfToday;
+
+    // Ensure period dates have start/end of day
+    if (startDateStr) periodStart.setHours(0, 0, 0, 0);
+    if (endDateStr) periodEnd.setHours(23, 59, 59, 999);
 
     const twelveMonthsAgo = new Date();
     twelveMonthsAgo.setMonth(today.getMonth() - 12);
@@ -32,22 +43,22 @@ export class DashboardService {
     const sevenDaysAgo = new Date(today);
     sevenDaysAgo.setDate(today.getDate() - 7);
 
-    // 1. Last Month Expenses by Category
-    const lastMonthTransactions = await this.prisma.transaction.findMany({
+    // 1. Period Expenses by Category (Custom Date Range)
+    const periodTransactions = await this.prisma.transaction.findMany({
       where: {
         wallet: { user_id: userId },
         transaction_type: 'EXPENSE',
         payment_method: { not: 'TRANSFER' },
         transaction_date: {
-          gte: oneMonthAgo,
-          lte: new Date(),
+          gte: periodStart,
+          lte: periodEnd,
         },
       },
       include: { TransactionCategory: true },
     });
 
     const categoriesMap = new Map<string, { value: number; icon?: string }>();
-    lastMonthTransactions.forEach((t) => {
+    periodTransactions.forEach((t) => {
       const catName = t.TransactionCategory?.name || 'Outro';
       const catIcon = t.TransactionCategory?.icon;
       const current = categoriesMap.get(catName) || { value: 0 };
@@ -77,14 +88,14 @@ export class DashboardService {
     });
 
     const flowMap = new Map<string, { name: string; value: number; isProjected: boolean }>();
-    
+
     // Initialize 24 months
     for (let i = -11; i <= 12; i++) {
       const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
       const monthLabel = d.toLocaleString('pt-BR', { month: 'short', year: '2-digit' });
-      flowMap.set(monthLabel, { 
-        name: monthLabel, 
-        value: 0, 
+      flowMap.set(monthLabel, {
+        name: monthLabel,
+        value: 0,
         isProjected: i > 0 || (i === 0 && d > today)
       });
     }
@@ -111,7 +122,7 @@ export class DashboardService {
           lte: sevenDaysFromNow,
         },
       },
-      include: { 
+      include: {
         TransactionCategory: true,
         wallet: true
       },
@@ -125,7 +136,7 @@ export class DashboardService {
         wallet: { user_id: userId },
         transaction_date: { lte: new Date() }
       },
-      include: { 
+      include: {
         TransactionCategory: true,
         wallet: true
       },
@@ -158,7 +169,7 @@ export class DashboardService {
           wallet: { user_id: userId },
           transaction_type: 'EXPENSE',
           payment_method: { not: 'TRANSFER' },
-          transaction_date: { gte: oneMonthAgo, lte: new Date() },
+          transaction_date: { gte: periodStart, lte: periodEnd },
         },
         _sum: { value: true },
       }),
@@ -167,7 +178,7 @@ export class DashboardService {
           wallet: { user_id: userId },
           transaction_type: 'INCOME',
           payment_method: { not: 'TRANSFER' },
-          transaction_date: { gte: oneMonthAgo, lte: new Date() },
+          transaction_date: { gte: periodStart, lte: periodEnd },
         },
         _sum: { value: true },
       }),
@@ -176,7 +187,7 @@ export class DashboardService {
     const income = Number(totalIncomesMonth._sum.value || 0);
     const expense = Number(totalExpensesMonth._sum.value || 0);
     const savingsRate = income > 0 ? ((income - expense) / income) * 100 : 0;
-    
+
     const cash = Number(totalWallets._sum.actual_cash || 0);
     const invested = Number(totalInvestments._sum.current_amount || 0);
 
@@ -187,7 +198,7 @@ export class DashboardService {
         wallet: { user_id: userId },
         transaction_type: 'EXPENSE',
         payment_method: { not: 'TRANSFER' },
-        transaction_date: { gte: oneMonthAgo, lte: new Date() },
+        transaction_date: { gte: periodStart, lte: periodEnd },
       },
       select: {
         value: true,
@@ -330,7 +341,7 @@ export class DashboardService {
     const txs = await this.prisma.transaction.findMany({
       where: {
         wallet: { user_id: userId },
-        TransactionCategory: { 
+        TransactionCategory: {
           name: {
             equals: categoryName,
             mode: 'insensitive'

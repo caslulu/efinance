@@ -1,3 +1,10 @@
+export interface WishlistProductHistory {
+  id: number;
+  wishlist_product_id: number;
+  price: number;
+  created_at: string;
+}
+
 export interface WishlistProduct {
   id: number;
   id_wishlist: number;

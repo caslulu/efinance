@@ -8,7 +8,7 @@ import { AuthGuard } from '@nestjs/passport';
 @Controller('wallets')
 @UseGuards(AuthGuard('jwt'))
 export class WalletsController {
-  constructor(private readonly walletsService: WalletsService) {}
+  constructor(private readonly walletsService: WalletsService) { }
 
   @Post()
   create(@Request() req, @Body() createWalletDto: CreateWalletDto) {
@@ -38,6 +38,11 @@ export class WalletsController {
   @Patch(':id')
   update(@Request() req, @Param('id', ParseIntPipe) id: number, @Body() updateWalletDto: UpdateWalletDto) {
     return this.walletsService.update(id, req.user.userId, updateWalletDto);
+  }
+
+  @Patch('reorder')
+  reorder(@Request() req, @Body() body: { id: number; order: number }[]) {
+    return this.walletsService.reorder(req.user.userId, body);
   }
 
   @Post('transfer')

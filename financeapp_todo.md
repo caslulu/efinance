@@ -48,7 +48,7 @@
 
 | # | Item | Status | Notes |
 |---|------|--------|-------|
-| 22 | No date range selector | ⬜ | Not implemented |
+| 22 | No date range selector | ✅ | DatePickerWithRange implemented |
 | 23 | `window.location.href` navigation | ✅ | Uses `useNavigate` |
 | 24 | KPI tooltips overflow | ✅ | Contained positioning instead of centering |
 
@@ -73,13 +73,13 @@
 | # | Item | Status | Notes |
 |---|------|--------|-------|
 | 31 | No confirmation before wallet deletion | ✅ | ConfirmDialog in EditWalletModal |
-| 32 | No wallet sorting/reordering | ⬜ | Not implemented |
+| 32 | No wallet sorting/reordering | ✅ | Drag and drop reordering added |
 
 ### Wishlist
 
 | # | Item | Status | Notes |
 |---|------|--------|-------|
-| 33 | No price history chart | ⬜ | Not implemented |
+| 33 | No price history chart | ✅ | Line chart component added |
 | 34 | Table missing URL/alert columns | ✅ | Added external link and alert badges |
 | 35 | First wishlist not auto-selected | ✅ | Visual highlight uses `activeWishlistId` |
 
@@ -87,7 +87,7 @@
 
 | # | Item | Status | Notes |
 |---|------|--------|-------|
-| 36 | No account deletion | ⬜ | Not implemented |
+| 36 | No account deletion | ✅ | Account deletion with password confirmation |
 | 37 | No password strength in Settings | ✅ | `PasswordStrengthIndicator` used |
 | 38 | No show/hide toggle in Settings | ✅ | Eye/EyeOff toggles on all 3 fields |
 

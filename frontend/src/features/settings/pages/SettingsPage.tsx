@@ -5,14 +5,18 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Shield, CheckCircle2, Eye, EyeOff } from 'lucide-react';
+import { Shield, CheckCircle2, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { PasswordStrengthIndicator } from '@/components/PasswordStrengthIndicator';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { useNavigate } from 'react-router-dom';
 
 export const SettingsPage = () => {
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, logout } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -59,6 +63,18 @@ export const SettingsPage = () => {
     } catch (error) {
       setErrorMsg('Falha ao atualizar configurações de 2FA');
     } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setLoading(true);
+    try {
+      await api.delete('/users/profile');
+      await logout();
+      navigate('/login');
+    } catch (error: any) {
+      setErrorMsg(error.response?.data?.message || 'Falha ao excluir a conta.');
       setLoading(false);
     }
   };
@@ -161,6 +177,40 @@ export const SettingsPage = () => {
             >
               {user?.isTwoFactorEnabled ? 'Desativar' : 'Ativar'}
             </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="border-red-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle size={20} />
+              Zona de Perigo
+            </CardTitle>
+            <CardDescription>
+              Ações destrutivas que não podem ser desfeitas.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between">
+            <div className="max-w-[80%]">
+              <p className="font-medium">Excluir Conta</p>
+              <p className="text-sm text-gray-500">
+                Isso excluirá permanentemente sua conta, junto com todas as carteiras, transações e assinaturas associadas.
+              </p>
+            </div>
+
+            <Button onClick={() => setIsDeleteDialogOpen(true)} variant="destructive" disabled={loading}>
+              {loading ? 'Excluindo...' : 'Excluir Conta'}
+            </Button>
+
+            <ConfirmDialog
+              open={isDeleteDialogOpen}
+              title="Excluir Conta Permanentemente?"
+              description="Esta ação analisará seus dados e os removerá de nossos servidores. Isso não pode ser desfeito. Tem certeza?"
+              confirmLabel="Excluir Permanentemente"
+              destructive={true}
+              onConfirm={handleDeleteAccount}
+              onCancel={() => setIsDeleteDialogOpen(false)}
+            />
           </CardContent>
         </Card>
       </div>

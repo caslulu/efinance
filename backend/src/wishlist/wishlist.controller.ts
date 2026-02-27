@@ -29,7 +29,7 @@ type AuthenticatedRequest = ExpressRequest & {
 @Controller('wishlists')
 @UseGuards(AuthGuard('jwt'))
 export class WishlistController {
-  constructor(private readonly wishlistService: WishlistService) {}
+  constructor(private readonly wishlistService: WishlistService) { }
 
   @Post()
   create(
@@ -125,6 +125,19 @@ export class WishlistController {
     @Param('productId', ParseIntPipe) productId: number,
   ) {
     return this.wishlistService.removeProduct(
+      wishlistId,
+      productId,
+      req.user.userId,
+    );
+  }
+
+  @Get(':wishlistId/products/:productId/history')
+  getProductHistory(
+    @Request() req: AuthenticatedRequest,
+    @Param('wishlistId', ParseIntPipe) wishlistId: number,
+    @Param('productId', ParseIntPipe) productId: number,
+  ) {
+    return this.wishlistService.getProductHistory(
       wishlistId,
       productId,
       req.user.userId,

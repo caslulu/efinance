@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Body, UseGuards, Request, BadRequestException, Post, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Controller, Get, Patch, Body, UseGuards, Request, BadRequestException, Post, UseInterceptors, UploadedFile, Delete } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { AuthGuard } from '@nestjs/passport';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -13,21 +13,21 @@ export class UsersController {
   constructor(
     private readonly usersService: UsersService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   @Get('me')
   async getMe(@Request() req) {
     const user = await this.usersService.findOne(req.user.userId);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { 
-      password, 
-      twoFactorToken, 
+    const {
+      password,
+      twoFactorToken,
       twoFactorTokenExpiry,
       resetToken,
       resetTokenExpiry,
       emailVerificationToken,
       emailVerificationTokenExpiry,
-      ...result 
+      ...result
     } = user;
     return result;
   }
@@ -64,12 +64,22 @@ export class UsersController {
     if (!file) {
       throw new BadRequestException('Arquivo não enviado ou inválido.');
     }
-    
+
     const baseUrl = this.configService.get('BACKEND_URL') || 'http://localhost:3000';
     const avatarUrl = `${baseUrl}/uploads/avatars/${file.filename}`;
-    
+
     await this.usersService.update(req.user.userId, { avatarUrl });
-    
+
     return { avatarUrl };
+  }
+
+  @Delete('profile')
+  async deleteProfile(@Request() req) {
+    try {
+      await this.usersService.removeProfile(req.user.userId);
+      return { message: 'Account successfully deleted' };
+    } catch (error) {
+      throw new BadRequestException('Erro ao excluir conta: ' + error.message);
+    }
   }
 }

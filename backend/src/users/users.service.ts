@@ -6,7 +6,7 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async create(createUserDto: any) {
     const user = await this.prisma.user.create({
@@ -127,7 +127,7 @@ export class UsersService {
 
   async update(id: number, updateUserDto: UpdateUserDto) {
     const { password, currentPassword, birthDate, ...data } = updateUserDto;
-    
+
     const updateData: any = { ...data };
 
     if (birthDate) {
@@ -154,7 +154,39 @@ export class UsersService {
     });
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+  async removeProfile(userId: number) {
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Delete Wishlist related data
+      const wishlists = await tx.wishlist.findMany({ where: { user_id: userId } });
+      const wishlistIds = wishlists.map(w => w.id);
+
+      const wishlistProducts = await tx.wishlistProduct.findMany({ where: { id_wishlist: { in: wishlistIds } } });
+      const productIds = wishlistProducts.map(p => p.id);
+
+      await tx.wishlistProductHistory.deleteMany({ where: { wishlist_product_id: { in: productIds } } });
+      await tx.wishlistPriceAlertNotification.deleteMany({ where: { user_id: userId } });
+      await tx.wishlistProduct.deleteMany({ where: { id_wishlist: { in: wishlistIds } } });
+      await tx.wishlist.deleteMany({ where: { user_id: userId } });
+
+      // 2. Delete Transactions and Investments
+      const wallets = await tx.wallet.findMany({ where: { user_id: userId } });
+      const walletIds = wallets.map(w => w.id);
+
+      await tx.transaction.deleteMany({ where: { wallet_id: { in: walletIds } } });
+      await tx.investment.deleteMany({ where: { wallet_id: { in: walletIds } } });
+
+      // 3. Delete Subscriptions and Budgets
+      await tx.subscription.deleteMany({ where: { user_id: userId } });
+      await tx.budget.deleteMany({ where: { user_id: userId } });
+
+      // 4. Delete Transaction Categories
+      await tx.transactionCategory.deleteMany({ where: { user_id: userId } });
+
+      // 5. Delete Wallets
+      await tx.wallet.deleteMany({ where: { user_id: userId } });
+
+      // 6. Delete User
+      return tx.user.delete({ where: { id: userId } });
+    });
   }
 }

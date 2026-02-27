@@ -6,7 +6,7 @@ import { Decimal } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class WalletsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async create(userId: number, createWalletDto: CreateWalletDto) {
     return this.prisma.wallet.create({
@@ -20,6 +20,7 @@ export class WalletsService {
   async findAll(userId: number) {
     const wallets = await this.prisma.wallet.findMany({
       where: { user_id: userId },
+      orderBy: { order: 'asc' },
     });
 
     return Promise.all(wallets.map(w => this.enrichWalletWithInvoice(w)));
@@ -29,11 +30,11 @@ export class WalletsService {
     const wallet = await this.prisma.wallet.findUnique({
       where: { id },
     });
-    
+
     if (!wallet || wallet.user_id !== userId) {
       throw new NotFoundException(`Wallet #${id} not found`);
     }
-    
+
     return this.enrichWalletWithInvoice(wallet);
   }
 
@@ -44,7 +45,7 @@ export class WalletsService {
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const currentDay = today.getDate();
     const closingDay = wallet.closing_day;
     const dueDay = wallet.due_day;
@@ -135,7 +136,7 @@ export class WalletsService {
 
     // due_invoice: What was owed from past cycles minus what was paid in total
     const dueInvoiceValue = Math.max(0, pastExp - incomes);
-    
+
     // remainingIncomes: What's left of payments after covering past cycles
     const remainingIncomes = Math.max(0, incomes - pastExp);
 
@@ -154,7 +155,7 @@ export class WalletsService {
     if (amount <= 0) {
       throw new BadRequestException('Amount must be positive');
     }
-    
+
     await this.findOne(id, userId);
 
     return this.prisma.wallet.update({
@@ -249,7 +250,7 @@ export class WalletsService {
 
       // 2. Create Transactions
       const description = `Transferência de ${fromWallet.name} para ${toWallet.name}`;
-      
+
       await tx.transaction.create({
         data: {
           wallet_id: fromId,
@@ -278,5 +279,34 @@ export class WalletsService {
 
       return { message: 'Transfer completed successfully' };
     });
+  }
+
+  async reorder(userId: number, wallets: { id: number; order: number }[]) {
+    if (!Array.isArray(wallets)) {
+      throw new BadRequestException('Body must be an array of { id, order }');
+    }
+
+    const walletIds = wallets.map((w) => w.id);
+    const existingWallets = await this.prisma.wallet.findMany({
+      where: {
+        id: { in: walletIds },
+        user_id: userId,
+      },
+    });
+
+    if (existingWallets.length !== walletIds.length) {
+      throw new BadRequestException('Um ou mais wallets não encontrados ou não pertencem ao usuário.');
+    }
+
+    await this.prisma.$transaction(
+      wallets.map((w) =>
+        this.prisma.wallet.update({
+          where: { id: w.id },
+          data: { order: w.order },
+        })
+      )
+    );
+
+    return { message: 'Wallets reordenados com sucesso' };
   }
 }

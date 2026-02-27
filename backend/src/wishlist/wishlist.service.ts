@@ -14,7 +14,7 @@ export class WishlistService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailerService: MailerService,
-  ) {}
+  ) { }
 
   create(userId: number, createWishlistDto: CreateWishlistDto) {
     return this.prisma.wishlist.create({
@@ -96,7 +96,7 @@ export class WishlistService {
   ) {
     await this.findOne(wishlistId, userId);
 
-    return this.prisma.wishlistProduct.create({
+    const product = await this.prisma.wishlistProduct.create({
       data: {
         id_wishlist: wishlistId,
         name_product: createWishlistProductDto.name_product,
@@ -106,6 +106,16 @@ export class WishlistService {
         last_checked_price: createWishlistProductDto.price,
       },
     });
+
+    await this.prisma.wishlistProductHistory.create({
+      data: {
+        wishlist_product_id: product.id,
+        price: product.price,
+      }
+    });
+
+    return product;
+
   }
 
   async updateProduct(
@@ -163,8 +173,34 @@ export class WishlistService {
       },
     });
 
+    await this.prisma.wishlistProductHistory.deleteMany({
+      where: {
+        wishlist_product_id: productId,
+      },
+    });
+
     return this.prisma.wishlistProduct.delete({
       where: { id: productId },
+    });
+  }
+
+  async getProductHistory(wishlistId: number, productId: number, userId: number) {
+    await this.findOne(wishlistId, userId);
+
+    const product = await this.prisma.wishlistProduct.findFirst({
+      where: {
+        id: productId,
+        id_wishlist: wishlistId,
+      },
+    });
+
+    if (!product) {
+      throw new NotFoundException('Wishlist product not found');
+    }
+
+    return this.prisma.wishlistProductHistory.findMany({
+      where: { wishlist_product_id: productId },
+      orderBy: { created_at: 'asc' },
     });
   }
 
@@ -251,6 +287,15 @@ export class WishlistService {
 
         const previousPrice = Number(product.last_checked_price ?? product.price);
         const currentPrice = scraped.price;
+
+        if (currentPrice < previousPrice || currentPrice > previousPrice) {
+          await this.prisma.wishlistProductHistory.create({
+            data: {
+              wishlist_product_id: product.id,
+              price: currentPrice,
+            }
+          });
+        }
 
         if (currentPrice < previousPrice) {
           const message = `O preço de "${product.name_product}" caiu de R$ ${previousPrice.toFixed(2)} para R$ ${currentPrice.toFixed(2)}.`;

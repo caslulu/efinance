@@ -5,6 +5,7 @@ import type {
   PriceAlertNotificationsResponse,
   Wishlist,
   WishlistProduct,
+  WishlistProductHistory,
 } from '@/types/Wishlist';
 
 export function useWishlists() {
@@ -14,6 +15,17 @@ export function useWishlists() {
       const res = await api.get<Wishlist[]>('/wishlists');
       return Array.isArray(res.data) ? res.data : [];
     },
+  });
+}
+
+export function useWishlistProductHistory(wishlistId: number, productId: number) {
+  return useQuery({
+    queryKey: ['wishlistProductHistory', wishlistId, productId],
+    queryFn: async () => {
+      const res = await api.get<WishlistProductHistory[]>(`/wishlists/${wishlistId}/products/${productId}/history`);
+      return Array.isArray(res.data) ? res.data : [];
+    },
+    enabled: !!wishlistId && !!productId,
   });
 }
 

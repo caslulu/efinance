@@ -53,6 +53,7 @@ model Wallet {
   type         String
   closing_day  Int?
   due_day      Int?
+  order        Int           @default(0)
   transactions Transaction[]
   investments  Investment[]
   subscriptions Subscription[]
@@ -170,6 +171,17 @@ model WishlistProduct {
   send_price_alerts Boolean @default(false)
   last_checked_price Decimal? @db.Decimal(10, 2)
   priceAlertNotifications WishlistPriceAlertNotification[]
+  history      WishlistProductHistory[]
+}
+
+model WishlistProductHistory {
+  id                  Int             @id @default(autoincrement())
+  wishlist_product_id Int
+  wishlistProduct     WishlistProduct @relation(fields: [wishlist_product_id], references: [id])
+  price               Decimal         @db.Decimal(10, 2)
+  created_at          DateTime        @default(now())
+
+  @@index([wishlist_product_id])
 }
 
 model WishlistPriceAlertNotification {

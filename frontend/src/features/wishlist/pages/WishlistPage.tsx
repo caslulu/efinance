@@ -24,8 +24,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Gift, Loader2, Pencil, Plus, Trash2, ExternalLink, Bell, BellOff } from 'lucide-react';
+import { Gift, Loader2, Pencil, Plus, Trash2, ExternalLink, Bell, BellOff, History } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { useWishlistProductHistory } from '@/hooks/useWishlists';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 export const WishlistPage = () => {
   const { data: wishlists = [], isLoading } = useWishlists();
@@ -66,6 +70,18 @@ export const WishlistPage = () => {
   const [editProductPrice, setEditProductPrice] = useState('');
   const [editProductUrl, setEditProductUrl] = useState('');
   const [editProductSendPriceAlerts, setEditProductSendPriceAlerts] = useState(false);
+
+  // History modal state
+  const [historyModal, setHistoryModal] = useState<{
+    wishlistId: number;
+    productId: number;
+    productName: string;
+  } | null>(null);
+
+  const { data: productHistory = [], isLoading: loadingHistory } = useWishlistProductHistory(
+    historyModal?.wishlistId || 0,
+    historyModal?.productId || 0,
+  );
 
   const handleUrlChange = useCallback(
     (url: string) => {
@@ -438,6 +454,18 @@ export const WishlistPage = () => {
                             <Button
                               variant="ghost"
                               size="icon"
+                              className="h-8 w-8"
+                              onClick={() => setHistoryModal({
+                                wishlistId: selectedWishlist.id,
+                                productId: product.id,
+                                productName: product.name_product
+                              })}
+                            >
+                              <History className="h-4 w-4 text-purple-600" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               className="h-8 w-8 text-red-600"
                               onClick={() => setConfirmDeleteProduct({ wishlistId: selectedWishlist.id, productId: product.id })}
                             >
@@ -559,6 +587,58 @@ export const WishlistPage = () => {
             <Button variant="outline" onClick={() => setEditProductModal(null)}>Cancelar</Button>
             <Button onClick={handleUpdateProduct} disabled={!editProductName.trim() || !editProductPrice}>Salvar</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* History Modal */}
+      <Dialog open={historyModal !== null} onOpenChange={(open) => !open && setHistoryModal(null)}>
+        <DialogContent className="sm:max-w-[700px]">
+          <DialogHeader>
+            <DialogTitle>Histórico de Preço</DialogTitle>
+            <DialogDescription>
+              {historyModal?.productName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {loadingHistory ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+              </div>
+            ) : productHistory.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
+                Nenhum histórico de preço registrado ainda.
+              </div>
+            ) : (
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={productHistory} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis
+                      dataKey="created_at"
+                      tickFormatter={(value) => format(new Date(value), "dd/MM", { locale: ptBR })}
+                      fontSize={12}
+                    />
+                    <YAxis
+                      tickFormatter={(value) => formatCurrency(value)}
+                      fontSize={12}
+                      width={80}
+                    />
+                    <Tooltip
+                      formatter={(value: number) => [formatCurrency(value), 'Preço']}
+                      labelFormatter={(label) => format(new Date(label), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="price"
+                      stroke="#8b5cf6"
+                      strokeWidth={2}
+                      activeDot={{ r: 8 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
