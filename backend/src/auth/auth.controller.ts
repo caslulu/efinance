@@ -22,12 +22,22 @@ export class AuthController {
     private readonly configService: ConfigService,
   ) {}
 
+  private isSecure(): boolean {
+    const forceHttps = process.env.FORCE_HTTPS;
+    if (forceHttps !== undefined) {
+      return forceHttps === 'true';
+    }
+    // Default: secure only if FRONTEND_URL starts with https
+    const frontendUrl = process.env.FRONTEND_URL || '';
+    return frontendUrl.startsWith('https');
+  }
+
   private setAuthCookie(res: Response, token: string, rememberMe = false) {
-    const isProduction = process.env.NODE_ENV === 'production';
+    const secure = this.isSecure();
 
     res.cookie('access_token', token, {
       httpOnly: true,
-      secure: isProduction,
+      secure,
       sameSite: 'lax',
       maxAge: rememberMe ? 7 * 24 * 60 * 60 * 1000 : 60 * 60 * 1000,
       path: '/',
@@ -35,11 +45,11 @@ export class AuthController {
   }
 
   private clearAuthCookie(res: Response) {
-    const isProduction = process.env.NODE_ENV === 'production';
+    const secure = this.isSecure();
 
     res.clearCookie('access_token', {
       httpOnly: true,
-      secure: isProduction,
+      secure,
       sameSite: 'lax',
       path: '/',
     });
