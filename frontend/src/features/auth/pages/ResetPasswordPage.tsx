@@ -34,7 +34,7 @@ export const ResetPasswordPage = () => {
     try {
       await api.post('/auth/reset-password', { token, newPassword: password });
       navigate('/login', { state: { message: 'Senha alterada com sucesso! Faça login.' } });
-    } catch (err: any) {
+    } catch (err) {
       setError('Falha ao redefinir senha. O token pode ter expirado.');
     } finally {
       setLoading(false);

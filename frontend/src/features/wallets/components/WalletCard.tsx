@@ -1,4 +1,5 @@
 import clsx from 'clsx';
+import { formatCurrency } from '@/lib/utils';
 import type { Wallet } from '../../../types/Wallet';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -29,9 +30,6 @@ export const WalletCard = ({ wallet, onAddFunds, onAddExpense, onEdit, onPayInvo
     INVESTMENT: 'Investimento',
     OTHER: 'Outro',
   };
-
-  const formatCurrency = (val: number) =>
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
   return (
     <Card className="hover:shadow-md transition-shadow relative group">

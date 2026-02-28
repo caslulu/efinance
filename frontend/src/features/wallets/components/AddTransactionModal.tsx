@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../../api/api';
+import { getErrorMessage } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CurrencyInput } from '@/components/CurrencyInput';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -102,12 +104,12 @@ export const AddTransactionModal = ({ isOpen, type, walletId, walletType, hasClo
       setInstallments('');
       setPaymentMethod('');
       setIsRecurring(false);
-    } catch (err: any) {
-      const msg = err.response?.data?.message;
+    } catch (err) {
+      const msg = getErrorMessage(err, 'Falha ao processar transação');
       if (msg === 'Insufficient funds in wallet') {
         setError('Você não tem saldo suficiente.');
       } else {
-        setError(Array.isArray(msg) ? msg.join(', ') : msg || 'Falha ao processar transação');
+        setError(msg);
       }
     } finally {
       setLoading(false);
@@ -140,15 +142,12 @@ export const AddTransactionModal = ({ isOpen, type, walletId, walletType, hasClo
 
           <div className="grid gap-2">
             <Label htmlFor="amount">Valor</Label>
-            <Input
+            <CurrencyInput
               id="amount"
-              type="number"
-              step="0.01"
               value={amount}
-              onChange={e => setAmount(e.target.value)}
+              onValueChange={setAmount}
               required
-              min="0.01"
-            />
+              />
           </div>
           
           {availableMethods.length > 0 && (

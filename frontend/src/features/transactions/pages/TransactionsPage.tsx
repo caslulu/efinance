@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
+import { formatCurrency } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTransactions, useSubscriptions, useWallets, useCategories, useDeleteTransaction } from '@/hooks';
 import type { Transaction } from '../../../types/Transaction';
@@ -225,9 +226,6 @@ export const TransactionsPage = () => {
       return next;
     });
   };
-
-  const formatCurrency = (val: number) =>
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
   const renderGroup = (group: any) => {
     const isExpanded = expandedMonths.includes(group.label);

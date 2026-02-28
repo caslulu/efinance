@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../../../api/api';
 import { useAuth } from '../../../context/AuthContext';
+import { getErrorMessage } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,8 +41,8 @@ export const ProfilePage = () => {
       await api.patch('/users/profile', profileData);
       await refreshUser();
       setSuccessMsg('Perfil atualizado com sucesso!');
-    } catch (error: any) {
-      setErrorMsg(error.response?.data?.message || 'Falha ao atualizar perfil');
+    } catch (error) {
+      setErrorMsg(getErrorMessage(error, 'Falha ao atualizar perfil'));
     } finally {
       setLoading(false);
     }
@@ -64,8 +65,8 @@ export const ProfilePage = () => {
       });
       await refreshUser();
       setSuccessMsg('Foto de perfil atualizada!');
-    } catch (error: any) {
-      setErrorMsg(error.response?.data?.message || 'Falha ao enviar imagem');
+    } catch (error) {
+      setErrorMsg(getErrorMessage(error, 'Falha ao enviar imagem'));
     } finally {
       setLoading(false);
     }

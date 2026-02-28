@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
+import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
   useCreateWishlist,
@@ -246,9 +247,6 @@ export const WishlistPage = () => {
       toast.error('Falha ao remover item da wishlist');
     }
   };
-
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
   return (
     <div className="p-8 space-y-8">

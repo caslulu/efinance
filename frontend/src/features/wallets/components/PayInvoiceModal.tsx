@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../../../api/api';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { CurrencyInput } from '@/components/CurrencyInput';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Wallet } from '../../../types/Wallet';
@@ -85,7 +85,7 @@ export const PayInvoiceModal = ({ isOpen, wallet, onClose, onSuccess }: PayInvoi
 
       onSuccess();
       onClose();
-    } catch (err: any) {
+    } catch (err) {
       setError('Falha ao processar pagamento.');
     } finally {
       setLoading(false);
@@ -123,15 +123,12 @@ export const PayInvoiceModal = ({ isOpen, wallet, onClose, onSuccess }: PayInvoi
 
           <div className="grid gap-2">
             <Label htmlFor="amount">Valor do Pagamento</Label>
-            <Input
+            <CurrencyInput
               id="amount"
-              type="number"
-              step="0.01"
               value={amount}
-              onChange={e => setAmount(e.target.value)}
+              onValueChange={setAmount}
               required
-              min="0.01"
-            />
+              />
           </div>
 
           <DialogFooter>

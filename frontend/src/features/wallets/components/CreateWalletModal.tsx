@@ -4,6 +4,7 @@ import { api } from '../../../api/api';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CurrencyInput } from '@/components/CurrencyInput';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -95,12 +96,10 @@ export const CreateWalletModal = ({ isOpen, onClose, onSuccess }: CreateWalletMo
           </div>
           <div className="grid gap-2">
             <Label htmlFor="balance">Saldo Inicial</Label>
-            <Input
+            <CurrencyInput
               id="balance"
-              type="number"
-              step="0.01"
               value={balance}
-              onChange={e => setBalance(e.target.value)}
+              onValueChange={setBalance}
               required
             />
           </div>

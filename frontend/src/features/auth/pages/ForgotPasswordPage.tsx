@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { api } from '../../../api/api';
+import { AxiosError } from 'axios';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -21,8 +22,8 @@ export const ForgotPasswordPage = () => {
     try {
       await api.post('/auth/forgot-password', { email });
       setMessage('Foi enviado um link de recuperação no seu email.');
-    } catch (err: any) {
-      if (err.response?.status === 404) {
+    } catch (err) {
+      if (err instanceof AxiosError && err.response?.status === 404) {
         setError('Email não encontrado');
       } else {
         setError('Falha ao solicitar recuperação. Tente novamente.');

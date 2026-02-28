@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useBudgetStatus, useDeleteBudget } from '@/hooks';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,9 +24,6 @@ export const BudgetsPage = () => {
       toast.error('Falha ao excluir meta');
     }
   };
-
-  const formatCurrency = (val: number) =>
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
   return (
     <div className="p-8 space-y-8">

@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useSubscriptions, useDeleteSubscription, useUpdateSubscription, useTriggerSubscriptionCheck } from '@/hooks';
 import type { Subscription } from '../../../types/Subscription';
@@ -50,9 +51,6 @@ export const SubscriptionsPage = () => {
     }, 0);
     return { activeCount: active.length, pausedCount: paused.length, monthlyTotal };
   }, [subscriptions]);
-
-  const formatCurrency = (val: number) =>
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
   const handleTriggerCheck = async () => {
     try {

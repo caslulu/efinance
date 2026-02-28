@@ -1,7 +1,10 @@
 import axios from 'axios';
 
-const defaultApiUrl = `${window.location.protocol}//${window.location.hostname}:3000`;
-const apiBaseUrl = (import.meta.env.VITE_API_URL || defaultApiUrl).replace(/\/+$/, '');
+if (!import.meta.env.VITE_API_URL) {
+  console.warn("VITE_API_URL is not defined in the environment variables.");
+}
+
+const apiBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/+$/, '');
 let authToken: string | null = null;
 
 export const setApiAuthToken = (token: string | null) => {

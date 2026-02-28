@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { api } from '../../../api/api';
 import { useAuth } from '../../../context/AuthContext';
+import { getErrorMessage } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,8 +44,8 @@ export const SettingsPage = () => {
       });
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setSuccessMsg('Senha alterada com sucesso!');
-    } catch (error: any) {
-      setErrorMsg(error.response?.data?.message || 'Falha ao alterar senha');
+    } catch (error) {
+      setErrorMsg(getErrorMessage(error, 'Falha ao alterar senha'));
     } finally {
       setLoading(false);
     }
@@ -73,8 +74,8 @@ export const SettingsPage = () => {
       await api.delete('/users/profile');
       await logout();
       navigate('/login');
-    } catch (error: any) {
-      setErrorMsg(error.response?.data?.message || 'Falha ao excluir a conta.');
+    } catch (error) {
+      setErrorMsg(getErrorMessage(error, 'Falha ao excluir a conta.'));
       setLoading(false);
     }
   };

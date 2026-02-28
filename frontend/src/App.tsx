@@ -2,6 +2,8 @@ import { useState, useRef, useEffect, type ReactElement, type ReactNode } from '
 import { Toaster } from 'sonner';
 import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
+import { ThemeToggle } from './components/ThemeToggle';
 import { LoginPage } from './features/auth/pages/LoginPage';
 import { RegisterPage } from './features/auth/pages/RegisterPage';
 import { ForgotPasswordPage } from './features/auth/pages/ForgotPasswordPage';
@@ -19,6 +21,9 @@ import { useMarkPriceAlertAsRead, usePriceAlertNotifications } from './hooks';
 import { Popover, PopoverContent, PopoverTrigger } from './components/ui/popover';
 import { NotFoundPage } from './features/404/NotFoundPage';
 import { LoadingSpinner } from './components/LoadingSpinner';
+import { BottomNav } from './components/BottomNav';
+import { OnboardingWrapper } from './components/OnboardingWrapper';
+import { OnboardingPage } from './features/onboarding/pages/OnboardingPage';
 import {
   ChevronDown,
   LogOut,
@@ -211,6 +216,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
           </div>
 
           <div className="flex items-center gap-4">
+            <ThemeToggle />
             <Popover>
               <PopoverTrigger asChild>
                 <button
@@ -319,6 +325,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
             {children}
           </div>
         </main>
+        <BottomNav />
       </div>
     </div>
   );
@@ -326,7 +333,8 @@ const Layout = ({ children }: { children: ReactNode }) => {
 
 function App() {
   return (
-    <AuthProvider>
+    <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+      <AuthProvider>
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
@@ -334,12 +342,22 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route
+            path="/onboarding"
+            element={
+              <ProtectedRoute>
+                <OnboardingPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/"
             element={
               <ProtectedRoute>
-                <Layout>
-                  <DashboardPage />
-                </Layout>
+                <OnboardingWrapper>
+                  <Layout>
+                    <DashboardPage />
+                  </Layout>
+                </OnboardingWrapper>
               </ProtectedRoute>
             }
           />
@@ -347,9 +365,11 @@ function App() {
             path="/wallets"
             element={
               <ProtectedRoute>
-                <Layout>
-                  <WalletsPage />
-                </Layout>
+                <OnboardingWrapper>
+                  <Layout>
+                    <WalletsPage />
+                  </Layout>
+                </OnboardingWrapper>
               </ProtectedRoute>
             }
           />
@@ -357,9 +377,11 @@ function App() {
             path="/transactions"
             element={
               <ProtectedRoute>
-                <Layout>
-                  <TransactionsPage />
-                </Layout>
+                <OnboardingWrapper>
+                  <Layout>
+                    <TransactionsPage />
+                  </Layout>
+                </OnboardingWrapper>
               </ProtectedRoute>
             }
           />
@@ -367,9 +389,11 @@ function App() {
             path="/subscriptions"
             element={
               <ProtectedRoute>
-                <Layout>
-                  <SubscriptionsPage />
-                </Layout>
+                <OnboardingWrapper>
+                  <Layout>
+                    <SubscriptionsPage />
+                  </Layout>
+                </OnboardingWrapper>
               </ProtectedRoute>
             }
           />
@@ -377,9 +401,11 @@ function App() {
             path="/categories"
             element={
               <ProtectedRoute>
-                <Layout>
-                  <CategoriesPage />
-                </Layout>
+                <OnboardingWrapper>
+                  <Layout>
+                    <CategoriesPage />
+                  </Layout>
+                </OnboardingWrapper>
               </ProtectedRoute>
             }
           />
@@ -387,9 +413,11 @@ function App() {
             path="/budgets"
             element={
               <ProtectedRoute>
-                <Layout>
-                  <BudgetsPage />
-                </Layout>
+                <OnboardingWrapper>
+                  <Layout>
+                    <BudgetsPage />
+                  </Layout>
+                </OnboardingWrapper>
               </ProtectedRoute>
             }
           />
@@ -397,9 +425,11 @@ function App() {
             path="/wishlists"
             element={
               <ProtectedRoute>
-                <Layout>
-                  <WishlistPage />
-                </Layout>
+                <OnboardingWrapper>
+                  <Layout>
+                    <WishlistPage />
+                  </Layout>
+                </OnboardingWrapper>
               </ProtectedRoute>
             }
           />
@@ -432,7 +462,8 @@ function App() {
         </Routes>
       </BrowserRouter>
       <Toaster position="top-right" richColors closeButton />
-    </AuthProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

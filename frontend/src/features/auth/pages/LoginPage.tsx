@@ -118,7 +118,7 @@ export const LoginPage = () => {
       try {
         const res = await api.post('/auth/2fa/login', { userId, token: twoFactorToken, rememberMe });
         login(res.data.access_token, { username }, rememberMe);
-      } catch (err: any) {
+      } catch (err) {
         setError('Código 2FA inválido.');
       } finally {
         setLoading(false);
@@ -135,7 +135,7 @@ export const LoginPage = () => {
       } else {
         login(res.data.access_token, { username }, rememberMe);
       }
-    } catch (err: any) {
+    } catch (err) {
       setError('Falha no login. Verifique suas credenciais.');
     } finally {
       setLoading(false);

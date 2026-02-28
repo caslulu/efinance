@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../../api/api';
+import { getErrorMessage } from '@/lib/utils';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, LayoutDashboard } from 'lucide-react';
 import { FcGoogle } from 'react-icons/fc';
@@ -84,9 +85,8 @@ export const RegisterPage = () => {
         setUserId(res.data.userId);
         setIsVerifying(true);
       }
-    } catch (err: any) {
-      const msg = err.response?.data?.message;
-      setError(Array.isArray(msg) ? msg.join(', ') : msg || 'Falha no cadastro. Tente novamente.');
+    } catch (err) {
+      setError(getErrorMessage(err, 'Falha no cadastro. Tente novamente.'));
     } finally {
       setLoading(false);
     }
@@ -103,7 +103,7 @@ export const RegisterPage = () => {
       const res = await api.post('/auth/verify-email', { userId, token: verificationCode });
       login(res.data.access_token, { username });
       navigate('/', { state: { message: 'Conta verificada com sucesso!' } });
-    } catch (err: any) {
+    } catch (err) {
       setError('Código inválido ou expirado.');
     } finally {
       setLoading(false);

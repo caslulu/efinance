@@ -3,6 +3,7 @@ import { api } from '../../../api/api';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CurrencyInput } from '@/components/CurrencyInput';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -104,7 +105,7 @@ export const EditTransactionModal = ({ isOpen, transaction, onClose, onSuccess }
       await api.patch(`/transactions/${transaction.id}`, payload);
       onSuccess();
       onClose();
-    } catch (err: any) {
+    } catch (err) {
       setError('Falha ao atualizar transação.');
     } finally {
       setLoading(false);
@@ -137,15 +138,12 @@ export const EditTransactionModal = ({ isOpen, transaction, onClose, onSuccess }
             </div>
             <div className="grid gap-2">
               <Label htmlFor="amount">Valor</Label>
-              <Input
+              <CurrencyInput
                 id="amount"
-                type="number"
-                step="0.01"
                 value={amount}
-                onChange={e => setAmount(e.target.value)}
+                onValueChange={setAmount}
                 required
-                min="0.01"
-              />
+                />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="date">Data</Label>

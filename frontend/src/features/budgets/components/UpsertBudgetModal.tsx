@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { api } from '../../../api/api';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { CurrencyInput } from '@/components/CurrencyInput';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -80,12 +80,10 @@ export const UpsertBudgetModal = ({ isOpen, budget, onClose, onSuccess }: Upsert
           </div>
           <div className="grid gap-2">
             <Label htmlFor="limit">Limite Mensal (R$)</Label>
-            <Input
+            <CurrencyInput
               id="limit"
-              type="number"
-              step="0.01"
               value={limit}
-              onChange={e => setLimit(e.target.value)}
+              onValueChange={setLimit}
               placeholder="Ex: 500.00"
               required
             />

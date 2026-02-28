@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../../api/api';
+import { getErrorMessage } from '@/lib/utils';
 import type { Wallet } from '../../../types/Wallet';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { CurrencyInput } from '@/components/CurrencyInput';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowRightLeft } from 'lucide-react';
@@ -64,8 +65,8 @@ export const TransferModal = ({ isOpen, onClose, onSuccess }: TransferModalProps
       });
       onSuccess();
       onClose();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Falha ao processar transferência.');
+    } catch (err) {
+      setError(getErrorMessage(err, 'Falha ao processar transferência.'));
     } finally {
       setLoading(false);
     }
@@ -119,16 +120,13 @@ export const TransferModal = ({ isOpen, onClose, onSuccess }: TransferModalProps
 
           <div className="grid gap-2">
             <Label htmlFor="amount">Valor (R$)</Label>
-            <Input
+            <CurrencyInput
               id="amount"
-              type="number"
-              step="0.01"
               value={amount}
-              onChange={e => setAmount(e.target.value)}
+              onValueChange={setAmount}
               placeholder="0.00"
               required
-              min="0.01"
-            />
+              />
           </div>
 
           <DialogFooter>
