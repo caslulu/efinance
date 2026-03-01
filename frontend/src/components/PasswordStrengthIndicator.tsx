@@ -5,7 +5,7 @@ interface PasswordStrengthIndicatorProps {
 }
 
 const getStrength = (password: string): { score: number; label: string; color: string } => {
-    if (!password) return { score: 0, label: '', color: 'bg-gray-200' };
+    if (!password) return { score: 0, label: '', color: 'bg-muted' };
 
     let score = 0;
     if (password.length >= 6) score++;
@@ -31,7 +31,7 @@ export const PasswordStrengthIndicator = ({ password }: PasswordStrengthIndicato
                 {[1, 2, 3, 4].map((level) => (
                     <div
                         key={level}
-                        className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${level <= strength.score ? strength.color : 'bg-gray-200'
+                        className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${level <= strength.score ? strength.color : 'bg-muted'
                             }`}
                     />
                 ))}

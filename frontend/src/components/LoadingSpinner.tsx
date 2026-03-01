@@ -2,7 +2,7 @@ import { LayoutDashboard } from 'lucide-react';
 
 export const LoadingSpinner = () => {
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 gap-4">
+        <div className="min-h-screen flex flex-col items-center justify-center bg-muted gap-4">
             <div className="relative">
                 <div className="w-16 h-16 rounded-2xl bg-blue-600 flex items-center justify-center animate-pulse shadow-lg shadow-blue-200">
                     <LayoutDashboard size={32} className="text-white" />

@@ -20,7 +20,7 @@ export function TopGrowingCategories({ data }: { data: any }) {
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2 min-w-0">
                     <CategoryIcon name={item.icon} className="h-4 w-4 text-violet-600" />
-                    <p className="text-xs font-bold text-gray-900 truncate">{item.name}</p>
+                    <p className="text-xs font-bold text-foreground truncate">{item.name}</p>
                   </div>
                   <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-violet-100 text-violet-700">
                     +{item.growthPercent}%

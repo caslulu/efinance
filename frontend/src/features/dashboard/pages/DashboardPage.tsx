@@ -72,11 +72,11 @@ export const DashboardPage = () => {
   return (
     <div className="p-4 space-y-8 md:p-8">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <DatePickerWithRange date={dateRange} setDate={setDateRange} />
 
-          <div className="text-sm text-muted-foreground bg-white px-3 py-1 rounded-md border shadow-sm flex items-center gap-2 h-10 w-fit">
+          <div className="text-sm text-muted-foreground bg-card px-3 py-1 rounded-md border shadow-sm flex items-center gap-2 h-10 w-fit">
             <CalendarDays size={14} />
             {dateRange?.from
               ? `Personalizado`
@@ -118,7 +118,7 @@ export const DashboardPage = () => {
           </DialogHeader>
           <div className="mt-4 border rounded-md overflow-hidden">
             <Table>
-              <TableHeader className="bg-gray-50">
+              <TableHeader className="bg-muted">
                 <TableRow>
                   <TableHead className="text-[11px] font-bold">Data</TableHead>
                   <TableHead className="text-[11px] font-bold">Nome / Descrição</TableHead>

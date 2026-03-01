@@ -76,7 +76,7 @@ export const ProfilePage = () => {
     <div className="max-w-4xl mx-auto space-y-8 pb-10">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold tracking-tight">Perfil</h1>
-        <p className="text-muted-foreground text-gray-500">Gerencie suas informações pessoais.</p>
+        <p className="text-muted-foreground text-muted-foreground">Gerencie suas informações pessoais.</p>
       </div>
 
       {(successMsg || errorMsg) && (
@@ -94,11 +94,11 @@ export const ProfilePage = () => {
           </CardHeader>
           <CardContent className="flex items-center gap-6">
             <div className="relative group">
-              <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-100 border-2 border-gray-200 flex items-center justify-center">
+              <div className="w-24 h-24 rounded-full overflow-hidden bg-muted border-2 border-border flex items-center justify-center">
                 {user?.avatarUrl ? (
                   <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
-                  <User size={40} className="text-gray-400" />
+                  <User size={40} className="text-muted-foreground" />
                 )}
               </div>
               <button
@@ -118,7 +118,7 @@ export const ProfilePage = () => {
             </div>
             <div className="space-y-1">
               <p className="font-medium">Sua Foto</p>
-              <p className="text-sm text-gray-500">Clique na imagem para alterar. PNG ou JPG, máx 2MB.</p>
+              <p className="text-sm text-muted-foreground">Clique na imagem para alterar. PNG ou JPG, máx 2MB.</p>
               <Button
                 variant="outline"
                 size="sm"
@@ -152,7 +152,7 @@ export const ProfilePage = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" value={user?.email || ''} disabled className="bg-gray-50" />
+                  <Input id="email" value={user?.email || ''} disabled className="bg-muted" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="fullName">Nome Completo</Label>

@@ -73,8 +73,8 @@ const NavLink = ({
         to={to}
         onClick={onClick}
         className={`flex items-center gap-3 px-3 py-3 text-sm font-medium transition-all duration-300 rounded-lg ${isActive
-          ? 'bg-blue-50 text-blue-600'
-          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+          ? 'bg-blue-50 text-blue-600 dark:text-blue-400 dark:bg-blue-900/30 dark:text-blue-300'
+          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:text-foreground'
           } ${isCollapsed ? 'justify-center px-2' : ''}`}
         title={isCollapsed ? label : ''}
       >
@@ -131,7 +131,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-background flex">
       {/* Sidebar Mobile Overlay */}
       {isSidebarOpen && (
         <div
@@ -142,21 +142,21 @@ const Layout = ({ children }: { children: ReactNode }) => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 bg-white border-r transition-all duration-300 lg:translate-x-0 lg:static lg:inset-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed inset-y-0 left-0 z-50 bg-card border-r transition-all duration-300 lg:translate-x-0 lg:static lg:inset-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
           } ${isCollapsed ? 'w-20' : 'w-64'}`}
       >
         <div className="h-full flex flex-col">
           <div className={`p-6 flex items-center justify-between ${isCollapsed ? 'px-4' : ''}`}>
-            <Link to="/" className={`flex items-center gap-2 font-bold text-blue-600 transition-all ${isCollapsed ? 'scale-110' : 'text-2xl'}`}>
+            <Link to="/" className={`flex items-center gap-2 font-bold text-blue-600 dark:text-blue-400 transition-all ${isCollapsed ? 'scale-110' : 'text-2xl'}`}>
               <LayoutDashboard size={isCollapsed ? 32 : 28} />
               {!isCollapsed && <span>FinanceApp</span>}
             </Link>
             <button className="lg:hidden" onClick={() => setIsSidebarOpen(false)}>
-              <X size={24} className="text-gray-500" />
+              <X size={24} className="text-muted-foreground" />
             </button>
             {!isCollapsed && (
               <button
-                className="hidden lg:block text-gray-400 hover:text-gray-600 p-1 rounded-md hover:bg-gray-100 transition-colors"
+                className="hidden lg:block text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
                 onClick={() => setIsCollapsed(true)}
               >
                 <ChevronDown size={20} className="rotate-90" />
@@ -167,7 +167,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
           {isCollapsed && (
             <div className="px-4 mb-4 flex justify-center">
               <button
-                className="hidden lg:block text-gray-400 hover:text-gray-600 p-2 rounded-md hover:bg-gray-100 transition-colors"
+                className="hidden lg:block text-muted-foreground hover:text-foreground p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
                 onClick={() => setIsCollapsed(false)}
               >
                 <ChevronDown size={20} className="-rotate-90" />
@@ -188,7 +188,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
           <div className={`p-4 border-t ${isCollapsed ? 'px-2' : ''}`}>
             <button
               onClick={logout}
-              className={`flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 transition-all rounded-lg w-full ${isCollapsed ? 'justify-center px-2' : ''}`}
+              className={`flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all rounded-lg w-full ${isCollapsed ? 'justify-center px-2' : ''}`}
               title={isCollapsed ? 'Sair' : ''}
             >
               <LogOut size={20} className="shrink-0" />
@@ -201,9 +201,9 @@ const Layout = ({ children }: { children: ReactNode }) => {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Header */}
-        <header className="h-16 bg-white border-b flex items-center justify-between px-4 lg:px-8 sticky top-0 z-30">
+        <header className="h-16 bg-card border-b flex items-center justify-between px-4 lg:px-8 sticky top-0 z-30">
           <button
-            className="lg:hidden p-2 -ml-2 text-gray-600"
+            className="lg:hidden p-2 -ml-2 text-muted-foreground"
             onClick={() => setIsSidebarOpen(true)}
           >
             <Menu size={24} />
@@ -211,7 +211,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
 
           <div className="flex-1 lg:flex-none">
             {pageTitle && (
-              <h1 className="hidden lg:block text-lg font-semibold text-gray-800">{pageTitle}</h1>
+              <h1 className="hidden lg:block text-lg font-semibold text-foreground">{pageTitle}</h1>
             )}
           </div>
 
@@ -220,7 +220,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
             <Popover>
               <PopoverTrigger asChild>
                 <button
-                  className="relative rounded-full p-2 text-gray-600 hover:bg-gray-100 transition-colors"
+                  className="relative rounded-full p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
                   aria-label="Notificações"
                 >
                   <Bell size={20} />
@@ -231,16 +231,16 @@ const Layout = ({ children }: { children: ReactNode }) => {
                   )}
                 </button>
               </PopoverTrigger>
-              <PopoverContent align="end" className="w-80 lg:w-96 p-0 shadow-xl border-gray-200">
-                <div className="border-b px-4 py-3 bg-gray-50 rounded-t-lg">
-                  <p className="font-bold text-sm text-gray-900">Alertas de preço</p>
+              <PopoverContent align="end" className="w-80 lg:w-96 p-0 shadow-xl border-border">
+                <div className="border-b px-4 py-3 bg-muted rounded-t-lg">
+                  <p className="font-bold text-sm text-foreground">Alertas de preço</p>
                 </div>
                 <div className="max-h-80 overflow-y-auto">
                   {priceAlerts?.notifications?.length ? (
                     priceAlerts.notifications.map((notification) => (
                       <button
                         key={notification.id}
-                        className={`w-full border-b px-4 py-4 text-left hover:bg-blue-50 transition-colors ${notification.is_read ? 'bg-white opacity-60' : 'bg-blue-50/30'
+                        className={`w-full border-b px-4 py-4 text-left hover:bg-blue-900/30 transition-colors ${notification.is_read ? 'bg-card opacity-60' : 'bg-blue-900/10'
                           }`}
                         onClick={() => {
                           if (!notification.is_read) {
@@ -255,14 +255,14 @@ const Layout = ({ children }: { children: ReactNode }) => {
                           }
                         }}
                       >
-                        <p className="text-sm font-medium text-gray-900">{notification.message}</p>
-                        <p className="mt-1 text-xs text-gray-500">
+                        <p className="text-sm font-medium text-foreground">{notification.message}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
                           {new Date(notification.notified_at).toLocaleString('pt-BR')}
                         </p>
                       </button>
                     ))
                   ) : (
-                    <div className="px-4 py-10 text-center text-sm text-gray-500">
+                    <div className="px-4 py-10 text-center text-sm text-muted-foreground">
                       Sem notificações no momento.
                     </div>
                   )}
@@ -273,7 +273,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex items-center gap-2 rounded-full lg:rounded-lg p-1 lg:px-3 lg:py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors focus:outline-none"
+                className="flex items-center gap-2 rounded-full lg:rounded-lg p-1 lg:px-3 lg:py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors focus:outline-none"
               >
                 <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold overflow-hidden border-2 border-white shadow-sm">
                   {user?.avatarUrl ? (
@@ -287,11 +287,11 @@ const Layout = ({ children }: { children: ReactNode }) => {
               </button>
 
               {isDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-48 origin-top-right rounded-lg bg-white shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none z-50 border border-gray-100">
+                <div className="absolute right-0 mt-2 w-48 origin-top-right rounded-lg bg-card shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none z-50 border border-border">
                   <div className="py-2">
                     <Link
                       to="/profile"
-                      className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                      className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-blue-900/30 hover:text-blue-600 dark:text-blue-400 transition-colors"
                       onClick={() => setIsDropdownOpen(false)}
                     >
                       <User size={18} />
@@ -299,7 +299,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
                     </Link>
                     <Link
                       to="/settings"
-                      className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                      className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-blue-900/30 hover:text-blue-600 dark:text-blue-400 transition-colors"
                       onClick={() => setIsDropdownOpen(false)}
                     >
                       <Settings size={18} />
@@ -308,7 +308,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
                     <div className="border-t my-1"></div>
                     <button
                       onClick={logout}
-                      className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                      className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                     >
                       <LogOut size={18} />
                       Sair

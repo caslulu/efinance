@@ -16,13 +16,13 @@ export function UpcomingBills({ data, formatDate }: { data: any, formatDate: (da
         <div className="space-y-4">
           {data.upcomingTransactions && data.upcomingTransactions.length > 0 ? (
             data.upcomingTransactions.map((tx: any) => (
-              <div key={tx.id} className="flex items-center justify-between p-3 rounded-lg border bg-gray-50/50 hover:bg-gray-50 transition-colors">
+              <div key={tx.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/50 hover:bg-accent hover:text-accent-foreground transition-colors">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded bg-orange-100 text-orange-600">
                     <CategoryIcon name={tx.TransactionCategory?.icon} className="h-4 w-4" />
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs font-bold text-gray-900 line-clamp-1">{tx.description || tx.TransactionCategory?.name || 'Sem nome'}</p>
+                    <p className="text-xs font-bold text-foreground line-clamp-1">{tx.description || tx.TransactionCategory?.name || 'Sem nome'}</p>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] text-muted-foreground flex items-center gap-1">
                         <WalletIcon size={10} /> {tx.wallet?.name}

@@ -84,7 +84,7 @@ export const SettingsPage = () => {
     <div className="max-w-4xl mx-auto space-y-8 pb-10">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold tracking-tight">Configurações</h1>
-        <p className="text-muted-foreground text-gray-500">Gerencie as preferências de segurança da sua conta.</p>
+        <p className="text-muted-foreground text-muted-foreground">Gerencie as preferências de segurança da sua conta.</p>
       </div>
 
       {(successMsg || errorMsg) && (
@@ -111,7 +111,7 @@ export const SettingsPage = () => {
                     onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
                     required
                   />
-                  <button type="button" onClick={() => setShowCurrentPw(!showCurrentPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  <button type="button" onClick={() => setShowCurrentPw(!showCurrentPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                     {showCurrentPw ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
@@ -126,7 +126,7 @@ export const SettingsPage = () => {
                     onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
                     required
                   />
-                  <button type="button" onClick={() => setShowNewPw(!showNewPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  <button type="button" onClick={() => setShowNewPw(!showNewPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                     {showNewPw ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
@@ -142,7 +142,7 @@ export const SettingsPage = () => {
                     onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
                     required
                   />
-                  <button type="button" onClick={() => setShowConfirmPw(!showConfirmPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  <button type="button" onClick={() => setShowConfirmPw(!showConfirmPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                     {showConfirmPw ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
@@ -167,7 +167,7 @@ export const SettingsPage = () => {
           <CardContent className="flex items-center justify-between">
             <div className="max-w-[80%]">
               <p className="font-medium">2FA via Email</p>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-foreground">
                 Ao ativar, solicitaremos um código enviado ao seu email sempre que você fizer login de um novo dispositivo.
               </p>
             </div>
@@ -194,7 +194,7 @@ export const SettingsPage = () => {
           <CardContent className="flex items-center justify-between">
             <div className="max-w-[80%]">
               <p className="font-medium">Excluir Conta</p>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-foreground">
                 Isso excluirá permanentemente sua conta, junto com todas as carteiras, transações e assinaturas associadas.
               </p>
             </div>

@@ -94,28 +94,28 @@ export const SubscriptionsPage = () => {
 
       {subscriptions.length > 0 && (
         <div className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-lg border bg-white p-4">
+          <div className="rounded-lg border bg-card p-4">
             <p className="text-sm text-muted-foreground">Custo Mensal Estimado</p>
-            <p className="text-2xl font-bold text-gray-900">{formatCurrency(summary.monthlyTotal)}</p>
+            <p className="text-2xl font-bold text-foreground">{formatCurrency(summary.monthlyTotal)}</p>
           </div>
-          <div className="rounded-lg border bg-white p-4">
+          <div className="rounded-lg border bg-card p-4">
             <div className="flex items-center gap-2">
               <div className="h-2 w-2 rounded-full bg-green-500" />
               <p className="text-sm text-muted-foreground">Ativas</p>
             </div>
-            <p className="text-2xl font-bold text-gray-900">{summary.activeCount}</p>
+            <p className="text-2xl font-bold text-foreground">{summary.activeCount}</p>
           </div>
-          <div className="rounded-lg border bg-white p-4">
+          <div className="rounded-lg border bg-card p-4">
             <div className="flex items-center gap-2">
               <div className="h-2 w-2 rounded-full bg-yellow-500" />
               <p className="text-sm text-muted-foreground">Pausadas</p>
             </div>
-            <p className="text-2xl font-bold text-gray-900">{summary.pausedCount}</p>
+            <p className="text-2xl font-bold text-foreground">{summary.pausedCount}</p>
           </div>
         </div>
       )}
 
-      <div className="rounded-md border bg-white">
+      <div className="rounded-md border bg-card">
         <Table>
           <TableHeader>
             <TableRow>
@@ -133,8 +133,8 @@ export const SubscriptionsPage = () => {
               <TableRow key={sub.id}>
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded bg-slate-100">
-                      <CategoryIcon name={sub.category?.icon} className="h-4 w-4 text-slate-600" />
+                    <div className="p-2 rounded bg-slate-100 dark:bg-slate-800">
+                      <CategoryIcon name={sub.category?.icon} className="h-4 w-4 text-slate-600 dark:text-slate-400" />
                     </div>
                     <span>{sub.name}</span>
                   </div>
@@ -148,7 +148,7 @@ export const SubscriptionsPage = () => {
                   <Badge
                     variant="outline"
                     className={clsx(
-                      sub.status === 'ACTIVE' ? 'border-green-500 text-green-600 bg-green-50' : 'border-yellow-500 text-yellow-600 bg-yellow-50'
+                      sub.status === 'ACTIVE' ? 'border-green-500 text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-400' : 'border-yellow-500 text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 dark:text-yellow-400'
                     )}
                   >
                     {sub.status === 'ACTIVE' ? 'Ativo' : 'Pausado'}

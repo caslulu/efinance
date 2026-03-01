@@ -98,12 +98,12 @@ export const WalletsPage = () => {
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Minhas Carteiras</h1>
+        <h1 className="text-3xl font-bold text-foreground">Minhas Carteiras</h1>
         <div className="flex gap-4">
           <Button
             variant="outline"
             onClick={() => setIsTransferOpen(true)}
-            className="flex items-center gap-2 border-blue-200 text-blue-600 hover:bg-blue-50"
+            className="flex items-center gap-2 border-blue-200 text-blue-600 hover:bg-blue-900/30"
           >
             <ArrowRightLeft size={18} />
             Transferir
@@ -159,7 +159,7 @@ export const WalletsPage = () => {
       </DndContext>
 
       {wallets.length === 0 && (
-        <div className="mt-10 text-center text-gray-500">
+        <div className="mt-10 text-center text-muted-foreground">
           Nenhuma carteira encontrada. Crie uma para começar!
         </div>
       )}

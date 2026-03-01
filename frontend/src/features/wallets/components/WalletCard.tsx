@@ -58,7 +58,7 @@ export const WalletCard = ({ wallet, onAddFunds, onAddExpense, onEdit, onPayInvo
             <div className="flex justify-between items-end">
               <div>
                 <p className="text-[10px] uppercase font-bold text-muted-foreground">Saldo Disponível</p>
-                <div className="text-xl font-bold text-green-600">
+                <div className="text-xl font-bold text-green-600 dark:text-green-400">
                   {formatCurrency(Number(wallet.actual_cash))}
                 </div>
               </div>
@@ -74,23 +74,23 @@ export const WalletCard = ({ wallet, onAddFunds, onAddExpense, onEdit, onPayInvo
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-gray-50 border border-gray-100">
+            <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-muted border border-border">
               <div className="space-y-1">
                 <p className="text-[9px] uppercase font-bold text-muted-foreground">Fatura Fechada</p>
-                <p className={clsx("text-sm font-bold", Number(wallet.due_invoice) > 0 ? "text-red-600" : "text-gray-400")}>
+                <p className={clsx("text-sm font-bold", Number(wallet.due_invoice) > 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground")}>
                   {formatCurrency(Number(wallet.due_invoice))}
                 </p>
               </div>
               <div className="space-y-1">
                 <p className="text-[9px] uppercase font-bold text-muted-foreground">Fatura Aberta</p>
-                <p className="text-sm font-bold text-blue-600">
+                <p className="text-sm font-bold text-blue-600 dark:text-blue-400">
                   {formatCurrency(Number(wallet.current_invoice))}
                 </p>
               </div>
-              <div className="col-span-2 pt-2 border-t border-gray-200 mt-1">
+              <div className="col-span-2 pt-2 border-t border-border mt-1">
                 <div className="flex justify-between items-center">
                   <p className="text-[9px] uppercase font-bold text-muted-foreground">Total Comprometido</p>
-                  <p className="text-sm font-black text-red-700">
+                  <p className="text-sm font-black text-red-700 dark:text-red-400">
                     {formatCurrency(Number(wallet.total_invoice || 0))}
                   </p>
                 </div>
@@ -109,14 +109,14 @@ export const WalletCard = ({ wallet, onAddFunds, onAddExpense, onEdit, onPayInvo
       <CardFooter className="flex gap-2 pt-2">
         <Button
           variant="outline"
-          className="flex-1 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+          className="flex-1 text-green-600 dark:text-green-400 border-green-200 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-700 dark:hover:text-green-300"
           onClick={() => onAddFunds(wallet.id)}
         >
           <Plus className="mr-2 h-4 w-4" /> Adicionar
         </Button>
         <Button
           variant="outline"
-          className="flex-1 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+          className="flex-1 text-red-600 dark:text-red-400 border-red-200 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-300 dark:text-red-400"
           onClick={() => onAddExpense(wallet.id)}
         >
           <Minus className="mr-2 h-4 w-4" /> Despesa

@@ -131,7 +131,7 @@ export const RegisterPage = () => {
             {isVerifying ? (
               <form onSubmit={handleVerification} className="space-y-4">
                 <div className="space-y-2">
-                  <p className="text-sm text-gray-600 text-center">
+                  <p className="text-sm text-muted-foreground text-center">
                     Enviamos um código de verificação para <strong>{email}</strong>.
                   </p>
                   <Label htmlFor="code">Código de Verificação</Label>
@@ -209,7 +209,7 @@ export const RegisterPage = () => {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700 focus:outline-none"
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground focus:outline-none"
                     >
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
@@ -235,7 +235,7 @@ export const RegisterPage = () => {
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700 focus:outline-none"
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground focus:outline-none"
                     >
                       {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
@@ -255,19 +255,19 @@ export const RegisterPage = () => {
                     <span className="w-full border-t" />
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-white px-2 text-gray-500">Ou continue com</span>
+                    <span className="bg-card px-2 text-muted-foreground">Ou continue com</span>
                   </div>
                 </div>
 
                 <a
                   href={`${(import.meta as any).env?.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:3000`}/auth/google`}
-                  className="flex w-full items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                  className="flex w-full items-center justify-center gap-2 rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-sm hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                 >
                   <FcGoogle className="h-5 w-5" />
                   Google
                 </a>
 
-                <p className="text-sm text-gray-600 text-center">
+                <p className="text-sm text-muted-foreground text-center">
                   Já tem uma conta?{' '}
                   <Link to="/login" className="text-blue-600 hover:underline">
                     Entrar

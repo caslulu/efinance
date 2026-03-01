@@ -50,7 +50,7 @@ export const CategoriesPage = () => {
         </Button>
       </div>
 
-      <div className="rounded-md border max-w-2xl bg-white">
+      <div className="rounded-md border max-w-2xl bg-card">
         <Table>
           <TableHeader>
             <TableRow>

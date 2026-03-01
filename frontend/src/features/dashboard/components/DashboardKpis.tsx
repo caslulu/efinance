@@ -68,7 +68,7 @@ export function DashboardKpis({ data }: { data: any }) {
       {content}
       {activeKpiExplanation === kpiKey && (
         <div className="pointer-events-none absolute left-0 right-0 top-0 z-20 -translate-y-full pb-1">
-          <div className="mx-auto max-w-[260px] rounded-md border bg-white p-2 text-xs text-gray-700 shadow-lg">
+          <div className="mx-auto max-w-[260px] rounded-md border bg-card p-2 text-xs text-foreground shadow-lg">
             {kpiExplanations[kpiKey]}
           </div>
         </div>
@@ -80,7 +80,7 @@ export function DashboardKpis({ data }: { data: any }) {
     <div className="space-y-6">
       <section className="space-y-3">
         <div className="flex items-center gap-2">
-          <h2 className="text-sm font-semibold text-gray-900">Visão Financeira</h2>
+          <h2 className="text-sm font-semibold text-foreground">Visão Financeira</h2>
           <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Patrimônio e renda</span>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -91,10 +91,10 @@ export function DashboardKpis({ data }: { data: any }) {
                 <Coins className="h-4 w-4 text-blue-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-gray-900">{formatCurrency(data.netWorth)}</div>
+                <div className="text-2xl font-bold text-foreground">{formatCurrency(data.netWorth)}</div>
                 <div className="text-[10px] text-muted-foreground flex gap-2 mt-1">
-                  <span className="bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">Saldo: {formatCurrency(data.totalBalance)}</span>
-                  {data.totalInvested > 0 && <span className="bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded">Inv: {formatCurrency(data.totalInvested)}</span>}
+                  <span className="bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300 px-1.5 py-0.5 rounded">Saldo: {formatCurrency(data.totalBalance)}</span>
+                  {data.totalInvested > 0 && <span className="bg-purple-50 text-purple-700 dark:bg-purple-500/10 dark:text-purple-300 px-1.5 py-0.5 rounded">Inv: {formatCurrency(data.totalInvested)}</span>}
                 </div>
               </CardContent>
             </Card>
@@ -107,7 +107,7 @@ export function DashboardKpis({ data }: { data: any }) {
                 <ArrowUpCircle className="h-4 w-4 text-green-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-green-600">{formatCurrency(data.monthlyIncomes)}</div>
+                <div className="text-2xl font-bold text-green-600 dark:text-green-400">{formatCurrency(data.monthlyIncomes)}</div>
                 <p className="text-xs text-muted-foreground">Total recebido no mês</p>
               </CardContent>
             </Card>
@@ -120,7 +120,7 @@ export function DashboardKpis({ data }: { data: any }) {
                 <PiggyBank className="h-4 w-4 text-orange-500" />
               </CardHeader>
               <CardContent>
-                <div className={`text-2xl font-bold ${data.savingsRate > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <div className={`text-2xl font-bold ${data.savingsRate > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                   {data.savingsRate}%
                 </div>
                 <p className="text-xs text-muted-foreground">Economia real do mês</p>
@@ -135,7 +135,7 @@ export function DashboardKpis({ data }: { data: any }) {
                 <Wallet className="h-4 w-4 text-cyan-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-cyan-700">{formatDays(data.financialAutonomyDays || 0)}</div>
+                <div className="text-2xl font-bold text-cyan-700 dark:text-cyan-400">{formatDays(data.financialAutonomyDays || 0)}</div>
                 <p className="text-xs text-muted-foreground">Saldo atual dividido pela média de gasto diário</p>
               </CardContent>
             </Card>
@@ -145,7 +145,7 @@ export function DashboardKpis({ data }: { data: any }) {
 
       <section className="space-y-3">
         <div className="flex items-center gap-2">
-          <h2 className="text-sm font-semibold text-gray-900">Consumo & Orçamento</h2>
+          <h2 className="text-sm font-semibold text-foreground">Consumo & Orçamento</h2>
           <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Gastos e aderência</span>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -156,7 +156,7 @@ export function DashboardKpis({ data }: { data: any }) {
                 <ArrowDownCircle className="h-4 w-4 text-red-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-red-600">{formatCurrency(data.weeklyBurnRate || 0)}</div>
+                <div className="text-2xl font-bold text-red-600 dark:text-red-400">{formatCurrency(data.weeklyBurnRate || 0)}</div>
                 <p className="text-xs text-muted-foreground">Saída total dos últimos 7 dias</p>
               </CardContent>
             </Card>
@@ -169,7 +169,7 @@ export function DashboardKpis({ data }: { data: any }) {
                 <Target className="h-4 w-4 text-emerald-500" />
               </CardHeader>
               <CardContent>
-                <div className={`text-2xl font-bold ${(data.budgetAdherencePercent || 0) <= 100 ? 'text-emerald-600' : 'text-red-600'}`}>
+                <div className={`text-2xl font-bold ${(data.budgetAdherencePercent || 0) <= 100 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
                   {(data.budgetAdherencePercent || 0).toFixed(1)}%
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -186,7 +186,7 @@ export function DashboardKpis({ data }: { data: any }) {
                 <Repeat className="h-4 w-4 text-violet-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-violet-700">{(data.fixedExpenseRatio || 0).toFixed(1)}% fixas</div>
+                <div className="text-2xl font-bold text-violet-700 dark:text-violet-400">{(data.fixedExpenseRatio || 0).toFixed(1)}% fixas</div>
                 <p className="text-xs text-muted-foreground">
                   {(data.variableExpenseRatio || 0).toFixed(1)}% variáveis no período
                 </p>
@@ -201,7 +201,7 @@ export function DashboardKpis({ data }: { data: any }) {
                 <TrendingUp className="h-4 w-4 text-sky-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-sky-700">{formatCurrency(data.variableExpensesMonthly || 0)}</div>
+                <div className="text-2xl font-bold text-sky-700 dark:text-sky-400">{formatCurrency(data.variableExpensesMonthly || 0)}</div>
                 <p className="text-xs text-muted-foreground">Fixas: {formatCurrency(data.fixedExpensesMonthly || 0)}</p>
               </CardContent>
             </Card>
@@ -211,7 +211,7 @@ export function DashboardKpis({ data }: { data: any }) {
 
       <section className="space-y-3">
         <div className="flex items-center gap-2">
-          <h2 className="text-sm font-semibold text-gray-900">Assinaturas</h2>
+          <h2 className="text-sm font-semibold text-foreground">Assinaturas</h2>
           <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Compromissos recorrentes</span>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
@@ -222,7 +222,7 @@ export function DashboardKpis({ data }: { data: any }) {
                 <Repeat className="h-4 w-4 text-purple-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-purple-600">{formatCurrency(data.recurringMonthly)}</div>
+                <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{formatCurrency(data.recurringMonthly)}</div>
                 <p className="text-xs text-muted-foreground">Total recorrente por mês</p>
               </CardContent>
             </Card>
@@ -235,7 +235,7 @@ export function DashboardKpis({ data }: { data: any }) {
                 <Bell className="h-4 w-4 text-indigo-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-indigo-700">{data.activeSubscriptionsCount || 0}</div>
+                <div className="text-2xl font-bold text-indigo-700 dark:text-indigo-400">{data.activeSubscriptionsCount || 0}</div>
                 <p className="text-xs text-muted-foreground">Total ativo • {formatCurrency(data.recurringMonthly || 0)}/mês</p>
               </CardContent>
             </Card>

@@ -71,8 +71,8 @@ export const TransactionList = ({
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded bg-slate-100">
-                      <CategoryIcon name={tx.TransactionCategory?.icon} className="h-3.5 w-3.5 text-slate-600" />
+                    <div className="p-1.5 rounded bg-slate-100 dark:bg-slate-800">
+                      <CategoryIcon name={tx.TransactionCategory?.icon} className="h-3.5 w-3.5 text-slate-600 dark:text-slate-400" />
                     </div>
                     <span>{tx.TransactionCategory?.name || 'Sem Categoria'}</span>
                   </div>
@@ -85,8 +85,8 @@ export const TransactionList = ({
                     variant="outline"
                     className={clsx(
                       tx.transaction_type === 'INCOME'
-                        ? 'border-green-500 text-green-600 bg-green-50'
-                        : 'border-red-500 text-red-600 bg-red-50'
+                        ? 'border-green-500 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 dark:text-green-400'
+                        : 'border-red-500 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 dark:text-red-400'
                     )}
                   >
                     {tx.transaction_type === 'INCOME' ? 'RECEITA' : 'DESPESA'}
@@ -96,7 +96,7 @@ export const TransactionList = ({
                   {tx.installment_total ? `${tx.installment_number}/${tx.installment_total}` : '-'}
                 </TableCell>
                 <TableCell className={clsx("text-right font-bold",
-                  tx.transaction_type === 'INCOME' ? 'text-green-600' : 'text-red-600'
+                  tx.transaction_type === 'INCOME' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                 )}>
                   {tx.transaction_type === 'EXPENSE' ? '- ' : '+ '}
                   R$ {Number(tx.value).toFixed(2)}

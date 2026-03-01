@@ -28,8 +28,8 @@ export const BudgetsPage = () => {
   return (
     <div className="p-8 space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-          <Target className="text-blue-600" />
+        <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
+          <Target className="text-blue-600 dark:text-blue-400" />
           Metas de Gastos
         </h1>
         <Button onClick={() => { setEditingBudget(null); setIsModalOpen(true); }}>
@@ -51,16 +51,16 @@ export const BudgetsPage = () => {
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-slate-100">
-                      <CategoryIcon name={budget.categoryIcon} className="h-5 w-5 text-slate-600" />
+                    <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800">
+                      <CategoryIcon name={budget.categoryIcon} className="h-5 w-5 text-slate-600 dark:text-slate-400" />
                     </div>
                     <CardTitle className="text-lg font-bold">{budget.categoryName}</CardTitle>
                   </div>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingBudget(budget); setIsModalOpen(true); }}>
-                      <Pencil className="h-4 w-4 text-blue-600" />
+                      <Pencil className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600" onClick={() => setConfirmDeleteId(budget.id)}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600 dark:text-red-400" onClick={() => setConfirmDeleteId(budget.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -75,11 +75,11 @@ export const BudgetsPage = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs">
                     <span>Gasto atual</span>
-                    <span className={budget.percentage >= 100 ? 'text-red-600 font-bold' : ''}>
+                    <span className={budget.percentage >= 100 ? 'text-red-600 dark:text-red-400 font-bold' : ''}>
                       {budget.percentage}%
                     </span>
                   </div>
-                  <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
                     <div
                       className={`h-full transition-all ${budget.percentage >= 100 ? 'bg-red-500' : budget.percentage >= 80 ? 'bg-orange-500' : 'bg-blue-500'
                         }`}
@@ -90,7 +90,7 @@ export const BudgetsPage = () => {
 
                 <div className="flex justify-between text-sm pt-2 border-t">
                   <span className="text-muted-foreground">Disponível</span>
-                  <span className={`font-bold ${budget.remaining > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  <span className={`font-bold ${budget.remaining > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                     {formatCurrency(budget.remaining)}
                   </span>
                 </div>

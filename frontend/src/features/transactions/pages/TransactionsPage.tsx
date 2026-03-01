@@ -232,17 +232,17 @@ export const TransactionsPage = () => {
     const isFuture = group.orderKey > (new Date().getFullYear() * 100 + new Date().getMonth());
 
     return (
-      <div key={group.label} className="border rounded-xl bg-white overflow-hidden shadow-sm transition-all hover:shadow-md">
+      <div key={group.label} className="border rounded-xl bg-card overflow-hidden shadow-sm transition-all hover:shadow-md">
         <button
           onClick={() => toggleMonth(group.label)}
-          className="w-full flex items-center justify-between p-4 bg-gray-50/50 hover:bg-gray-50 transition-colors border-b"
+          className="w-full flex items-center justify-between p-4 bg-muted/50 hover:bg-accent hover:text-accent-foreground transition-colors border-b"
         >
           <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${isFuture ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}`}>
+            <div className={`p-2 rounded-lg ${isFuture ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 dark:bg-blue-900/30 dark:text-blue-300' : 'bg-muted text-muted-foreground'}`}>
               <Calendar size={18} />
             </div>
             <div className="text-left">
-              <h3 className="font-bold text-gray-900 capitalize">{group.label}</h3>
+              <h3 className="font-bold text-foreground capitalize">{group.label}</h3>
               {isFuture && <span className="text-[10px] bg-blue-500 text-white px-1.5 py-0.5 rounded uppercase font-bold ml-2">Projeção</span>}
             </div>
           </div>
@@ -251,14 +251,14 @@ export const TransactionsPage = () => {
             <div className="hidden md:flex gap-4 text-sm">
               <div className="text-right">
                 <p className="text-[10px] text-muted-foreground uppercase">Receitas</p>
-                <p className="font-bold text-green-600">{formatCurrency(group.totalIncome)}</p>
+                <p className="font-bold text-green-600 dark:text-green-400">{formatCurrency(group.totalIncome)}</p>
               </div>
               <div className="text-right border-l pl-4">
                 <p className="text-[10px] text-muted-foreground uppercase">Gastos</p>
-                <p className="font-bold text-red-600">{formatCurrency(group.totalExpense)}</p>
+                <p className="font-bold text-red-600 dark:text-red-400">{formatCurrency(group.totalExpense)}</p>
               </div>
             </div>
-            {isExpanded ? <ChevronDown className="text-gray-400" /> : <ChevronRight className="text-gray-400" />}
+            {isExpanded ? <ChevronDown className="text-muted-foreground" /> : <ChevronRight className="text-muted-foreground" />}
           </div>
         </button>
 
@@ -282,16 +282,16 @@ export const TransactionsPage = () => {
     <div className="p-8 space-y-8">
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-gray-900">Histórico de Transações</h1>
+          <h1 className="text-3xl font-bold text-foreground">Histórico de Transações</h1>
           {isFiltered && (
-            <Button variant="ghost" size="sm" onClick={clearFilters} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="text-red-600 dark:text-red-400 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20">
               <X size={16} className="mr-2" /> Limpar Filtros
             </Button>
           )}
         </div>
 
         {/* Filters Bar */}
-        <div className="grid gap-4 md:grid-cols-4 bg-white p-4 rounded-xl border shadow-sm">
+        <div className="grid gap-4 md:grid-cols-4 bg-card p-4 rounded-xl border shadow-sm">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -396,10 +396,10 @@ export const TransactionsPage = () => {
           {/* 1. CURRENT SECTION (TOP) */}
           {(groupedData.current || isFiltered) && (
             <div className="space-y-4">
-              <h2 className="text-lg font-bold text-blue-600 uppercase tracking-wider flex items-center gap-2">
-                <div className="h-px flex-1 bg-blue-100"></div>
+              <h2 className="text-lg font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider flex items-center gap-2">
+                <div className="h-px flex-1 bg-blue-100 dark:bg-blue-900"></div>
                 {isFiltered ? 'Resultados Encontrados' : 'Atual'}
-                <div className="h-px flex-1 bg-blue-100"></div>
+                <div className="h-px flex-1 bg-blue-100 dark:bg-blue-900"></div>
               </h2>
               {groupedData.current && renderGroup(groupedData.current)}
               {isFiltered && groupedData.past.length === 0 && !groupedData.current && groupedData.future.length === 0 && (
@@ -411,10 +411,10 @@ export const TransactionsPage = () => {
           {/* 2. FUTURE SECTION (MIDDLE) */}
           {!isFiltered && groupedData.future.length > 0 && (
             <div className="space-y-4">
-              <h2 className="text-lg font-bold text-purple-600 uppercase tracking-wider flex items-center gap-2">
-                <div className="h-px flex-1 bg-purple-100"></div>
+              <h2 className="text-lg font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider flex items-center gap-2">
+                <div className="h-px flex-1 bg-purple-100 dark:bg-purple-900"></div>
                 Futuras
-                <div className="h-px flex-1 bg-purple-100"></div>
+                <div className="h-px flex-1 bg-purple-100 dark:bg-purple-900"></div>
               </h2>
               <div className="space-y-4">
                 {groupedData.future.map(renderGroup)}
@@ -425,10 +425,10 @@ export const TransactionsPage = () => {
           {/* 3. PAST SECTION (BOTTOM) */}
           {!isFiltered && groupedData.past.length > 0 && (
             <div className="space-y-4">
-              <h2 className="text-lg font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
-                <div className="h-px flex-1 bg-gray-200"></div>
+              <h2 className="text-lg font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                <div className="h-px flex-1 bg-muted"></div>
                 Passadas
-                <div className="h-px flex-1 bg-gray-200"></div>
+                <div className="h-px flex-1 bg-muted"></div>
               </h2>
               <div className="space-y-4">
                 {groupedData.past.map(renderGroup)}

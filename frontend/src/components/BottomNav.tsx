@@ -30,7 +30,7 @@ const NavItem = ({ to, icon: Icon, label, onClick }: any) => {
       to={to}
       onClick={onClick}
       className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${
-        isActive ? 'text-blue-600' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100'
+        isActive ? 'text-blue-600' : 'text-muted-foreground hover:text-foreground dark:text-gray-400 dark:hover:text-gray-100'
       }`}
     >
       <Icon size={20} className={isActive ? 'fill-blue-50/50' : ''} />
@@ -43,14 +43,14 @@ export const BottomNav = () => {
   const { logout } = useAuth();
   
   return (
-    <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-white dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800 flex items-center justify-around px-2 z-50 pb-safe">
+    <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-card dark:bg-gray-950 border-t border-border dark:border-gray-800 flex items-center justify-around px-2 z-50 pb-safe">
       <NavItem to="/" icon={LayoutDashboard} label="Início" />
       <NavItem to="/wallets" icon={Wallet} label="Carteiras" />
       <NavItem to="/transactions" icon={ArrowLeftRight} label="Transações" />
       
       <Sheet>
         <SheetTrigger asChild>
-          <button className="flex flex-col items-center justify-center w-full h-full gap-1 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition-colors">
+          <button className="flex flex-col items-center justify-center w-full h-full gap-1 text-muted-foreground hover:text-foreground dark:text-gray-400 dark:hover:text-gray-100 transition-colors">
             <Menu size={20} />
             <span className="text-[10px] font-medium">Menu</span>
           </button>
@@ -60,7 +60,7 @@ export const BottomNav = () => {
             <SheetTitle>Menu</SheetTitle>
           </SheetHeader>
           
-          <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-xl">
+          <div className="grid grid-cols-3 gap-4 p-4 bg-muted dark:bg-gray-900 rounded-xl">
             <NavItem to="/budgets" icon={Target} label="Metas" />
             <NavItem to="/wishlists" icon={Gift} label="Wishlist" />
             <NavItem to="/subscriptions" icon={Repeat} label="Assinaturas" />

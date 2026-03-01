@@ -252,7 +252,7 @@ export const WishlistPage = () => {
     <div className="p-8 space-y-8">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-          <Gift className="text-blue-600" />
+          <Gift className="text-blue-600 dark:text-blue-400" />
           Wishlist
         </h1>
       </div>
@@ -291,7 +291,7 @@ export const WishlistPage = () => {
                 return (
                   <div
                     key={wishlist.id}
-                    className={`rounded-lg border p-3 transition ${isActive ? 'border-blue-500 bg-blue-50' : 'hover:bg-slate-50'
+                    className={`rounded-lg border p-3 transition ${isActive ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30' : 'hover:bg-slate-50 dark:bg-slate-900/50 dark:hover:bg-slate-800'
                       }`}
                   >
                     <button
@@ -299,7 +299,7 @@ export const WishlistPage = () => {
                       className="w-full text-left"
                       onClick={() => setSelectedWishlistId(wishlist.id)}
                     >
-                      <p className="font-medium text-slate-900">{wishlist.name}</p>
+                      <p className="font-medium text-slate-900 dark:text-slate-100">{wishlist.name}</p>
                       <p className="text-xs text-muted-foreground">
                         {wishlist.products.length} item(ns)
                       </p>
@@ -311,12 +311,12 @@ export const WishlistPage = () => {
                         className="h-8 w-8"
                         onClick={() => openRenameModal(wishlist.id, wishlist.name)}
                       >
-                        <Pencil className="h-4 w-4 text-blue-600" />
+                        <Pencil className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-red-600"
+                        className="h-8 w-8 text-red-600 dark:text-red-400"
                         onClick={() => setConfirmDeleteWishlistId(wishlist.id)}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -338,8 +338,8 @@ export const WishlistPage = () => {
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
-              <form onSubmit={handleCreateProduct} className="space-y-3 rounded-lg border p-4 bg-slate-50">
-                <p className="text-sm font-medium text-slate-700">Adicionar item</p>
+              <form onSubmit={handleCreateProduct} className="space-y-3 rounded-lg border p-4 bg-slate-50 dark:bg-slate-900/50">
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Adicionar item</p>
                 <div className="relative">
                   <Input
                     value={newProductUrl}
@@ -355,7 +355,7 @@ export const WishlistPage = () => {
                     className="pr-10"
                   />
                   {scrapeLoading && (
-                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-blue-500" />
+                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-blue-500 dark:text-blue-400" />
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -380,7 +380,7 @@ export const WishlistPage = () => {
                     Adicionar
                   </Button>
                 </div>
-                <label className="flex items-center gap-2 text-sm text-slate-700">
+                <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
                   <Checkbox
                     checked={newProductSendPriceAlerts}
                     onCheckedChange={(checked) => setNewProductSendPriceAlerts(Boolean(checked))}
@@ -389,7 +389,7 @@ export const WishlistPage = () => {
                 </label>
               </form>
 
-              <div className="rounded-md border bg-white">
+              <div className="rounded-md border bg-card">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -411,7 +411,7 @@ export const WishlistPage = () => {
                               href={product.url}
                               target="_blank"
                               rel="noreferrer"
-                              className="text-blue-500 hover:text-blue-700 flex items-center gap-1 text-sm"
+                              className="text-blue-500 dark:text-blue-400 hover:text-blue-700 flex items-center gap-1 text-sm"
                               title={product.url}
                             >
                               <ExternalLink className="h-3 w-3" /> Acessar
@@ -422,11 +422,11 @@ export const WishlistPage = () => {
                         </TableCell>
                         <TableCell>
                           {product.send_price_alerts ? (
-                            <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">
+                            <Badge variant="outline" className="bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800">
                               <Bell className="h-3 w-3 mr-1" /> Ativo
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="bg-slate-50 text-slate-500 border-slate-200">
+                            <Badge variant="outline" className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700">
                               <BellOff className="h-3 w-3 mr-1" /> Inativo
                             </Badge>
                           )}
@@ -448,7 +448,7 @@ export const WishlistPage = () => {
                                 )
                               }
                             >
-                              <Pencil className="h-4 w-4 text-blue-600" />
+                              <Pencil className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                             </Button>
                             <Button
                               variant="ghost"
@@ -460,12 +460,12 @@ export const WishlistPage = () => {
                                 productName: product.name_product
                               })}
                             >
-                              <History className="h-4 w-4 text-purple-600" />
+                              <History className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                             </Button>
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-red-600"
+                              className="h-8 w-8 text-red-600 dark:text-red-400"
                               onClick={() => setConfirmDeleteProduct({ wishlistId: selectedWishlist.id, productId: product.id })}
                             >
                               <Trash2 className="h-4 w-4" />
@@ -574,7 +574,7 @@ export const WishlistPage = () => {
                 placeholder="https://amazon.com.br/..."
               />
             </div>
-            <label className="flex items-center gap-2 text-sm text-slate-700">
+            <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
               <Checkbox
                 checked={editProductSendPriceAlerts}
                 onCheckedChange={(checked) => setEditProductSendPriceAlerts(Boolean(checked))}
@@ -601,7 +601,7 @@ export const WishlistPage = () => {
           <div className="py-4">
             {loadingHistory ? (
               <div className="flex justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+                <Loader2 className="h-8 w-8 animate-spin text-blue-500 dark:text-blue-400" />
               </div>
             ) : productHistory.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">

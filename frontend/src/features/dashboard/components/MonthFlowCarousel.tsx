@@ -47,10 +47,10 @@ export function MonthFlowCarousel({ data }: { data: any }) {
       <CardContent>
         <div ref={carouselRef} className="flex gap-4 overflow-x-hidden py-2 px-1">
           {data.monthFlow.map((month: any, i: number) => (
-            <div key={i} className={`min-w-[140px] p-3 rounded-lg border flex flex-col items-center justify-center transition-all ${month.isProjected ? 'bg-blue-50/50 border-blue-100 border-dashed' : 'bg-white shadow-sm border-gray-200'
+            <div key={i} className={`min-w-[140px] p-3 rounded-lg border flex flex-col items-center justify-center transition-all ${month.isProjected ? 'bg-blue-900/20 border-blue-100 border-dashed' : 'bg-card shadow-sm border-border'
               } ${!month.isProjected && data.monthFlow[i + 1]?.isProjected ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`}>
               <span className="text-[10px] font-bold text-muted-foreground uppercase">{month.name}</span>
-              <span className={`text-base font-bold ${month.isProjected ? 'text-blue-500' : 'text-gray-900'}`}>{formatCurrency(month.value)}</span>
+              <span className={`text-base font-bold ${month.isProjected ? 'text-blue-500' : 'text-foreground'}`}>{formatCurrency(month.value)}</span>
               <span className="text-[9px] text-muted-foreground">{month.isProjected ? 'Projetado' : 'Realizado'}</span>
             </div>
           ))}
