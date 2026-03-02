@@ -40,4 +40,9 @@ export class CreateTransactionDto {
   @IsNumber()
   @Min(1)
   subscription_id?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  card_id?: number;
 }

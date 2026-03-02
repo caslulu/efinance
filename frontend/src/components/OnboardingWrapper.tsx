@@ -5,14 +5,14 @@ import { useWallets } from '@/hooks';
 
 export const OnboardingWrapper = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
-  const { data: wallets, isLoading } = useWallets();
+  const { data: wallets, isLoading, isFetching } = useWallets();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (isAuthenticated && !isLoading && wallets && wallets.length === 0) {
+    if (isAuthenticated && !isLoading && !isFetching && wallets && wallets.length === 0) {
       navigate('/onboarding', { replace: true });
     }
-  }, [isAuthenticated, isLoading, wallets, navigate]);
+  }, [isAuthenticated, isLoading, isFetching, wallets, navigate]);
 
   return <>{children}</>;
 };

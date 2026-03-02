@@ -22,12 +22,12 @@ interface AddTransactionModalProps {
   type: 'INCOME' | 'EXPENSE' | null;
   walletId: number | null;
   walletType?: string;
-  hasClosingDay?: boolean;
+  cardId?: number;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export const AddTransactionModal = ({ isOpen, type, walletId, walletType, hasClosingDay, onClose, onSuccess }: AddTransactionModalProps) => {
+export const AddTransactionModal = ({ isOpen, type, walletId, walletType, cardId, onClose, onSuccess }: AddTransactionModalProps) => {
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -39,18 +39,23 @@ export const AddTransactionModal = ({ isOpen, type, walletId, walletType, hasClo
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const isCardTransaction = !!cardId;
+
   useEffect(() => {
     if (isOpen) {
       setError('');
-      setPaymentMethod(hasClosingDay ? 'CREDIT' : '');
+      setPaymentMethod(isCardTransaction ? 'CREDIT' : '');
       setDescription('');
       api.get('/categories').then(res => {
         if (Array.isArray(res.data)) setCategories(res.data);
       });
     }
-  }, [isOpen, hasClosingDay]);
+  }, [isOpen, isCardTransaction]);
 
   const getAvailableMethods = () => {
+    // Card transactions are always CREDIT
+    if (isCardTransaction) return ['CREDIT'];
+
     if (!walletType) return [];
     
     // Normalize legacy types
@@ -82,7 +87,7 @@ export const AddTransactionModal = ({ isOpen, type, walletId, walletType, hasClo
     setError('');
     
     try {
-      const payload = {
+      const payload: Record<string, unknown> = {
         wallet_id: walletId,
         value: Number(amount),
         description: description || undefined,
@@ -94,6 +99,10 @@ export const AddTransactionModal = ({ isOpen, type, walletId, walletType, hasClo
         is_recurring: isRecurring,
         installment_total: (installments && !isRecurring) ? Number(installments) : undefined,
       };
+
+      if (cardId) {
+        payload.card_id = cardId;
+      }
       
       await api.post('/transactions', payload);
       onSuccess();

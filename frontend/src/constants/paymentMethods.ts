@@ -17,7 +17,7 @@ export const PAYMENT_METHODS = {
 
 // Maps Wallet Type Name -> Array of Payment Method Keys
 export const ALLOWED_METHODS: Record<string, string[]> = {
-  [WALLET_TYPES.BANK_ACCOUNT]: ['CREDIT', 'DEBIT', 'PIX', 'TRANSFER'],
+  [WALLET_TYPES.BANK_ACCOUNT]: ['DEBIT', 'PIX', 'TRANSFER'],
   [WALLET_TYPES.PHYSICAL]: ['MONEY'],
   [WALLET_TYPES.MEAL_VOUCHER]: ['CREDIT'],
   [WALLET_TYPES.INVESTMENT]: ['DEPOSIT', 'TRANSFER'],

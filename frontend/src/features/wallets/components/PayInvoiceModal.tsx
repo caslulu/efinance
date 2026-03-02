@@ -6,15 +6,16 @@ import { CurrencyInput } from '@/components/CurrencyInput';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Wallet } from '../../../types/Wallet';
+import type { Card } from '../../../types/Card';
 
 interface PayInvoiceModalProps {
   isOpen: boolean;
-  wallet: Wallet | null;
+  card: Card | null;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export const PayInvoiceModal = ({ isOpen, wallet, onClose, onSuccess }: PayInvoiceModalProps) => {
+export const PayInvoiceModal = ({ isOpen, card, onClose, onSuccess }: PayInvoiceModalProps) => {
   const [amount, setAmount] = useState('');
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [sourceWalletId, setSourceWalletId] = useState<string>('');
@@ -25,28 +26,28 @@ export const PayInvoiceModal = ({ isOpen, wallet, onClose, onSuccess }: PayInvoi
     if (isOpen) {
       api.get('/wallets').then(res => {
         setWallets(res.data);
-        // Default to first bank account or first wallet that is not the current one
-        const defaultSource = res.data.find((w: Wallet) => w.id !== wallet?.id && w.type === 'BANK') 
-          || res.data.find((w: Wallet) => w.id !== wallet?.id);
+        // Default to first bank account or first wallet
+        const defaultSource = res.data.find((w: Wallet) => w.type === 'BANK')
+          || res.data[0];
         if (defaultSource) setSourceWalletId(String(defaultSource.id));
       });
     }
-  }, [isOpen, wallet]);
+  }, [isOpen, card]);
 
   useEffect(() => {
-    if (wallet && isOpen) {
-      const due = Number(wallet.due_invoice || 0);
-      const current = Number(wallet.current_invoice || 0);
+    if (card && isOpen) {
+      const due = Number(card.due_invoice || 0);
+      const current = Number(card.current_invoice || 0);
       setAmount(due > 0 ? String(due) : String(current));
       setError('');
     }
-  }, [wallet, isOpen]);
+  }, [card, isOpen]);
 
   const sourceWallet = wallets.find(w => String(w.id) === sourceWalletId);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!wallet || !amount || !sourceWalletId) return;
+    if (!card || !amount || !sourceWalletId) return;
 
     const val = Number(amount);
     if (val <= 0) {
@@ -73,9 +74,10 @@ export const PayInvoiceModal = ({ isOpen, wallet, onClose, onSuccess }: PayInvoi
         is_recurring: false,
       });
 
-      // 2. Create Income (Credit) in the Target Credit Wallet to reduce its invoice
+      // 2. Create Income (Credit) on the card to reduce its invoice
       await api.post('/transactions', {
-        wallet_id: wallet.id,
+        wallet_id: card.wallet_id,
+        card_id: card.id,
         value: val,
         transaction_type: 'INCOME',
         payment_method: 'CREDIT',
@@ -85,20 +87,20 @@ export const PayInvoiceModal = ({ isOpen, wallet, onClose, onSuccess }: PayInvoi
 
       onSuccess();
       onClose();
-    } catch (err) {
+    } catch {
       setError('Falha ao processar pagamento.');
     } finally {
       setLoading(false);
     }
   };
 
-  if (!wallet) return null;
+  if (!card) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Pagar Fatura: {wallet.name}</DialogTitle>
+          <DialogTitle>Pagar Fatura: {card.name}</DialogTitle>
           <DialogDescription>
             Escolha de onde sairá o dinheiro para pagar esta fatura.
           </DialogDescription>

@@ -37,6 +37,9 @@ export const queryKeys = {
   
   budgets: ['budgets'] as const,
   budgetStatus: ['budgets', 'status'] as const,
+
+  cards: ['cards'] as const,
+  cardsByWallet: (walletId: number) => ['cards', 'wallet', walletId] as const,
   
   dashboard: ['dashboard'] as const,
   dashboardCategory: (category: string) => ['dashboard', 'category', category] as const,

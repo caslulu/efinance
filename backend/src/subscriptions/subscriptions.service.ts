@@ -12,6 +12,21 @@ export class SubscriptionsService {
     private readonly transactionsService: TransactionsService,
   ) {}
 
+  /**
+   * Safely advance a date by N months, clamping to the last valid day.
+   * E.g. Jan 31 + 1 month → Feb 28 (not Mar 3).
+   */
+  private addMonthsSafe(date: Date, months: number): Date {
+    const result = new Date(date);
+    const targetDay = result.getDate();
+    result.setMonth(result.getMonth() + months);
+    // If the day shifted (e.g. 31 → 3 because month has fewer days), clamp
+    if (result.getDate() !== targetDay) {
+      result.setDate(0); // Go back to last day of previous month
+    }
+    return result;
+  }
+
   async create(userId: number, createSubscriptionDto: CreateSubscriptionDto) {
     const wallet = await this.prisma.wallet.findUnique({ where: { id: createSubscriptionDto.wallet_id } });
     if (!wallet || wallet.user_id !== userId) throw new NotFoundException('Wallet not found');
@@ -64,20 +79,24 @@ export class SubscriptionsService {
         payment_method: sub.payment_method || undefined,
       });
 
-      const nextDate = new Date(sub.next_billing_date);
+      let nextDate: Date;
       switch (sub.frequency) {
         case Frequency.WEEKLY:
+          nextDate = new Date(sub.next_billing_date);
           nextDate.setDate(nextDate.getDate() + 7);
           break;
         case Frequency.MONTHLY:
-          nextDate.setMonth(nextDate.getMonth() + 1);
+          nextDate = this.addMonthsSafe(sub.next_billing_date, 1);
           break;
         case Frequency.QUARTERLY:
-          nextDate.setMonth(nextDate.getMonth() + 3);
+          nextDate = this.addMonthsSafe(sub.next_billing_date, 3);
           break;
         case Frequency.YEARLY:
+          nextDate = new Date(sub.next_billing_date);
           nextDate.setFullYear(nextDate.getFullYear() + 1);
           break;
+        default:
+          nextDate = new Date(sub.next_billing_date);
       }
 
       await this.prisma.subscription.update({

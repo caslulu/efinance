@@ -72,12 +72,34 @@ export const TransactionsPage = () => {
             TransactionCategory: (sub as any).category ? { id: (sub as any).category.id, name: (sub as any).category.name } : undefined
           } as any);
         }
-        const nextDate = new Date(currentDate);
+        let nextDate: Date;
+        const originalDay = new Date(sub.next_billing_date).getDate();
         switch (sub.frequency) {
-          case 'WEEKLY': nextDate.setDate(nextDate.getDate() + 7); break;
-          case 'MONTHLY': nextDate.setMonth(nextDate.getMonth() + 1); break;
-          case 'QUARTERLY': nextDate.setMonth(nextDate.getMonth() + 3); break;
-          case 'YEARLY': nextDate.setFullYear(nextDate.getFullYear() + 1); break;
+          case 'WEEKLY':
+            nextDate = new Date(currentDate);
+            nextDate.setDate(nextDate.getDate() + 7);
+            break;
+          case 'MONTHLY': {
+            nextDate = new Date(currentDate);
+            nextDate.setMonth(nextDate.getMonth() + 1);
+            // Clamp to the original day or last valid day of the month
+            const maxDay = new Date(nextDate.getFullYear(), nextDate.getMonth() + 1, 0).getDate();
+            nextDate.setDate(Math.min(originalDay, maxDay));
+            break;
+          }
+          case 'QUARTERLY': {
+            nextDate = new Date(currentDate);
+            nextDate.setMonth(nextDate.getMonth() + 3);
+            const maxDayQ = new Date(nextDate.getFullYear(), nextDate.getMonth() + 1, 0).getDate();
+            nextDate.setDate(Math.min(originalDay, maxDayQ));
+            break;
+          }
+          case 'YEARLY':
+            nextDate = new Date(currentDate);
+            nextDate.setFullYear(nextDate.getFullYear() + 1);
+            break;
+          default:
+            nextDate = new Date(currentDate);
         }
         currentDate = nextDate;
       }

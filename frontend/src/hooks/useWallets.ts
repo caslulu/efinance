@@ -21,7 +21,10 @@ export function useCreateWallet() {
       const res = await api.post('/wallets', data);
       return res.data;
     },
-    onSuccess: () => {
+    onSuccess: (newWallet) => {
+      queryClient.setQueryData(queryKeys.wallets, (old: Wallet[] | undefined) => {
+        return [...(old || []), newWallet];
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.wallets });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
     },

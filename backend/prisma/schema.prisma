@@ -52,12 +52,23 @@ model Wallet {
   actual_cash  Decimal       @db.Decimal(10, 2)
   name         String
   type         String
-  closing_day  Int?
-  due_day      Int?
   order        Int           @default(0)
   transactions Transaction[]
   investments  Investment[]
   subscriptions Subscription[]
+  cards        Card[]
+}
+
+model Card {
+  id           Int           @id @default(autoincrement())
+  wallet_id    Int
+  wallet       Wallet        @relation(fields: [wallet_id], references: [id], onDelete: Cascade)
+  name         String
+  flag         String
+  closing_day  Int
+  due_day      Int
+  card_limit   Decimal       @db.Decimal(10, 2)
+  transactions Transaction[]
 }
 
 model Transaction {
@@ -65,6 +76,8 @@ model Transaction {
   transaction_date    DateTime
   wallet_id           Int
   wallet              Wallet              @relation(fields: [wallet_id], references: [id])
+  card_id             Int?
+  card                Card?               @relation(fields: [card_id], references: [id], onDelete: SetNull)
   transaction_type    String
   payment_method      String?
   description         String?
@@ -73,6 +86,7 @@ model Transaction {
   installment_id      String?
   installment_total   Int?
   installment_number  Int?
+  is_processed        Boolean             @default(true)
   category_id         Int
   TransactionCategory TransactionCategory @relation(fields: [category_id], references: [id])
   subscription_id     Int?

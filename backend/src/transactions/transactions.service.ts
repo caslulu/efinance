@@ -12,6 +12,31 @@ export class TransactionsService {
     private readonly walletsService: WalletsService,
   ) {}
 
+  /**
+   * Returns true if the given date is in the future (after end of today).
+   */
+  private isFutureDate(date: Date): boolean {
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+    return date > endOfToday;
+  }
+
+  /**
+   * Safely compute a date that is `monthsToAdd` months after `startDate`,
+   * preserving the original day and clamping to the last valid day of the target month.
+   * E.g. Jan 31 + 1 month → Feb 28 (not Mar 3).
+   */
+  private addMonthsSafe(startDate: Date, monthsToAdd: number): Date {
+    const result = new Date(startDate);
+    const originalDay = startDate.getDate();
+    result.setMonth(startDate.getMonth() + monthsToAdd);
+    // If the day shifted (month overflow), clamp to last valid day
+    if (result.getDate() !== originalDay) {
+      result.setDate(0); // last day of previous month
+    }
+    return result;
+  }
+
   async update(id: number, userId: number, updateTransactionDto: UpdateTransactionDto) {
     const oldTransaction = await this.findOne(id, userId);
     if (!oldTransaction) {
@@ -33,40 +58,50 @@ export class TransactionsService {
       updateTransactionDto.value !== undefined || 
       updateTransactionDto.transaction_type !== undefined ||
       updateTransactionDto.wallet_id !== undefined ||
-      updateTransactionDto.payment_method !== undefined
+      updateTransactionDto.payment_method !== undefined ||
+      updateTransactionDto.transaction_date !== undefined
     ) {
       const multiplier = oldTransaction.installment_id ? (oldTransaction.installment_total || 12) : 1;
 
-      // Revert old transaction impact
-      if (oldTransaction.transaction_type === 'EXPENSE') {
-        if (oldTransaction.payment_method !== 'CREDIT') {
-          await this.walletsService.addIncoming(oldTransaction.wallet_id, userId, Number(oldTransaction.value) * multiplier);
-        }
-      } else {
-        // INCOME
-        if (oldTransaction.payment_method !== 'CREDIT') {
-          await this.walletsService.addExpense(oldTransaction.wallet_id, userId, Number(oldTransaction.value) * multiplier);
+      // Revert old transaction impact ONLY if it was processed (balance was applied)
+      if (oldTransaction.is_processed) {
+        if (oldTransaction.transaction_type === 'EXPENSE') {
+          if (oldTransaction.payment_method !== 'CREDIT') {
+            await this.walletsService.addIncoming(oldTransaction.wallet_id, userId, Number(oldTransaction.value) * multiplier);
+          }
+        } else {
+          // INCOME
+          if (oldTransaction.payment_method !== 'CREDIT') {
+            await this.walletsService.addExpense(oldTransaction.wallet_id, userId, Number(oldTransaction.value) * multiplier);
+          }
         }
       }
 
-      // Apply new transaction impact
+      // Apply new transaction impact only if the new date is NOT in the future
       const newValue = updateTransactionDto.value !== undefined ? updateTransactionDto.value : Number(oldTransaction.value);
       const newType = updateTransactionDto.transaction_type || oldTransaction.transaction_type;
       const newWalletId = updateTransactionDto.wallet_id || oldTransaction.wallet_id;
       const newMethod = updateTransactionDto.payment_method !== undefined ? updateTransactionDto.payment_method : oldTransaction.payment_method;
+      const newDate = updateTransactionDto.transaction_date ? new Date(updateTransactionDto.transaction_date) : oldTransaction.transaction_date;
+      const willBeFuture = this.isFutureDate(newDate);
       
       const newMultiplier = oldTransaction.installment_id ? (updateTransactionDto.installment_total || oldTransaction.installment_total || 12) : 1;
 
-      if (newType === 'EXPENSE') {
-        if (newMethod !== 'CREDIT') {
-          await this.walletsService.addExpense(newWalletId, userId, newValue * newMultiplier);
-        }
-      } else {
-        // INCOME
-        if (newMethod !== 'CREDIT') {
-          await this.walletsService.addIncoming(newWalletId, userId, newValue * newMultiplier);
+      if (!willBeFuture) {
+        if (newType === 'EXPENSE') {
+          if (newMethod !== 'CREDIT') {
+            await this.walletsService.addExpense(newWalletId, userId, newValue * newMultiplier);
+          }
+        } else {
+          // INCOME
+          if (newMethod !== 'CREDIT') {
+            await this.walletsService.addIncoming(newWalletId, userId, newValue * newMultiplier);
+          }
         }
       }
+
+      // Update is_processed flag based on the new date
+      updateTransactionDto = { ...updateTransactionDto, is_processed: !willBeFuture } as any;
     }
 
     if (oldTransaction.installment_id) {
@@ -115,7 +150,7 @@ export class TransactionsService {
       if (!category || category.user_id !== userId) throw new NotFoundException('Category not found');
     }
 
-    const { installment_total, is_recurring, subscription_id, ...data } = createTransactionDto;
+    const { installment_total, is_recurring, subscription_id, card_id, ...data } = createTransactionDto;
 
     if (installment_total && installment_total > 1) {
       return this.createInstallments(userId, createTransactionDto, categoryId!);
@@ -126,25 +161,33 @@ export class TransactionsService {
       return this.createSubscription(userId, createTransactionDto, categoryId!);
     }
 
+    const transactionDate = new Date(data.transaction_date);
+    const isFuture = this.isFutureDate(transactionDate);
+
     const transaction = await this.prisma.transaction.create({
       data: {
         ...data,
         category_id: categoryId!,
         is_recurring: is_recurring || false,
         subscription_id: subscription_id,
+        card_id: card_id || null,
         installment_total: 1,
         installment_number: 1,
-        transaction_date: new Date(data.transaction_date),
+        is_processed: !isFuture,
+        transaction_date: transactionDate,
       },
     });
 
-    if (data.transaction_type === 'EXPENSE') {
-      if (data.payment_method !== 'CREDIT') {
-        await this.walletsService.addExpense(data.wallet_id, userId, data.value);
-      }
-    } else {
-      if (data.payment_method !== 'CREDIT') {
-        await this.walletsService.addIncoming(data.wallet_id, userId, data.value);
+    // Only update wallet balance if the transaction date is today or in the past
+    if (!isFuture) {
+      if (data.transaction_type === 'EXPENSE') {
+        if (data.payment_method !== 'CREDIT') {
+          await this.walletsService.addExpense(data.wallet_id, userId, data.value);
+        }
+      } else {
+        if (data.payment_method !== 'CREDIT') {
+          await this.walletsService.addIncoming(data.wallet_id, userId, data.value);
+        }
       }
     }
 
@@ -158,15 +201,16 @@ export class TransactionsService {
     const transactionsData: any[] = [];
 
     const startDate = new Date(dto.transaction_date);
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+
+    let processedCount = 0;
 
     for (let i = 0; i < PREDICTION_MONTHS; i++) {
-      const transactionDate = new Date(startDate);
-      const targetMonth = startDate.getMonth() + i;
-      transactionDate.setMonth(targetMonth);
-      
-      if (transactionDate.getMonth() !== targetMonth % 12) {
-        transactionDate.setDate(0);
-      }
+      const transactionDate = this.addMonthsSafe(startDate, i);
+
+      const isFuture = transactionDate > endOfToday;
+      if (!isFuture) processedCount++;
 
       transactionsData.push({
         transaction_date: transactionDate,
@@ -176,9 +220,11 @@ export class TransactionsService {
         value: monthlyValue,
         category_id: categoryId,
         payment_method: dto.payment_method,
+        card_id: dto.card_id || null,
         installment_id: groupId,
         installment_total: null,
         installment_number: i + 1,
+        is_processed: !isFuture,
       });
     }
 
@@ -186,13 +232,16 @@ export class TransactionsService {
       data: transactionsData,
     });
 
-    if (dto.transaction_type === 'EXPENSE') {
-      if (dto.payment_method !== 'CREDIT') {
-        await this.walletsService.addExpense(dto.wallet_id, userId, monthlyValue * PREDICTION_MONTHS);
-      }
-    } else {
-      if (dto.payment_method !== 'CREDIT') {
-        await this.walletsService.addIncoming(dto.wallet_id, userId, monthlyValue * PREDICTION_MONTHS);
+    // Only apply balance for transactions that are not in the future
+    if (processedCount > 0) {
+      if (dto.transaction_type === 'EXPENSE') {
+        if (dto.payment_method !== 'CREDIT') {
+          await this.walletsService.addExpense(dto.wallet_id, userId, monthlyValue * processedCount);
+        }
+      } else {
+        if (dto.payment_method !== 'CREDIT') {
+          await this.walletsService.addIncoming(dto.wallet_id, userId, monthlyValue * processedCount);
+        }
       }
     }
 
@@ -210,15 +259,16 @@ export class TransactionsService {
     const transactionsData: any[] = [];
 
     const startDate = new Date(dto.transaction_date);
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+
+    let processedValue = 0;
 
     for (let i = 0; i < totalInstallments; i++) {
-      const transactionDate = new Date(startDate);
-      const targetMonth = startDate.getMonth() + i;
-      transactionDate.setMonth(targetMonth);
-      
-      if (transactionDate.getMonth() !== targetMonth % 12) {
-        transactionDate.setDate(0);
-      }
+      const transactionDate = this.addMonthsSafe(startDate, i);
+
+      const isFuture = transactionDate > endOfToday;
+      if (!isFuture) processedValue += installmentValue;
 
       transactionsData.push({
         transaction_date: transactionDate,
@@ -228,9 +278,11 @@ export class TransactionsService {
         value: installmentValue,
         category_id: categoryId,
         payment_method: dto.payment_method,
+        card_id: dto.card_id || null,
         installment_id: installmentId,
         installment_total: totalInstallments,
         installment_number: i + 1,
+        is_processed: !isFuture,
       });
     }
 
@@ -238,13 +290,16 @@ export class TransactionsService {
       data: transactionsData,
     });
 
-    if (dto.transaction_type === 'EXPENSE') {
-      if (dto.payment_method !== 'CREDIT') {
-        await this.walletsService.addExpense(dto.wallet_id, userId, dto.value);
-      }
-    } else {
-      if (dto.payment_method !== 'CREDIT') {
-        await this.walletsService.addIncoming(dto.wallet_id, userId, dto.value);
+    // Only apply balance for installments that are not in the future
+    if (processedValue > 0) {
+      if (dto.transaction_type === 'EXPENSE') {
+        if (dto.payment_method !== 'CREDIT') {
+          await this.walletsService.addExpense(dto.wallet_id, userId, processedValue);
+        }
+      } else {
+        if (dto.payment_method !== 'CREDIT') {
+          await this.walletsService.addIncoming(dto.wallet_id, userId, processedValue);
+        }
       }
     }
 
@@ -260,7 +315,7 @@ export class TransactionsService {
       where: {
         wallet: { user_id: userId },
       },
-      include: { TransactionCategory: true },
+      include: { TransactionCategory: true, card: true },
       orderBy: [
         { transaction_date: 'desc' },
         { id: 'desc' },
@@ -283,28 +338,94 @@ export class TransactionsService {
       throw new NotFoundException('Transaction not found');
     }
 
-    const multiplier = transaction.installment_id ? (transaction.installment_total || 12) : 1;
-
-    // Revert balance impact
-    if (transaction.transaction_type === 'EXPENSE') {
-      if (transaction.payment_method !== 'CREDIT') {
-        await this.walletsService.addIncoming(transaction.wallet_id, userId, Number(transaction.value) * multiplier);
-      }
-    } else {
-      // INCOME
-      if (transaction.payment_method !== 'CREDIT') {
-        await this.walletsService.addExpense(transaction.wallet_id, userId, Number(transaction.value) * multiplier);
-      }
-    }
-
+    // For installment/recurring series, revert only the processed (non-future) transactions
     if (transaction.installment_id) {
+      const allInSeries = await this.prisma.transaction.findMany({
+        where: { installment_id: transaction.installment_id },
+      });
+
+      const processedInSeries = allInSeries.filter(t => t.is_processed);
+      const processedTotal = processedInSeries.reduce((sum, t) => sum + Number(t.value), 0);
+
+      if (processedTotal > 0) {
+        if (transaction.transaction_type === 'EXPENSE') {
+          if (transaction.payment_method !== 'CREDIT') {
+            await this.walletsService.addIncoming(transaction.wallet_id, userId, processedTotal);
+          }
+        } else {
+          if (transaction.payment_method !== 'CREDIT') {
+            await this.walletsService.addExpense(transaction.wallet_id, userId, processedTotal);
+          }
+        }
+      }
+
       return this.prisma.transaction.deleteMany({
         where: { installment_id: transaction.installment_id },
       });
     }
 
+    // Single transaction: only revert if it was processed
+    if (transaction.is_processed) {
+      if (transaction.transaction_type === 'EXPENSE') {
+        if (transaction.payment_method !== 'CREDIT') {
+          await this.walletsService.addIncoming(transaction.wallet_id, userId, Number(transaction.value));
+        }
+      } else {
+        if (transaction.payment_method !== 'CREDIT') {
+          await this.walletsService.addExpense(transaction.wallet_id, userId, Number(transaction.value));
+        }
+      }
+    }
+
     return this.prisma.transaction.delete({
       where: { id },
     });
+  }
+
+  /**
+   * Process all unprocessed transactions whose date has arrived (today or past).
+   * Called by the cron scheduler to apply balance impacts for future-dated transactions.
+   */
+  async processMaturedTransactions(): Promise<number> {
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+
+    const unprocessed = await this.prisma.transaction.findMany({
+      where: {
+        is_processed: false,
+        transaction_date: { lte: endOfToday },
+      },
+      include: { wallet: true },
+    });
+
+    let processedCount = 0;
+
+    for (const tx of unprocessed) {
+      const userId = tx.wallet.user_id;
+
+      try {
+        if (tx.transaction_type === 'EXPENSE') {
+          if (tx.payment_method !== 'CREDIT') {
+            await this.walletsService.addExpense(tx.wallet_id, userId, Number(tx.value));
+          }
+        } else {
+          if (tx.payment_method !== 'CREDIT') {
+            await this.walletsService.addIncoming(tx.wallet_id, userId, Number(tx.value));
+          }
+        }
+
+        await this.prisma.transaction.update({
+          where: { id: tx.id },
+          data: { is_processed: true },
+        });
+
+        processedCount++;
+      } catch (error) {
+        // Log but continue processing other transactions
+        console.error(`Failed to process matured transaction #${tx.id}:`, error.message);
+      }
+    }
+
+    return processedCount;
   }
 }

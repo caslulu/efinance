@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react';
 import type { Wallet } from '../../../types/Wallet';
+import type { Card } from '../../../types/Card';
 import { useWallets, useSubscriptions } from '@/hooks';
 import { AddTransactionModal } from '../components/AddTransactionModal';
 import { CreateWalletModal } from '../components/CreateWalletModal';
 import { EditWalletModal } from '../components/EditWalletModal';
 import { PayInvoiceModal } from '../components/PayInvoiceModal';
 import { TransferModal } from '../components/TransferModal';
+import { CreateCardModal } from '../components/CreateCardModal';
+import { EditCardModal } from '../components/EditCardModal';
 import { Button } from '@/components/ui/button';
 import { ArrowRightLeft } from 'lucide-react';
 import { api } from '@/api/api';
+import { toast } from 'sonner';
 import {
   DndContext,
   closestCenter,
@@ -29,32 +33,85 @@ import { SortableWalletCard } from '../components/SortableWalletCard';
 export const WalletsPage = () => {
   const { data: initialWallets = [], refetch: refetchWallets } = useWallets();
   const [wallets, setWallets] = useState<Wallet[]>([]);
-  const { data: subscriptions = [], refetch: refetchSubscriptions } = useSubscriptions();
+  const { refetch: refetchSubscriptions } = useSubscriptions();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [editWallet, setEditWallet] = useState<Wallet | null>(null);
-  const [payInvoiceWallet, setPayInvoiceWallet] = useState<Wallet | null>(null);
+
+  // Card modals state
+  const [createCardWalletId, setCreateCardWalletId] = useState<number | null>(null);
+  const [editCard, setEditCard] = useState<Card | null>(null);
+  const [payInvoiceCard, setPayInvoiceCard] = useState<Card | null>(null);
+
+  // Cards data per wallet
+  const [cardsMap, setCardsMap] = useState<Record<number, Card[]>>({});
+
   const [transactionModal, setTransactionModal] = useState<{
     isOpen: boolean;
     type: 'INCOME' | 'EXPENSE' | null;
     walletId: number | null;
     walletType?: string;
-    hasClosingDay?: boolean;
+    cardId?: number;
   }>({ isOpen: false, type: null, walletId: null });
 
   const refetchData = () => {
     refetchWallets();
     refetchSubscriptions();
+    fetchAllCards();
   };
 
-  const openTransaction = (walletId: number, type: 'INCOME' | 'EXPENSE', walletType: string, hasClosingDay: boolean) => {
-    setTransactionModal({ isOpen: true, type, walletId, walletType, hasClosingDay });
+  const openTransaction = (walletId: number, type: 'INCOME' | 'EXPENSE', walletType: string) => {
+    setTransactionModal({ isOpen: true, type, walletId, walletType });
+  };
+
+  const openCardExpense = (card: Card, walletType: string) => {
+    setTransactionModal({
+      isOpen: true,
+      type: 'EXPENSE',
+      walletId: card.wallet_id,
+      walletType,
+      cardId: card.id,
+    });
+  };
+
+  // Fetch cards for all wallets
+  const fetchAllCards = async () => {
+    const allWallets = initialWallets.length > 0 ? initialWallets : wallets;
+    const map: Record<number, Card[]> = {};
+    await Promise.all(
+      allWallets.map(async (w) => {
+        try {
+          const res = await api.get<Card[]>(`/cards/wallet/${w.id}`);
+          map[w.id] = Array.isArray(res.data) ? res.data : [];
+        } catch {
+          map[w.id] = [];
+        }
+      }),
+    );
+    setCardsMap(map);
   };
 
   // Sync state with fetched data
   useEffect(() => {
     setWallets(initialWallets);
   }, [initialWallets]);
+
+  useEffect(() => {
+    if (initialWallets.length > 0) {
+      fetchAllCards();
+    }
+  }, [initialWallets]);
+
+  const handleDeleteCard = async (id: number) => {
+    try {
+      await api.delete(`/cards/${id}`);
+      toast.success('Cartão excluído!');
+      setEditCard(null);
+      refetchData();
+    } catch {
+      toast.error('Falha ao excluir cartão');
+    }
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -77,17 +134,15 @@ export const WalletsPage = () => {
 
         const reordered = arrayMove(items, oldIndex, newIndex);
 
-        // Update order property
         const updatedWallets = reordered.map((w, index) => ({
           ...w,
           order: index,
         }));
 
-        // Send to API
         api.patch('/wallets/reorder', updatedWallets.map(w => ({ id: w.id, order: w.order })))
           .catch((err) => {
             console.error('Failed to reorder wallets:', err);
-            refetchWallets(); // Revert on failure
+            refetchWallets();
           });
 
         return updatedWallets;
@@ -127,33 +182,20 @@ export const WalletsPage = () => {
             items={wallets.map(w => w.id)}
             strategy={rectSortingStrategy}
           >
-            {wallets.map((wallet) => {
-              let projectedTotal = Number(wallet.total_invoice || 0);
-
-              const walletSubs = subscriptions.filter(
-                s => s.wallet_id === wallet.id && s.status === 'ACTIVE'
-              );
-
-              walletSubs.forEach(sub => {
-                projectedTotal += Number(sub.value) * 12;
-              });
-
-              const walletWithProjection = {
-                ...wallet,
-                total_invoice: projectedTotal
-              };
-
-              return (
-                <SortableWalletCard
-                  key={wallet.id}
-                  wallet={walletWithProjection}
-                  onAddFunds={() => openTransaction(wallet.id, 'INCOME', wallet.type, !!wallet.closing_day)}
-                  onAddExpense={() => openTransaction(wallet.id, 'EXPENSE', wallet.type, !!wallet.closing_day)}
-                  onEdit={() => setEditWallet(wallet)}
-                  onPayInvoice={() => setPayInvoiceWallet(wallet)}
-                />
-              );
-            })}
+            {wallets.map((wallet) => (
+              <SortableWalletCard
+                key={wallet.id}
+                wallet={wallet}
+                cards={cardsMap[wallet.id] || []}
+                onAddFunds={() => openTransaction(wallet.id, 'INCOME', wallet.type)}
+                onAddExpense={() => openTransaction(wallet.id, 'EXPENSE', wallet.type)}
+                onEdit={() => setEditWallet(wallet)}
+                onAddCard={() => setCreateCardWalletId(wallet.id)}
+                onEditCard={(card) => setEditCard(card)}
+                onAddCardExpense={(card) => openCardExpense(card, wallet.type)}
+                onPayCardInvoice={(card) => setPayInvoiceCard(card)}
+              />
+            ))}
           </SortableContext>
         </div>
       </DndContext>
@@ -177,16 +219,31 @@ export const WalletsPage = () => {
         onSuccess={refetchData}
       />
 
-      <PayInvoiceModal
-        isOpen={!!payInvoiceWallet}
-        wallet={payInvoiceWallet}
-        onClose={() => setPayInvoiceWallet(null)}
-        onSuccess={refetchData}
-      />
-
       <TransferModal
         isOpen={isTransferOpen}
         onClose={() => setIsTransferOpen(false)}
+        onSuccess={refetchData}
+      />
+
+      <CreateCardModal
+        isOpen={!!createCardWalletId}
+        walletId={createCardWalletId}
+        onClose={() => setCreateCardWalletId(null)}
+        onSuccess={refetchData}
+      />
+
+      <EditCardModal
+        isOpen={!!editCard}
+        card={editCard}
+        onClose={() => setEditCard(null)}
+        onSuccess={refetchData}
+        onDelete={handleDeleteCard}
+      />
+
+      <PayInvoiceModal
+        isOpen={!!payInvoiceCard}
+        card={payInvoiceCard}
+        onClose={() => setPayInvoiceCard(null)}
         onSuccess={refetchData}
       />
 
@@ -195,7 +252,7 @@ export const WalletsPage = () => {
         type={transactionModal.type}
         walletId={transactionModal.walletId}
         walletType={transactionModal.walletType}
-        hasClosingDay={transactionModal.hasClosingDay}
+        cardId={transactionModal.cardId}
         onClose={() => setTransactionModal({ ...transactionModal, isOpen: false })}
         onSuccess={refetchData}
       />

@@ -35,8 +35,6 @@ const WALLET_TYPE_OPTIONS = [
 export const EditWalletModal = ({ isOpen, wallet, onClose, onSuccess }: EditWalletModalProps) => {
   const [name, setName] = useState('');
   const [type, setType] = useState('BANK');
-  const [closingDay, setClosingDay] = useState('');
-  const [dueDay, setDueDay] = useState('');
   const [loading, setLoading] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -44,8 +42,6 @@ export const EditWalletModal = ({ isOpen, wallet, onClose, onSuccess }: EditWall
     if (wallet) {
       setName(wallet.name);
       setType(wallet.type);
-      setClosingDay(wallet.closing_day ? String(wallet.closing_day) : '');
-      setDueDay(wallet.due_day ? String(wallet.due_day) : '');
     }
   }, [wallet]);
 
@@ -58,8 +54,6 @@ export const EditWalletModal = ({ isOpen, wallet, onClose, onSuccess }: EditWall
       await api.patch(`/wallets/${wallet.id}`, {
         name,
         type,
-        closing_day: closingDay ? Number(closingDay) : null,
-        due_day: dueDay ? Number(dueDay) : null,
       });
       onSuccess();
       onClose();
@@ -117,35 +111,6 @@ export const EditWalletModal = ({ isOpen, wallet, onClose, onSuccess }: EditWall
                 </SelectContent>
               </Select>
             </div>
-
-            {type === 'BANK' && (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="closingDay">Dia Fechamento</Label>
-                  <Input
-                    id="closingDay"
-                    type="number"
-                    min="1"
-                    max="31"
-                    placeholder="Ex: 10"
-                    value={closingDay}
-                    onChange={e => setClosingDay(e.target.value)}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="dueDay">Dia Vencimento</Label>
-                  <Input
-                    id="dueDay"
-                    type="number"
-                    min="1"
-                    max="31"
-                    placeholder="Ex: 17"
-                    value={dueDay}
-                    onChange={e => setDueDay(e.target.value)}
-                  />
-                </div>
-              </div>
-            )}
 
             <DialogFooter className="flex !justify-between">
               <Button

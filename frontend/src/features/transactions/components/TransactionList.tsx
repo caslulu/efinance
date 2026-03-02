@@ -12,7 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Edit2 } from 'lucide-react';
+import { Edit2, Clock } from 'lucide-react';
 import { EditTransactionModal } from './EditTransactionModal';
 import { PAYMENT_METHODS } from '../../../constants/paymentMethods';
 import { CategoryIcon } from '@/components/IconPicker';
@@ -50,8 +50,13 @@ export const TransactionList = ({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {transactions.map((tx) => (
-              <TableRow key={tx.id} className={selectedIds.has(tx.id) ? "bg-muted/50" : ""}>
+            {transactions.map((tx) => {
+              const isFutureTransaction = tx.is_processed === false || new Date(tx.transaction_date) > new Date();
+              return (
+              <TableRow key={tx.id} className={clsx(
+                selectedIds.has(tx.id) ? "bg-muted/50" : "",
+                isFutureTransaction && tx.id > 0 ? "opacity-70" : ""
+              )}>
                 {onToggleSelect && (
                   <TableCell>
                     <div title={tx.id < 0 ? "Transações projetadas não podem ser apagadas." : ""}>
@@ -66,8 +71,16 @@ export const TransactionList = ({
                 <TableCell>
                   {new Date(tx.transaction_date).toLocaleDateString()}
                 </TableCell>
-                <TableCell className="font-medium truncate max-w-[150px]" title={tx.description}>
-                  {tx.description || '-'}
+                <TableCell className="font-medium max-w-[200px]" title={tx.description}>
+                  <div className="flex items-center gap-2">
+                    <span className="truncate">{tx.description || '-'}</span>
+                    {isFutureTransaction && tx.id > 0 && (
+                      <Badge variant="outline" className="shrink-0 border-amber-500 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 text-[10px] px-1.5 py-0 gap-1">
+                        <Clock className="h-3 w-3" />
+                        Futura
+                      </Badge>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
@@ -107,7 +120,7 @@ export const TransactionList = ({
                   </Button>
                 </TableCell>
               </TableRow>
-            ))}
+            );})}
             {transactions.length === 0 && (
               <TableRow>
                 <TableCell colSpan={onToggleSelect ? 9 : 8} className="h-24 text-center text-muted-foreground">

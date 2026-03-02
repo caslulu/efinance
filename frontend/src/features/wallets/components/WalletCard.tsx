@@ -1,20 +1,36 @@
 import clsx from 'clsx';
 import { formatCurrency } from '@/lib/utils';
 import type { Wallet } from '../../../types/Wallet';
+import type { Card as CardType } from '../../../types/Card';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Plus, Minus, Pencil, CreditCard, ReceiptText } from 'lucide-react';
+import { Plus, Minus, Pencil, CreditCard } from 'lucide-react';
+import { CardItem } from './CardItem';
 
 interface WalletCardProps {
   wallet: Wallet;
+  cards: CardType[];
   onAddFunds: (id: number) => void;
   onAddExpense: (id: number) => void;
   onEdit: () => void;
-  onPayInvoice?: () => void;
+  onAddCard: () => void;
+  onEditCard: (card: CardType) => void;
+  onAddCardExpense: (card: CardType) => void;
+  onPayCardInvoice: (card: CardType) => void;
 }
 
-export const WalletCard = ({ wallet, onAddFunds, onAddExpense, onEdit, onPayInvoice }: WalletCardProps) => {
+export const WalletCard = ({
+  wallet,
+  cards,
+  onAddFunds,
+  onAddExpense,
+  onEdit,
+  onAddCard,
+  onEditCard,
+  onAddCardExpense,
+  onPayCardInvoice,
+}: WalletCardProps) => {
   const typeColors: Record<string, string> = {
     BANK: 'bg-blue-500 hover:bg-blue-600',
     PHYSICAL: 'bg-green-500 hover:bg-green-600',
@@ -35,7 +51,6 @@ export const WalletCard = ({ wallet, onAddFunds, onAddExpense, onEdit, onPayInvo
     <Card className="hover:shadow-md transition-shadow relative group">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-          {wallet.closing_day && <CreditCard className="h-4 w-4 text-blue-500" />}
           {wallet.name}
         </CardTitle>
         <div className="flex items-center gap-2">
@@ -52,58 +67,44 @@ export const WalletCard = ({ wallet, onAddFunds, onAddExpense, onEdit, onPayInvo
           </Button>
         </div>
       </CardHeader>
-      <CardContent>
-        {wallet.closing_day ? (
-          <div className="space-y-4">
-            <div className="flex justify-between items-end">
-              <div>
-                <p className="text-[10px] uppercase font-bold text-muted-foreground">Saldo Disponível</p>
-                <div className="text-xl font-bold text-green-600 dark:text-green-400">
-                  {formatCurrency(Number(wallet.actual_cash))}
-                </div>
-              </div>
-              {onPayInvoice && (Number(wallet.due_invoice) > 0 || Number(wallet.current_invoice) > 0) && (
-                <Button
-                  size="sm"
-                  className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm flex items-center gap-2 h-8 px-3"
-                  onClick={onPayInvoice}
-                >
-                  <ReceiptText className="h-4 w-4" />
-                  Pagar Fatura
-                </Button>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-muted border border-border">
-              <div className="space-y-1">
-                <p className="text-[9px] uppercase font-bold text-muted-foreground">Fatura Fechada</p>
-                <p className={clsx("text-sm font-bold", Number(wallet.due_invoice) > 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground")}>
-                  {formatCurrency(Number(wallet.due_invoice))}
-                </p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-[9px] uppercase font-bold text-muted-foreground">Fatura Aberta</p>
-                <p className="text-sm font-bold text-blue-600 dark:text-blue-400">
-                  {formatCurrency(Number(wallet.current_invoice))}
-                </p>
-              </div>
-              <div className="col-span-2 pt-2 border-t border-border mt-1">
-                <div className="flex justify-between items-center">
-                  <p className="text-[9px] uppercase font-bold text-muted-foreground">Total Comprometido</p>
-                  <p className="text-sm font-black text-red-700 dark:text-red-400">
-                    {formatCurrency(Number(wallet.total_invoice || 0))}
-                  </p>
-                </div>
-              </div>
-            </div>
+      <CardContent className="space-y-3">
+        <div>
+          <p className="text-[10px] uppercase font-bold text-muted-foreground">Saldo Disponível</p>
+          <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+            {formatCurrency(Number(wallet.actual_cash))}
           </div>
-        ) : (
-          <>
-            <div className="text-2xl font-bold">
-              {formatCurrency(Number(wallet.actual_cash))}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">ID: #{wallet.id}</p>
-          </>
+        </div>
+
+        {/* Cards section */}
+        {cards.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1">
+              <CreditCard className="h-3 w-3" />
+              Cartões
+            </p>
+            {cards.map((card) => (
+              <CardItem
+                key={card.id}
+                card={card}
+                onEdit={() => onEditCard(card)}
+                onAddExpense={() => onAddCardExpense(card)}
+                onPayInvoice={() => onPayCardInvoice(card)}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Add card button */}
+        {wallet.type === 'BANK' && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full text-xs border-dashed"
+            onClick={onAddCard}
+          >
+            <CreditCard className="mr-2 h-3 w-3" />
+            Adicionar Cartão
+          </Button>
         )}
       </CardContent>
       <CardFooter className="flex gap-2 pt-2">
@@ -116,7 +117,7 @@ export const WalletCard = ({ wallet, onAddFunds, onAddExpense, onEdit, onPayInvo
         </Button>
         <Button
           variant="outline"
-          className="flex-1 text-red-600 dark:text-red-400 border-red-200 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-300 dark:text-red-400"
+          className="flex-1 text-red-600 dark:text-red-400 border-red-200 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-300"
           onClick={() => onAddExpense(wallet.id)}
         >
           <Minus className="mr-2 h-4 w-4" /> Despesa
