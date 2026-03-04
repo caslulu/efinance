@@ -8,10 +8,10 @@ import { useNavigate } from 'react-router-dom';
 export function RecentActivity({ data, formatDate }: { data: any, formatDate: (dateStr: string) => string }) {
   const navigate = useNavigate();
   return (
-    <Card className="border-t-4 border-t-blue-500">
+    <Card className="border-t-4 border-t-emerald-500">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base font-semibold">
-          <History size={18} className="text-blue-500" />
+          <History size={18} className="text-emerald-500" />
           Atividade Recente
         </CardTitle>
       </CardHeader>
@@ -21,7 +21,7 @@ export function RecentActivity({ data, formatDate }: { data: any, formatDate: (d
             data.recentTransactions.map((tx: any) => (
               <div key={tx.id} className="flex items-center justify-between p-3 rounded-lg border bg-card shadow-sm hover:shadow-md transition-all">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded bg-blue-100 text-blue-600">
+                  <div className="p-2 rounded bg-emerald-100 text-emerald-600">
                     <CategoryIcon name={tx.TransactionCategory?.icon} className="h-4 w-4" />
                   </div>
                   <div className="space-y-1">
@@ -39,7 +39,7 @@ export function RecentActivity({ data, formatDate }: { data: any, formatDate: (d
           ) : (
             <div className="text-center py-4 text-muted-foreground text-xs italic">Nenhuma atividade recente.</div>
           )}
-          <Button variant="ghost" className="w-full text-xs text-blue-600" onClick={() => navigate('/transactions')}>
+          <Button variant="ghost" className="w-full text-xs text-emerald-600" onClick={() => navigate('/transactions')}>
             Ver histórico completo
           </Button>
         </div>

@@ -53,6 +53,7 @@ model Wallet {
   name         String
   type         String
   order        Int           @default(0)
+  is_transfer_only Boolean   @default(false)
   transactions Transaction[]
   investments  Investment[]
   subscriptions Subscription[]

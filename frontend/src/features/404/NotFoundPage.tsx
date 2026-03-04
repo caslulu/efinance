@@ -6,8 +6,8 @@ export const NotFoundPage = () => {
     return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-muted px-4">
             <div className="text-center space-y-6 max-w-md">
-                <div className="mx-auto w-20 h-20 rounded-2xl bg-blue-100 flex items-center justify-center">
-                    <LayoutDashboard size={40} className="text-blue-600" />
+                <div className="mx-auto w-20 h-20 rounded-2xl bg-emerald-100 flex items-center justify-center">
+                    <LayoutDashboard size={40} className="text-emerald-600" />
                 </div>
 
                 <div className="space-y-2">

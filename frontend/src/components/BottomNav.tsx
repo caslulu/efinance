@@ -30,10 +30,10 @@ const NavItem = ({ to, icon: Icon, label, onClick }: any) => {
       to={to}
       onClick={onClick}
       className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${
-        isActive ? 'text-blue-600' : 'text-muted-foreground hover:text-foreground dark:text-gray-400 dark:hover:text-gray-100'
+        isActive ? 'text-emerald-600' : 'text-muted-foreground hover:text-foreground dark:text-gray-400 dark:hover:text-gray-100'
       }`}
     >
-      <Icon size={20} className={isActive ? 'fill-blue-50/50' : ''} />
+      <Icon size={20} className={isActive ? 'fill-emerald-50/50' : ''} />
       <span className="text-[10px] font-medium">{label}</span>
     </Link>
   );

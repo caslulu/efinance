@@ -260,12 +260,12 @@ export const TransactionsPage = () => {
           className="w-full flex items-center justify-between p-4 bg-muted/50 hover:bg-accent hover:text-accent-foreground transition-colors border-b"
         >
           <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${isFuture ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 dark:bg-blue-900/30 dark:text-blue-300' : 'bg-muted text-muted-foreground'}`}>
+            <div className={`p-2 rounded-lg ${isFuture ? 'bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-muted text-muted-foreground'}`}>
               <Calendar size={18} />
             </div>
             <div className="text-left">
               <h3 className="font-bold text-foreground capitalize">{group.label}</h3>
-              {isFuture && <span className="text-[10px] bg-blue-500 text-white px-1.5 py-0.5 rounded uppercase font-bold ml-2">Projeção</span>}
+              {isFuture && <span className="text-[10px] bg-emerald-500 text-white px-1.5 py-0.5 rounded uppercase font-bold ml-2">Projeção</span>}
             </div>
           </div>
 
@@ -418,10 +418,10 @@ export const TransactionsPage = () => {
           {/* 1. CURRENT SECTION (TOP) */}
           {(groupedData.current || isFiltered) && (
             <div className="space-y-4">
-              <h2 className="text-lg font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider flex items-center gap-2">
-                <div className="h-px flex-1 bg-blue-100 dark:bg-blue-900"></div>
+              <h2 className="text-lg font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-2">
+                <div className="h-px flex-1 bg-emerald-100 dark:bg-emerald-900"></div>
                 {isFiltered ? 'Resultados Encontrados' : 'Atual'}
-                <div className="h-px flex-1 bg-blue-100 dark:bg-blue-900"></div>
+                <div className="h-px flex-1 bg-emerald-100 dark:bg-emerald-900"></div>
               </h2>
               {groupedData.current && renderGroup(groupedData.current)}
               {isFiltered && groupedData.past.length === 0 && !groupedData.current && groupedData.future.length === 0 && (

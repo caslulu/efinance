@@ -167,7 +167,7 @@ export const SubscriptionsPage = () => {
                       )}
                     </Button>
                     <Button variant="ghost" size="icon" onClick={() => setEditingSubscription(sub)} title="Editar">
-                      <Edit2 className="h-4 w-4 text-blue-500" />
+                      <Edit2 className="h-4 w-4 text-emerald-500" />
                     </Button>
                     <Button variant="ghost" size="icon" onClick={() => setConfirmDeleteId(sub.id)} title="Excluir">
                       <Trash className="h-4 w-4 text-red-500" />

@@ -158,14 +158,14 @@ export const WalletsPage = () => {
           <Button
             variant="outline"
             onClick={() => setIsTransferOpen(true)}
-            className="flex items-center gap-2 border-blue-200 text-blue-600 hover:bg-blue-900/30"
+            className="flex items-center gap-2 border-emerald-200 text-emerald-600 hover:bg-emerald-900/30"
           >
             <ArrowRightLeft size={18} />
             Transferir
           </Button>
           <button
             onClick={() => setIsCreateOpen(true)}
-            className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white shadow-sm hover:bg-blue-700"
+            className="rounded-lg bg-emerald-600 px-4 py-2 font-medium text-white shadow-sm hover:bg-emerald-700"
           >
             + Nova Carteira
           </button>

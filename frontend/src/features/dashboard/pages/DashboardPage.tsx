@@ -110,7 +110,7 @@ export const DashboardPage = () => {
       <Dialog open={!!drilldownCategory} onOpenChange={() => setDrilldownCategory(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <div className="flex items-center gap-2 text-blue-600 mb-2">
+            <div className="flex items-center gap-2 text-emerald-600 mb-2">
               <Search size={20} />
               <DialogTitle>Detalhamento: {drilldownCategory}</DialogTitle>
             </div>

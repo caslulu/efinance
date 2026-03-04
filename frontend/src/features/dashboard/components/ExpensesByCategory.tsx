@@ -16,7 +16,7 @@ export function ExpensesByCategory({ data, onCategoryClick }: { data: any, onCat
     <Card>
       <CardHeader className="pb-0">
         <CardTitle className="flex items-center gap-2 text-base font-semibold">
-          <TrendingUp className="h-4 w-4 text-blue-500" />
+          <TrendingUp className="h-4 w-4 text-emerald-500" />
           Gastos por Categoria (30d)
         </CardTitle>
         <p className="text-[11px] text-muted-foreground italic">Dica: clique para ver detalhes</p>

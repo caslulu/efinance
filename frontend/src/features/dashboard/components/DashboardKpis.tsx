@@ -85,15 +85,15 @@ export function DashboardKpis({ data }: { data: any }) {
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {renderKpiCard('netWorth', (
-            <Card className="border-l-4 border-l-blue-500 shadow-sm">
+            <Card className="border-l-4 border-l-emerald-500 shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                 <CardTitle className="text-sm font-medium">Patrimônio Total</CardTitle>
-                <Coins className="h-4 w-4 text-blue-500" />
+                <Coins className="h-4 w-4 text-emerald-500" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-foreground">{formatCurrency(data.netWorth)}</div>
                 <div className="text-[10px] text-muted-foreground flex gap-2 mt-1">
-                  <span className="bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300 px-1.5 py-0.5 rounded">Saldo: {formatCurrency(data.totalBalance)}</span>
+                  <span className="bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300 px-1.5 py-0.5 rounded">Saldo: {formatCurrency(data.totalBalance)}</span>
                   {data.totalInvested > 0 && <span className="bg-purple-50 text-purple-700 dark:bg-purple-500/10 dark:text-purple-300 px-1.5 py-0.5 rounded">Inv: {formatCurrency(data.totalInvested)}</span>}
                 </div>
               </CardContent>

@@ -10,7 +10,7 @@ export function BudgetProgress({ data }: { data: any }) {
     <Card>
       <CardHeader>
         <CardTitle className="text-base font-semibold flex items-center gap-2">
-          <Target size={18} className="text-blue-600" />
+          <Target size={18} className="text-emerald-600" />
           Orçamento por Categoria
         </CardTitle>
       </CardHeader>
@@ -28,7 +28,7 @@ export function BudgetProgress({ data }: { data: any }) {
             </div>
             <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
               <div
-                className={`h-full transition-all ${budget.percentage >= 100 ? 'bg-red-500' : budget.percentage >= 80 ? 'bg-orange-500' : 'bg-blue-500'
+                className={`h-full transition-all ${budget.percentage >= 100 ? 'bg-red-500' : budget.percentage >= 80 ? 'bg-orange-500' : 'bg-emerald-500'
                   }`}
                 style={{ width: `${Math.min(100, budget.percentage)}%` }}
               />

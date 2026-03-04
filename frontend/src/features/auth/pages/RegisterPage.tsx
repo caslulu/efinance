@@ -111,7 +111,7 @@ export const RegisterPage = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 px-4 py-8">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-600 px-4 py-8">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
           <div className="mx-auto w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg">
@@ -269,7 +269,7 @@ export const RegisterPage = () => {
 
                 <p className="text-sm text-muted-foreground text-center">
                   Já tem uma conta?{' '}
-                  <Link to="/login" className="text-blue-600 hover:underline">
+                  <Link to="/login" className="text-emerald-600 hover:underline">
                     Entrar
                   </Link>
                 </p>

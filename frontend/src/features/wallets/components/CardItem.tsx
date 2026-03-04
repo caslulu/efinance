@@ -14,7 +14,7 @@ const FLAG_LABELS: Record<string, string> = {
 };
 
 const FLAG_COLORS: Record<string, string> = {
-  VISA: 'text-blue-600 dark:text-blue-400',
+  VISA: 'text-emerald-600 dark:text-emerald-400',
   MASTERCARD: 'text-red-600 dark:text-red-400',
   ELO: 'text-yellow-600 dark:text-yellow-400',
   AMEX: 'text-cyan-600 dark:text-cyan-400',
@@ -75,7 +75,7 @@ export const CardItem = ({ card, onEdit, onAddExpense, onPayInvoice }: CardItemP
         </div>
         <div className="space-y-0.5">
           <p className="text-[9px] uppercase font-bold text-muted-foreground">Fatura Aberta</p>
-          <p className="text-sm font-bold text-blue-600 dark:text-blue-400">
+          <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
             {formatCurrency(Number(card.current_invoice || 0))}
           </p>
         </div>
@@ -115,7 +115,7 @@ export const CardItem = ({ card, onEdit, onAddExpense, onPayInvoice }: CardItemP
         {hasInvoice && (
           <Button
             size="sm"
-            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white shadow-sm flex items-center gap-1 text-xs h-7"
+            className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm flex items-center gap-1 text-xs h-7"
             onClick={onPayInvoice}
           >
             <ReceiptText className="h-3 w-3" />

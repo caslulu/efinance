@@ -77,7 +77,7 @@ export const TransferModal = ({ isOpen, onClose, onSuccess }: TransferModalProps
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <ArrowRightLeft className="text-blue-600" />
+            <ArrowRightLeft className="text-emerald-600" />
             Transferência entre Carteiras
           </DialogTitle>
           <DialogDescription>

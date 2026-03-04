@@ -32,7 +32,7 @@ export const WalletCard = ({
   onPayCardInvoice,
 }: WalletCardProps) => {
   const typeColors: Record<string, string> = {
-    BANK: 'bg-blue-500 hover:bg-blue-600',
+    BANK: 'bg-emerald-500 hover:bg-emerald-600',
     PHYSICAL: 'bg-green-500 hover:bg-green-600',
     MEAL_VOUCHER: 'bg-orange-500 hover:bg-orange-600',
     INVESTMENT: 'bg-purple-500 hover:bg-purple-600',
@@ -69,7 +69,14 @@ export const WalletCard = ({
       </CardHeader>
       <CardContent className="space-y-3">
         <div>
-          <p className="text-[10px] uppercase font-bold text-muted-foreground">Saldo Disponível</p>
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] uppercase font-bold text-muted-foreground">Saldo Disponível</p>
+            {wallet.is_transfer_only && (
+              <Badge variant="outline" className="text-[9px] h-4 px-1 border-emerald-200 text-emerald-600">
+                Apenas Transferência
+              </Badge>
+            )}
+          </div>
           <div className="text-2xl font-bold text-green-600 dark:text-green-400">
             {formatCurrency(Number(wallet.actual_cash))}
           </div>
@@ -107,22 +114,24 @@ export const WalletCard = ({
           </Button>
         )}
       </CardContent>
-      <CardFooter className="flex gap-2 pt-2">
-        <Button
-          variant="outline"
-          className="flex-1 text-green-600 dark:text-green-400 border-green-200 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-700 dark:hover:text-green-300"
-          onClick={() => onAddFunds(wallet.id)}
-        >
-          <Plus className="mr-2 h-4 w-4" /> Adicionar
-        </Button>
-        <Button
-          variant="outline"
-          className="flex-1 text-red-600 dark:text-red-400 border-red-200 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-300"
-          onClick={() => onAddExpense(wallet.id)}
-        >
-          <Minus className="mr-2 h-4 w-4" /> Despesa
-        </Button>
-      </CardFooter>
+      {!wallet.is_transfer_only && (
+        <CardFooter className="flex gap-2 pt-2">
+          <Button
+            variant="outline"
+            className="flex-1 text-green-600 dark:text-green-400 border-green-200 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-700 dark:hover:text-green-300"
+            onClick={() => onAddFunds(wallet.id)}
+          >
+            <Plus className="mr-2 h-4 w-4" /> Adicionar
+          </Button>
+          <Button
+            variant="outline"
+            className="flex-1 text-red-600 dark:text-red-400 border-red-200 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-300"
+            onClick={() => onAddExpense(wallet.id)}
+          >
+            <Minus className="mr-2 h-4 w-4" /> Despesa
+          </Button>
+        </CardFooter>
+      )}
     </Card>
   );
 };

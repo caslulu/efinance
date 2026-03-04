@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CurrencyInput } from '@/components/CurrencyInput';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -33,6 +34,7 @@ export const CreateWalletModal = ({ isOpen, onClose, onSuccess }: CreateWalletMo
   const [name, setName] = useState('');
   const [type, setType] = useState('BANK');
   const [balance, setBalance] = useState('');
+  const [isTransferOnly, setIsTransferOnly] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,12 +45,14 @@ export const CreateWalletModal = ({ isOpen, onClose, onSuccess }: CreateWalletMo
         name,
         type,
         actual_cash: Number(balance),
+        is_transfer_only: isTransferOnly,
       });
       onSuccess();
       onClose();
       setName('');
       setBalance('');
       setType('BANK');
+      setIsTransferOnly(false);
     } catch {
       toast.error('Falha ao criar carteira');
     } finally {
@@ -95,6 +99,18 @@ export const CreateWalletModal = ({ isOpen, onClose, onSuccess }: CreateWalletMo
               value={balance}
               onValueChange={setBalance}
               required
+            />
+          </div>
+          <div className="flex items-center justify-between mt-2">
+            <div className="space-y-0.5">
+              <Label>Apenas Transferências</Label>
+              <p className="text-xs text-muted-foreground">
+                Desabilita lançamentos manuais (útil para contas correntes onde só entra o salário).
+              </p>
+            </div>
+            <Switch
+              checked={isTransferOnly}
+              onCheckedChange={setIsTransferOnly}
             />
           </div>
 

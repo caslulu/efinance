@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -35,6 +35,36 @@ export class TransactionsService {
       result.setDate(0); // last day of previous month
     }
     return result;
+  }
+
+  private async validateCardLimit(cardId: number, incomingExpenseValue: number, currentTransactionIdToExclude?: number) {
+    const card = await this.prisma.card.findUnique({ where: { id: cardId } });
+    if (!card) return;
+
+    const totalExp = await this.prisma.transaction.aggregate({
+      where: {
+        card_id: cardId,
+        transaction_type: 'EXPENSE',
+        payment_method: 'CREDIT',
+        ...(currentTransactionIdToExclude ? { id: { not: currentTransactionIdToExclude } } : {})
+      },
+      _sum: { value: true },
+    });
+
+    const totalInc = await this.prisma.transaction.aggregate({
+      where: {
+        card_id: cardId,
+        transaction_type: 'INCOME',
+        payment_method: 'CREDIT',
+        ...(currentTransactionIdToExclude ? { id: { not: currentTransactionIdToExclude } } : {})
+      },
+      _sum: { value: true },
+    });
+
+    const used = Number(totalExp._sum.value || 0) - Number(totalInc._sum.value || 0);
+    if (used + incomingExpenseValue > Number(card.card_limit)) {
+      throw new BadRequestException(`Limite do cartão excedido. Limite disponível: R$ ${(Number(card.card_limit) - used).toFixed(2)}`);
+    }
   }
 
   async update(id: number, userId: number, updateTransactionDto: UpdateTransactionDto) {
@@ -82,10 +112,15 @@ export class TransactionsService {
       const newType = updateTransactionDto.transaction_type || oldTransaction.transaction_type;
       const newWalletId = updateTransactionDto.wallet_id || oldTransaction.wallet_id;
       const newMethod = updateTransactionDto.payment_method !== undefined ? updateTransactionDto.payment_method : oldTransaction.payment_method;
+      const newCardId = updateTransactionDto.card_id !== undefined ? updateTransactionDto.card_id : oldTransaction.card_id;
       const newDate = updateTransactionDto.transaction_date ? new Date(updateTransactionDto.transaction_date) : oldTransaction.transaction_date;
       const willBeFuture = this.isFutureDate(newDate);
       
       const newMultiplier = oldTransaction.installment_id ? (updateTransactionDto.installment_total || oldTransaction.installment_total || 12) : 1;
+
+      if (newType === 'EXPENSE' && newMethod === 'CREDIT' && newCardId) {
+        await this.validateCardLimit(newCardId, newValue * newMultiplier, id);
+      }
 
       if (!willBeFuture) {
         if (newType === 'EXPENSE') {
@@ -151,6 +186,11 @@ export class TransactionsService {
     }
 
     const { installment_total, is_recurring, subscription_id, card_id, ...data } = createTransactionDto;
+
+    if (data.transaction_type === 'EXPENSE' && data.payment_method === 'CREDIT' && card_id) {
+      const multiplier = installment_total && installment_total > 1 ? installment_total : (is_recurring && !subscription_id ? 12 : 1);
+      await this.validateCardLimit(card_id, data.value * multiplier);
+    }
 
     if (installment_total && installment_total > 1) {
       return this.createInstallments(userId, createTransactionDto, categoryId!);

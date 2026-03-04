@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsNumber, IsEnum, Min } from 'class-validator';
+import { IsString, IsNotEmpty, IsNumber, IsEnum, Min, IsBoolean, IsOptional } from 'class-validator';
 
 export class CreateWalletDto {
   @IsString()
@@ -13,4 +13,8 @@ export class CreateWalletDto {
   @IsNumber()
   @Min(0)
   actual_cash: number;
+
+  @IsBoolean()
+  @IsOptional()
+  is_transfer_only?: boolean;
 }

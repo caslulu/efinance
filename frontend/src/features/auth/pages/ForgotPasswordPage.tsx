@@ -59,7 +59,7 @@ export const ForgotPasswordPage = () => {
           </form>
         </CardContent>
         <CardFooter className="justify-center">
-          <Link to="/login" className="text-sm text-blue-600 hover:underline">
+          <Link to="/login" className="text-sm text-emerald-600 hover:underline">
             Voltar para o Login
           </Link>
         </CardFooter>

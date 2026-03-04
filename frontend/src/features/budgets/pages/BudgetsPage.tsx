@@ -29,7 +29,7 @@ export const BudgetsPage = () => {
     <div className="p-8 space-y-8">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
-          <Target className="text-blue-600 dark:text-blue-400" />
+          <Target className="text-emerald-600 dark:text-emerald-400" />
           Metas de Gastos
         </h1>
         <Button onClick={() => { setEditingBudget(null); setIsModalOpen(true); }}>
@@ -47,7 +47,7 @@ export const BudgetsPage = () => {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {budgets.map((budget) => (
             <Card key={budget.id} className="relative group overflow-hidden">
-              <div className={budget.percentage >= 100 ? 'h-1 bg-red-500 w-full' : 'h-1 bg-blue-500 w-full'} style={{ width: `${Math.min(100, budget.percentage)}%` }} />
+              <div className={budget.percentage >= 100 ? 'h-1 bg-red-500 w-full' : 'h-1 bg-emerald-500 w-full'} style={{ width: `${Math.min(100, budget.percentage)}%` }} />
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-3">
@@ -58,7 +58,7 @@ export const BudgetsPage = () => {
                   </div>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingBudget(budget); setIsModalOpen(true); }}>
-                      <Pencil className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      <Pencil className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                     </Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600 dark:text-red-400" onClick={() => setConfirmDeleteId(budget.id)}>
                       <Trash2 className="h-4 w-4" />
@@ -81,7 +81,7 @@ export const BudgetsPage = () => {
                   </div>
                   <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
                     <div
-                      className={`h-full transition-all ${budget.percentage >= 100 ? 'bg-red-500' : budget.percentage >= 80 ? 'bg-orange-500' : 'bg-blue-500'
+                      className={`h-full transition-all ${budget.percentage >= 100 ? 'bg-red-500' : budget.percentage >= 80 ? 'bg-orange-500' : 'bg-emerald-500'
                         }`}
                       style={{ width: `${Math.min(100, budget.percentage)}%` }}
                     />

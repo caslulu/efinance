@@ -159,7 +159,7 @@ export const SettingsPage = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Shield className="text-blue-600" size={20} />
+              <Shield className="text-emerald-600" size={20} />
               Autenticação de Dois Fatores
             </CardTitle>
             <CardDescription>Adicione uma camada extra de segurança à sua conta.</CardDescription>

@@ -143,7 +143,7 @@ export const LoginPage = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-600 px-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
           <div className="mx-auto w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg">
@@ -239,7 +239,7 @@ export const LoginPage = () => {
                       type="button"
                       onClick={handleResend}
                       disabled={!canResend}
-                      className="text-sm text-blue-600 hover:underline disabled:text-gray-400 disabled:no-underline"
+                      className="text-sm text-emerald-600 hover:underline disabled:text-gray-400 disabled:no-underline"
                     >
                       {canResend ? 'Reenviar código' : `Reenviar em ${resendTimer}s`}
                     </button>
@@ -273,14 +273,14 @@ export const LoginPage = () => {
 
                 <div className="mt-4 text-center space-y-2">
                   <div>
-                    <Link to="/forgot-password" className="text-sm text-blue-600 hover:underline">
+                    <Link to="/forgot-password" className="text-sm text-emerald-600 hover:underline">
                       Esqueci minha senha
                     </Link>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">
                       Não tem uma conta?{' '}
-                      <Link to="/register" className="text-blue-600 hover:underline">
+                      <Link to="/register" className="text-emerald-600 hover:underline">
                         Criar conta
                       </Link>
                     </p>

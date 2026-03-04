@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -35,6 +36,7 @@ const WALLET_TYPE_OPTIONS = [
 export const EditWalletModal = ({ isOpen, wallet, onClose, onSuccess }: EditWalletModalProps) => {
   const [name, setName] = useState('');
   const [type, setType] = useState('BANK');
+  const [isTransferOnly, setIsTransferOnly] = useState(false);
   const [loading, setLoading] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -42,6 +44,7 @@ export const EditWalletModal = ({ isOpen, wallet, onClose, onSuccess }: EditWall
     if (wallet) {
       setName(wallet.name);
       setType(wallet.type);
+      setIsTransferOnly(!!wallet.is_transfer_only);
     }
   }, [wallet]);
 
@@ -54,6 +57,7 @@ export const EditWalletModal = ({ isOpen, wallet, onClose, onSuccess }: EditWall
       await api.patch(`/wallets/${wallet.id}`, {
         name,
         type,
+        is_transfer_only: isTransferOnly,
       });
       onSuccess();
       onClose();
@@ -110,6 +114,18 @@ export const EditWalletModal = ({ isOpen, wallet, onClose, onSuccess }: EditWall
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="flex items-center justify-between mt-2">
+              <div className="space-y-0.5">
+                <Label>Apenas Transferências</Label>
+                <p className="text-xs text-muted-foreground">
+                  Desabilita lançamentos manuais nesta carteira.
+                </p>
+              </div>
+              <Switch
+                checked={isTransferOnly}
+                onCheckedChange={setIsTransferOnly}
+              />
             </div>
 
             <DialogFooter className="flex !justify-between">

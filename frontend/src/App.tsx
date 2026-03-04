@@ -73,7 +73,7 @@ const NavLink = ({
         to={to}
         onClick={onClick}
         className={`flex items-center gap-3 px-3 py-3 text-sm font-medium transition-all duration-300 rounded-lg ${isActive
-          ? 'bg-blue-50 text-blue-600 dark:text-blue-400 dark:bg-blue-900/30 dark:text-blue-300'
+          ? 'bg-emerald-50 text-emerald-600 dark:text-emerald-400 dark:bg-emerald-900/30 dark:text-emerald-300'
           : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:text-foreground'
           } ${isCollapsed ? 'justify-center px-2' : ''}`}
         title={isCollapsed ? label : ''}
@@ -147,7 +147,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
       >
         <div className="h-full flex flex-col">
           <div className={`p-6 flex items-center justify-between ${isCollapsed ? 'px-4' : ''}`}>
-            <Link to="/" className={`flex items-center gap-2 font-bold text-blue-600 dark:text-blue-400 transition-all ${isCollapsed ? 'scale-110' : 'text-2xl'}`}>
+            <Link to="/" className={`flex items-center gap-2 font-bold text-emerald-600 dark:text-emerald-400 transition-all ${isCollapsed ? 'scale-110' : 'text-2xl'}`}>
               <LayoutDashboard size={isCollapsed ? 32 : 28} />
               {!isCollapsed && <span>FinanceApp</span>}
             </Link>
@@ -240,7 +240,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
                     priceAlerts.notifications.map((notification) => (
                       <button
                         key={notification.id}
-                        className={`w-full border-b px-4 py-4 text-left hover:bg-blue-900/30 transition-colors ${notification.is_read ? 'bg-card opacity-60' : 'bg-blue-900/10'
+                        className={`w-full border-b px-4 py-4 text-left hover:bg-emerald-900/30 transition-colors ${notification.is_read ? 'bg-card opacity-60' : 'bg-emerald-900/10'
                           }`}
                         onClick={() => {
                           if (!notification.is_read) {
@@ -275,7 +275,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 className="flex items-center gap-2 rounded-full lg:rounded-lg p-1 lg:px-3 lg:py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors focus:outline-none"
               >
-                <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold overflow-hidden border-2 border-white shadow-sm">
+                <div className="h-8 w-8 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold overflow-hidden border-2 border-white shadow-sm">
                   {user?.avatarUrl ? (
                     <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
@@ -291,7 +291,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
                   <div className="py-2">
                     <Link
                       to="/profile"
-                      className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-blue-900/30 hover:text-blue-600 dark:text-blue-400 transition-colors"
+                      className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-emerald-900/30 hover:text-emerald-600 dark:text-emerald-400 transition-colors"
                       onClick={() => setIsDropdownOpen(false)}
                     >
                       <User size={18} />
@@ -299,7 +299,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
                     </Link>
                     <Link
                       to="/settings"
-                      className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-blue-900/30 hover:text-blue-600 dark:text-blue-400 transition-colors"
+                      className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-emerald-900/30 hover:text-emerald-600 dark:text-emerald-400 transition-colors"
                       onClick={() => setIsDropdownOpen(false)}
                     >
                       <Settings size={18} />

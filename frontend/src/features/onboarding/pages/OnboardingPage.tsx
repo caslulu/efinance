@@ -17,12 +17,15 @@ export const OnboardingPage = () => {
   const createWallet = useCreateWallet();
   const navigate = useNavigate();
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleNext = async () => {
     if (step === 1) {
       setStep(2);
     } else if (step === 2) {
-      if (!name || !type || !balance) return;
+      if (!name || !type || !balance || createWallet.isPending || isSubmitting) return;
       
+      setIsSubmitting(true);
       try {
         await createWallet.mutateAsync({
           name,
@@ -32,9 +35,11 @@ export const OnboardingPage = () => {
         setStep(3);
       } catch (error) {
         console.error("Failed to create initial wallet", error);
+      } finally {
+        setIsSubmitting(false);
       }
     } else {
-      navigate('/');
+      navigate('/', { replace: true });
     }
   };
 
@@ -42,7 +47,7 @@ export const OnboardingPage = () => {
     <div className="min-h-screen bg-background dark:bg-gray-900 flex items-center justify-center p-4">
       <Card className="w-full max-w-lg border-2 shadow-xl">
         <CardHeader className="text-center">
-          <div className="mx-auto w-16 h-16 bg-blue-100 dark:bg-blue-900/50 text-blue-600 rounded-full flex items-center justify-center mb-4">
+          <div className="mx-auto w-16 h-16 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 rounded-full flex items-center justify-center mb-4">
             {step === 3 ? <CheckCircle2 size={32} /> : <Wallet size={32} />}
           </div>
           <CardTitle className="text-2xl">
