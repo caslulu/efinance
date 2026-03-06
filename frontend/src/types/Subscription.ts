@@ -16,5 +16,6 @@ export interface Subscription {
   wallet_id: number;
   category_id: number;
   payment_method?: 'CREDIT' | 'DEBIT' | 'PIX' | 'MONEY' | 'TRANSFER' | 'DEPOSIT';
+  icon?: string;
   category?: Category;
 }

@@ -134,7 +134,7 @@ export const SubscriptionsPage = () => {
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-3">
                     <div className="p-2 rounded bg-slate-100 dark:bg-slate-800">
-                      <CategoryIcon name={sub.category?.icon} className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                      <CategoryIcon name={sub.icon || sub.category?.icon} className="h-4 w-4 text-slate-600 dark:text-slate-400" />
                     </div>
                     <span>{sub.name}</span>
                   </div>

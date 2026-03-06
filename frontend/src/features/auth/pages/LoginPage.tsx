@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { api } from '../../../api/api';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { Eye, EyeOff, LayoutDashboard } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { FcGoogle } from 'react-icons/fc';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -146,10 +146,9 @@ export const LoginPage = () => {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-600 px-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
-          <div className="mx-auto w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg">
-            <LayoutDashboard size={28} className="text-white" />
+          <div className="mx-auto w-24 h-24 flex items-center justify-center mb-6 overflow-hidden rounded-full shadow-lg border-2 border-white/20">
+            <img src="/logo.png" alt="Finance Pro" className="w-full h-full object-cover scale-[2.2]" />
           </div>
-          <h1 className="text-2xl font-bold text-white">FinanceApp</h1>
         </div>
         <Card className="w-full">
           <CardHeader>

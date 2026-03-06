@@ -8,11 +8,11 @@ services:
     environment:
       POSTGRES_USER: ${DB_USER:-financeuser}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME:-financeapp}
+      POSTGRES_DB: ${DB_NAME:-financepro}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-financeuser} -d ${DB_NAME:-financeapp}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-financeuser} -d ${DB_NAME:-financepro}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -27,7 +27,7 @@ services:
     env_file:
       - ./backend/.env.prod
     environment:
-      - DATABASE_URL=postgresql://${DB_USER:-financeuser}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-financeapp}?schema=public
+      - DATABASE_URL=postgresql://${DB_USER:-financeuser}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-financepro}?schema=public
       - NODE_ENV=production
     volumes:
       - uploads:/app/uploads

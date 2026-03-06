@@ -2,12 +2,12 @@ import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { WalletCard } from './WalletCard';
+import { useCardsByWallet } from '../../../hooks/useCards';
 import type { Wallet } from '../../../types/Wallet';
 import type { Card } from '../../../types/Card';
 
 interface SortableWalletCardProps {
     wallet: Wallet;
-    cards: Card[];
     onAddFunds: () => void;
     onAddExpense: () => void;
     onEdit: () => void;
@@ -19,7 +19,6 @@ interface SortableWalletCardProps {
 
 export const SortableWalletCard: React.FC<SortableWalletCardProps> = ({
     wallet,
-    cards,
     onAddFunds,
     onAddExpense,
     onEdit,
@@ -28,6 +27,8 @@ export const SortableWalletCard: React.FC<SortableWalletCardProps> = ({
     onAddCardExpense,
     onPayCardInvoice,
 }) => {
+    const { data: cards = [] } = useCardsByWallet(wallet.id);
+
     const {
         attributes,
         listeners,
@@ -35,7 +36,7 @@ export const SortableWalletCard: React.FC<SortableWalletCardProps> = ({
         transform,
         transition,
         isDragging,
-    } = useSortable({ id: wallet.id });
+    } = useSortable({ id: wallet.id, animateLayoutChanges: () => false });
 
     const style = {
         transform: CSS.Transform.toString(transform),

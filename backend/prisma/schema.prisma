@@ -21,6 +21,11 @@ enum SubscriptionStatus {
   CANCELLED
 }
 
+enum ChatRole {
+  USER
+  ASSISTANT
+}
+
 model User {
   id                    Int                   @id @default(autoincrement())
   username              String
@@ -43,6 +48,7 @@ model User {
   subscriptions         Subscription[]
   budgets               Budget[]
   priceAlertNotifications WishlistPriceAlertNotification[]
+  chatConversations     ChatConversation[]
 }
 
 model Wallet {
@@ -112,6 +118,7 @@ model Subscription {
   start_date        DateTime
   next_billing_date DateTime
   payment_method    String?
+  icon              String?
   
   transactions      Transaction[]      @relation("SubscriptionTransactions")
 }
@@ -214,4 +221,27 @@ model WishlistPriceAlertNotification {
 
   @@index([user_id, is_read])
   @@index([wishlist_product_id])
+}
+
+model ChatConversation {
+  id         Int           @id @default(autoincrement())
+  user_id    Int
+  user       User          @relation(fields: [user_id], references: [id])
+  title      String?
+  created_at DateTime      @default(now())
+  updated_at DateTime      @updatedAt
+  messages   ChatMessage[]
+
+  @@index([user_id])
+}
+
+model ChatMessage {
+  id              Int              @id @default(autoincrement())
+  conversation_id Int
+  conversation    ChatConversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+  role            ChatRole
+  content         String
+  created_at      DateTime         @default(now())
+
+  @@index([conversation_id])
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { api } from '../../../api/api';
+import { useUpdateCard } from '../../../hooks/useCards';
 import type { Card } from '../../../types/Card';
 import {
   Dialog,
@@ -51,7 +51,8 @@ export const EditCardModal = ({
   const [closingDay, setClosingDay] = useState('');
   const [dueDay, setDueDay] = useState('');
   const [cardLimit, setCardLimit] = useState('');
-  const [loading, setLoading] = useState(false);
+  
+  const updateCard = useUpdateCard();
 
   useEffect(() => {
     if (card) {
@@ -66,22 +67,23 @@ export const EditCardModal = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!card) return;
-    setLoading(true);
+    
     try {
-      await api.patch(`/cards/${card.id}`, {
-        name,
-        flag,
-        closing_day: Number(closingDay),
-        due_day: Number(dueDay),
-        card_limit: Number(cardLimit),
+      await updateCard.mutateAsync({
+        id: card.id,
+        data: {
+          name,
+          flag,
+          closing_day: Number(closingDay),
+          due_day: Number(dueDay),
+          card_limit: Number(cardLimit),
+        }
       });
       toast.success('Cartão atualizado!');
       onSuccess();
       onClose();
     } catch {
       toast.error('Falha ao atualizar cartão');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -166,8 +168,8 @@ export const EditCardModal = ({
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={loading}>
-                {loading ? 'Salvando...' : 'Salvar'}
+              <Button type="submit" disabled={updateCard.isPending}>
+                {updateCard.isPending ? 'Salvando...' : 'Salvar'}
               </Button>
             </div>
           </DialogFooter>

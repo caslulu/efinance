@@ -175,7 +175,7 @@ export class AuthService {
       try {
         await this.mailerService.sendMail({
           to: email,
-          subject: 'Recuperação de Senha - FinanceApp',
+          subject: 'Recuperação de Senha - Finance Pro',
           html: `
             <h3>Recuperação de Senha</h3>
             <p>Você solicitou a redefinição de sua senha.</p>
@@ -235,7 +235,7 @@ export class AuthService {
     try {
       await this.mailerService.sendMail({
         to: user.email,
-        subject: 'Código de Verificação - FinanceApp',
+        subject: 'Código de Verificação - Finance Pro',
         html: `
           <h3>Seu código de acesso</h3>
           <p>Utilize o código abaixo para completar seu login:</p>
@@ -260,15 +260,15 @@ export class AuthService {
     try {
       await this.mailerService.sendMail({
         to: user.email,
-        subject: 'Bem-vindo ao FinanceApp - Verifique seu email',
+        subject: 'Bem-vindo ao Finance Pro - Verifique seu email',
         html: `
           <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
             <div style="background-color: #2563eb; padding: 20px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0;">Bem-vindo ao FinanceApp!</h1>
+              <h1 style="color: #ffffff; margin: 0;">Bem-vindo ao Finance Pro!</h1>
             </div>
             <div style="padding: 20px;">
               <p style="font-size: 16px;">Olá, <strong>${user.username}</strong>!</p>
-              <p style="font-size: 16px;">Estamos muito felizes em tê-lo conosco. Para garantir a segurança da sua conta e começar a usar o FinanceApp, por favor, utilize o código abaixo para verificar seu email:</p>
+              <p style="font-size: 16px;">Estamos muito felizes em tê-lo conosco. Para garantir a segurança da sua conta e começar a usar o Finance Pro, por favor, utilize o código abaixo para verificar seu email:</p>
               
               <div style="text-align: center; margin: 30px 0;">
                 <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #2563eb; background-color: #f0f7ff; padding: 15px 25px; border-radius: 8px; display: inline-block;">${token}</div>
@@ -278,7 +278,7 @@ export class AuthService {
               <p style="font-size: 14px; color: #666;">Se você não criou esta conta, por favor ignore este email.</p>
             </div>
             <div style="background-color: #f9fafb; padding: 15px; text-align: center; font-size: 12px; color: #999;">
-              &copy; ${new Date().getFullYear()} FinanceApp. Todos os direitos reservados.
+              &copy; ${new Date().getFullYear()} Finance Pro. Todos os direitos reservados.
             </div>
           </div>
         `,

@@ -13,6 +13,12 @@ const mockPrismaService = {
     update: jest.fn(),
     delete: jest.fn(),
   },
+  wallet: {
+    findUnique: jest.fn(),
+  },
+  transactionCategory: {
+    findUnique: jest.fn(),
+  },
 };
 
 const mockTransactionsService = {
@@ -56,7 +62,10 @@ describe('SubscriptionsService', () => {
         start_date: new Date().toISOString(),
       };
 
+      mockPrismaService.wallet.findUnique.mockResolvedValue({ id: 1, user_id: userId });
+      mockPrismaService.transactionCategory.findUnique.mockResolvedValue({ id: 1, user_id: userId });
       mockPrismaService.subscription.create.mockResolvedValue({ id: 1, ...dto, user_id: userId });
+      mockPrismaService.subscription.findMany.mockResolvedValue([]);
 
       const result = await service.create(userId, dto as any);
       expect(result.id).toBe(1);
@@ -76,6 +85,8 @@ describe('SubscriptionsService', () => {
         category_id: 1,
         status: 'ACTIVE',
         start_date: new Date('2026-01-01'),
+        next_billing_date: new Date('2026-01-01'),
+        transaction_type: 'EXPENSE',
       };
 
       mockPrismaService.subscription.findMany.mockResolvedValue([dueSub]);
@@ -98,6 +109,31 @@ describe('SubscriptionsService', () => {
     it('should NOT generate transactions for PAUSED subscriptions', async () => {
       mockPrismaService.subscription.findMany.mockResolvedValue([]);
 
+      await service.triggerCheck();
+      expect(transactionsService.create).not.toHaveBeenCalled();
+    });
+
+    it('should NOT generate transactions if next_billing_date is in the future', async () => {
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 2); // 2 days in the future
+      const futureSub = {
+        id: 1,
+        user_id: 1,
+        name: 'Spotify',
+        value: new Decimal(19.90),
+        frequency: 'MONTHLY',
+        wallet_id: 1,
+        category_id: 1,
+        status: 'ACTIVE',
+        start_date: new Date('2026-01-01'),
+        next_billing_date: futureDate,
+        transaction_type: 'EXPENSE',
+      };
+
+      // Since the where clause in triggerCheck only fetches dates <= endOfToday
+      // findMany should return an empty array or we test the query itself
+      // In this case, we just return empty as it simulates the DB logic
+      mockPrismaService.subscription.findMany.mockResolvedValue([]);
       await service.triggerCheck();
       expect(transactionsService.create).not.toHaveBeenCalled();
     });

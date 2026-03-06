@@ -148,8 +148,10 @@ const Layout = ({ children }: { children: ReactNode }) => {
         <div className="h-full flex flex-col">
           <div className={`p-6 flex items-center justify-between ${isCollapsed ? 'px-4' : ''}`}>
             <Link to="/" className={`flex items-center gap-2 font-bold text-emerald-600 dark:text-emerald-400 transition-all ${isCollapsed ? 'scale-110' : 'text-2xl'}`}>
-              <LayoutDashboard size={isCollapsed ? 32 : 28} />
-              {!isCollapsed && <span>FinanceApp</span>}
+              <div className={`overflow-hidden rounded-full shadow-sm flex items-center justify-center ${isCollapsed ? 'w-8 h-8' : 'w-7 h-7'}`}>
+                <img src="/logo.png" alt="Finance Pro" className="w-full h-full object-cover scale-[2.2]" />
+              </div>
+              {!isCollapsed && <span>Finance Pro</span>}
             </Link>
             <button className="lg:hidden" onClick={() => setIsSidebarOpen(false)}>
               <X size={24} className="text-muted-foreground" />

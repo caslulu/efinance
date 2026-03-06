@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TransactionsService } from './transactions.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { WalletsService } from '../wallets/wallets.service';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
 
 const mockPrismaService = {
   transaction: {
@@ -9,10 +10,18 @@ const mockPrismaService = {
     createMany: jest.fn(),
     findFirst: jest.fn(),
     update: jest.fn(),
+    aggregate: jest.fn(),
   },
   transactionCategory: {
     findFirst: jest.fn(),
     create: jest.fn(),
+    findUnique: jest.fn(),
+  },
+  wallet: {
+    findUnique: jest.fn(),
+  },
+  card: {
+    findUnique: jest.fn(),
   }
 };
 
@@ -40,6 +49,8 @@ describe('TransactionsService', () => {
     walletsService = module.get<WalletsService>(WalletsService);
 
     jest.clearAllMocks();
+    mockPrismaService.wallet.findUnique.mockResolvedValue({ id: 1, user_id: 1, type: 'BANK' });
+    mockPrismaService.transactionCategory.findUnique.mockResolvedValue({ id: 1, user_id: 1 });
   });
 
   it('should create a single transaction and update wallet (DEBIT/Default)', async () => {
@@ -149,7 +160,7 @@ describe('TransactionsService', () => {
 
   it('should create a Subscription (12 months view) when is_recurring is true (DEBIT)', async () => {
     const dto = {
-      transaction_date: '2026-01-30T00:00:00.000Z',
+      transaction_date: new Date().toISOString(),
       wallet_id: 1,
       transaction_type: 'EXPENSE',
       is_recurring: true,
@@ -176,7 +187,7 @@ describe('TransactionsService', () => {
 
   it('should NOT update wallet balance if payment_method is CREDIT for Subscription', async () => {
     const dto = {
-      transaction_date: '2026-01-30T00:00:00.000Z',
+      transaction_date: new Date().toISOString(),
       wallet_id: 1,
       transaction_type: 'EXPENSE',
       is_recurring: true,
@@ -196,28 +207,45 @@ describe('TransactionsService', () => {
     expect(walletsService.addExpense).not.toHaveBeenCalled();
   });
 
-  it('should create independent transactions for multiple subscriptions on the same date', async () => {
+  it('should throw NotFoundException if wallet belongs to another user', async () => {
     const dto = {
-      transaction_date: '2026-02-04T00:00:00.000Z',
+      transaction_date: new Date().toISOString(),
       wallet_id: 1,
       transaction_type: 'EXPENSE',
-      is_recurring: true,
-      category_id: 2,
-      value: 50.00,
-      payment_method: 'CREDIT',
+      is_recurring: false,
+      value: 100,
+      category_id: 1,
     };
     const userId = 1;
 
-    // Reset mocks for this test
-    jest.clearAllMocks();
-    mockPrismaService.transaction.createMany.mockResolvedValue({ count: 12 });
+    // mock wallet belonging to user 999
+    mockPrismaService.wallet.findUnique.mockResolvedValueOnce({ id: 1, user_id: 999, type: 'BANK' });
 
-    // First Subscription
-    await service.create(userId, dto);
-    expect(prisma.transaction.createMany).toHaveBeenCalledTimes(1);
+    await expect(service.create(userId, dto)).rejects.toThrow(NotFoundException);
+    expect(prisma.transaction.create).not.toHaveBeenCalled();
+  });
 
-    // Second Subscription
-    await service.create(userId, dto);
-    expect(prisma.transaction.createMany).toHaveBeenCalledTimes(2);
+  it('should throw BadRequestException when card limit is exceeded', async () => {
+    const dto = {
+      transaction_date: new Date().toISOString(),
+      wallet_id: 1,
+      transaction_type: 'EXPENSE',
+      is_recurring: false,
+      value: 1500,
+      category_id: 1,
+      payment_method: 'CREDIT',
+      card_id: 1,
+    };
+    const userId = 1;
+
+    // mock card
+    mockPrismaService.card.findUnique.mockResolvedValueOnce({ id: 1, card_limit: 1000 });
+    // mock aggregates
+    mockPrismaService.transaction.aggregate = jest.fn()
+      .mockResolvedValueOnce({ _sum: { value: 200 } }) // exp
+      .mockResolvedValueOnce({ _sum: { value: 0 } }); // inc
+
+    await expect(service.create(userId, dto)).rejects.toThrow(BadRequestException);
+    expect(prisma.transaction.create).not.toHaveBeenCalled();
   });
 });

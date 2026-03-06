@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { MailerService } from '@nestjs-modules/mailer';
 import * as bcrypt from 'bcrypt';
 
 jest.mock('bcrypt', () => ({
@@ -16,6 +18,14 @@ const mockUsersService = {
 
 const mockJwtService = {
   sign: jest.fn(() => 'mockToken'),
+};
+
+const mockConfigService = {
+  get: jest.fn(),
+};
+
+const mockMailerService = {
+  sendMail: jest.fn(),
 };
 
 describe('AuthService', () => {
@@ -33,6 +43,14 @@ describe('AuthService', () => {
           provide: JwtService,
           useValue: mockJwtService,
         },
+        {
+          provide: ConfigService,
+          useValue: mockConfigService,
+        },
+        {
+          provide: MailerService,
+          useValue: mockMailerService,
+        },
       ],
     }).compile();
 
@@ -44,7 +62,7 @@ describe('AuthService', () => {
   });
 
   describe('validateUser', () => {
-    it('should return user data (without password) if validation succeeds', async () => {
+    it('should return user data if validation succeeds', async () => {
       const mockUser = {
         id: 1,
         username: 'test',
@@ -55,7 +73,7 @@ describe('AuthService', () => {
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
       const result = await service.validateUser('test', 'password');
-      expect(result).toEqual({ id: 1, username: 'test' });
+      expect(result).toEqual(mockUser);
     });
 
     it('should return null if validation fails', async () => {
@@ -67,7 +85,7 @@ describe('AuthService', () => {
 
   describe('login', () => {
     it('should return an access token', async () => {
-      const result = await service.login({ username: 'test', id: 1 });
+      const result = await service.login({ username: 'test', id: 1, isEmailVerified: true });
       expect(result).toEqual({ access_token: 'mockToken' });
     });
   });

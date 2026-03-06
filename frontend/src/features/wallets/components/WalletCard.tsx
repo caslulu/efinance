@@ -1,11 +1,12 @@
+import { useState } from 'react';
 import clsx from 'clsx';
 import { formatCurrency } from '@/lib/utils';
 import type { Wallet } from '../../../types/Wallet';
 import type { Card as CardType } from '../../../types/Card';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Plus, Minus, Pencil, CreditCard } from 'lucide-react';
+import { Plus, Minus, Pencil, CreditCard, ChevronDown, ChevronUp } from 'lucide-react';
 import { CardItem } from './CardItem';
 
 interface WalletCardProps {
@@ -31,6 +32,8 @@ export const WalletCard = ({
   onAddCardExpense,
   onPayCardInvoice,
 }: WalletCardProps) => {
+  const [isCardsCollapsed, setIsCardsCollapsed] = useState(true);
+
   const typeColors: Record<string, string> = {
     BANK: 'bg-emerald-500 hover:bg-emerald-600',
     PHYSICAL: 'bg-green-500 hover:bg-green-600',
@@ -77,61 +80,83 @@ export const WalletCard = ({
               </Badge>
             )}
           </div>
-          <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+          <div className="text-2xl font-bold text-green-600 dark:text-green-400 mb-4">
             {formatCurrency(Number(wallet.actual_cash))}
           </div>
+
+          {!wallet.is_transfer_only && (
+            <div className="flex gap-2 mb-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 text-green-600 dark:text-green-400 border-green-200 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-700 dark:hover:text-green-300 text-xs h-8"
+                onClick={() => onAddFunds(wallet.id)}
+              >
+                <Plus className="mr-1 h-3 w-3" /> Receita
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 text-red-600 dark:text-red-400 border-red-200 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-300 text-xs h-8"
+                onClick={() => onAddExpense(wallet.id)}
+              >
+                <Minus className="mr-1 h-3 w-3" /> Despesa
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Cards section */}
-        {cards.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1">
-              <CreditCard className="h-3 w-3" />
-              Cartões
-            </p>
-            {cards.map((card) => (
-              <CardItem
-                key={card.id}
-                card={card}
-                onEdit={() => onEditCard(card)}
-                onAddExpense={() => onAddCardExpense(card)}
-                onPayInvoice={() => onPayCardInvoice(card)}
-              />
-            ))}
+        {(cards.length > 0 || wallet.type === 'BANK') && (
+          <div className="pt-4 border-t border-border space-y-3">
+            <div className="flex items-center justify-between">
+              <div 
+                className={clsx(
+                  "flex items-center gap-1", 
+                  cards.length > 0 && "cursor-pointer hover:opacity-80 transition-opacity"
+                )}
+                onClick={() => cards.length > 0 && setIsCardsCollapsed(!isCardsCollapsed)}
+              >
+                <p className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1">
+                  <CreditCard className="h-3 w-3" />
+                  Cartões de Crédito
+                </p>
+                {cards.length > 0 && (
+                  isCardsCollapsed ? (
+                    <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                  ) : (
+                    <ChevronUp className="h-3 w-3 text-muted-foreground" />
+                  )
+                )}
+              </div>
+              {wallet.type === 'BANK' && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-[10px] text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                  onClick={onAddCard}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Novo Cartão
+                </Button>
+              )}
+            </div>
+            {cards.length > 0 && !isCardsCollapsed && (
+              <div className="space-y-3">
+                {cards.map((card) => (
+                  <CardItem
+                    key={card.id}
+                    card={card}
+                    onEdit={() => onEditCard(card)}
+                    onAddExpense={() => onAddCardExpense(card)}
+                    onPayInvoice={() => onPayCardInvoice(card)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
-
-        {/* Add card button */}
-        {wallet.type === 'BANK' && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full text-xs border-dashed"
-            onClick={onAddCard}
-          >
-            <CreditCard className="mr-2 h-3 w-3" />
-            Adicionar Cartão
-          </Button>
-        )}
       </CardContent>
-      {!wallet.is_transfer_only && (
-        <CardFooter className="flex gap-2 pt-2">
-          <Button
-            variant="outline"
-            className="flex-1 text-green-600 dark:text-green-400 border-green-200 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-700 dark:hover:text-green-300"
-            onClick={() => onAddFunds(wallet.id)}
-          >
-            <Plus className="mr-2 h-4 w-4" /> Adicionar
-          </Button>
-          <Button
-            variant="outline"
-            className="flex-1 text-red-600 dark:text-red-400 border-red-200 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-300"
-            onClick={() => onAddExpense(wallet.id)}
-          >
-            <Minus className="mr-2 h-4 w-4" /> Despesa
-          </Button>
-        </CardFooter>
-      )}
     </Card>
   );
 };

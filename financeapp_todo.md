@@ -1,4 +1,4 @@
-# FinanceApp — Todo List (Audited)
+# Finance Pro — Todo List (Audited)
 
 > Each item verified against the current codebase. ✅ = Done · ⬜ = Pending
 

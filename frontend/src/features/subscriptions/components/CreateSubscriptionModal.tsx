@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { ALLOWED_METHODS, PAYMENT_METHODS, WALLET_TYPES } from '../../../constants/paymentMethods';
-import { CategoryIcon } from '@/components/IconPicker';
+import { CategoryIcon, IconPicker } from '@/components/IconPicker';
 import { api } from '@/api/api';
 import type { Wallet } from '@/types/Wallet';
 
@@ -33,6 +33,8 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
   const [walletId, setWalletId] = React.useState('');
   const [categoryId, setCategoryId] = React.useState('');
   const [paymentMethod, setPaymentMethod] = React.useState('');
+  const [icon, setIcon] = React.useState<string>('');
+  const [step, setStep] = React.useState(1);
 
   const [wallets, setWallets] = React.useState<Wallet[]>([]);
   const [categories, setCategories] = React.useState<any[]>([]);
@@ -42,6 +44,8 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
     if (isOpen) {
       setPaymentMethod('');
       setDescription('');
+      setIcon('');
+      setStep(1);
       api.get('/wallets').then(res => setWallets(res.data));
       api.get('/categories').then(res => setCategories(res.data));
     }
@@ -71,6 +75,15 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (step === 1) {
+      if (!name || !value) {
+        toast.warning("Preencha nome e valor para continuar");
+        return;
+      }
+      setStep(2);
+      return;
+    }
+
     if (availableMethods.length > 0 && !paymentMethod) {
       toast.warning('Selecione um método de pagamento');
       return;
@@ -81,6 +94,7 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
       await api.post('/subscriptions', {
         name,
         description: description || undefined,
+        icon: icon || undefined,
         value: Number(value),
         transaction_type: type,
         frequency,
@@ -93,6 +107,7 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
       onClose();
       setName('');
       setDescription('');
+      setIcon('');
       setValue('');
       setPaymentMethod('');
     } catch (error) {
@@ -111,102 +126,127 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
             Configure uma nova transação recorrente ou assinatura abaixo.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="grid gap-4 py-4 max-h-[80vh] overflow-y-auto pr-2">
-          <div className="grid gap-2">
-            <Label htmlFor="name">Nome / Título</Label>
-            <Input id="name" value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Netflix, Aluguel..." required />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="description">Descrição (Opcional)</Label>
-            <Input id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Ex: Plano familiar..." />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="type">Tipo</Label>
-            <Select value={type} onValueChange={setType}>
-              <SelectTrigger id="type">
-                <SelectValue placeholder="Selecione the tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="EXPENSE">Despesa</SelectItem>
-                <SelectItem value="INCOME">Receita (Salário)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="value">Valor</Label>
-              <CurrencyInput id="value" value={value} onValueChange={setValue} required />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="frequency">Frequência</Label>
-              <Select value={frequency} onValueChange={setFrequency}>
-                <SelectTrigger id="frequency">
-                  <SelectValue placeholder="Selecione a frequência" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="WEEKLY">Semanal</SelectItem>
-                  <SelectItem value="MONTHLY">Mensal</SelectItem>
-                  <SelectItem value="QUARTERLY">Trimestral</SelectItem>
-                  <SelectItem value="YEARLY">Anual</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="startDate">Data de Início</Label>
-            <Input id="startDate" type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="wallet">Carteira</Label>
-            <Select value={walletId} onValueChange={setWalletId}>
-              <SelectTrigger id="wallet">
-                <SelectValue placeholder="Selecione a Carteira" />
-              </SelectTrigger>
-              <SelectContent>
-                {wallets.map(w => <SelectItem key={w.id} value={String(w.id)}>{w.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {availableMethods.length > 0 && (
-            <div className="grid gap-2">
-              <Label htmlFor="method">Método de Pagamento</Label>
-              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                <SelectTrigger id="method">
-                  <SelectValue placeholder="Selecione o método" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableMethods.map(methodKey => (
-                    <SelectItem key={methodKey} value={methodKey}>
-                      {PAYMENT_METHODS[methodKey as keyof typeof PAYMENT_METHODS]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+          {step === 1 && (
+            <>
+              <div className="flex items-end gap-3">
+                <div className="grid gap-2 shrink-0">
+                  <Label>Ícone</Label>
+                  <IconPicker value={icon} onChange={setIcon} />
+                </div>
+                <div className="grid gap-2 flex-1">
+                  <Label htmlFor="name">Nome / Título</Label>
+                  <Input id="name" value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Netflix, Aluguel..." required />
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="description">Descrição (Opcional)</Label>
+                <Input id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Ex: Plano familiar..." />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="type">Tipo</Label>
+                <Select value={type} onValueChange={setType}>
+                  <SelectTrigger id="type">
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="EXPENSE">Despesa</SelectItem>
+                    <SelectItem value="INCOME">Receita (Salário)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="value">Valor</Label>
+                  <CurrencyInput id="value" value={value} onValueChange={setValue} required />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="frequency">Frequência</Label>
+                  <Select value={frequency} onValueChange={setFrequency}>
+                    <SelectTrigger id="frequency">
+                      <SelectValue placeholder="Selecione a frequência" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="WEEKLY">Semanal</SelectItem>
+                      <SelectItem value="MONTHLY">Mensal</SelectItem>
+                      <SelectItem value="QUARTERLY">Trimestral</SelectItem>
+                      <SelectItem value="YEARLY">Anual</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </>
           )}
 
-          <div className="grid gap-2">
-            <Label htmlFor="category">Categoria</Label>
-            <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger id="category">
-                <SelectValue placeholder="Selecione a Categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map(c => (
-                  <SelectItem key={c.id} value={String(c.id)}>
-                    <div className="flex items-center gap-2">
-                      <CategoryIcon name={c.icon} className="h-4 w-4" />
-                      <span>{c.name}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-            <Button type="submit" disabled={loading}>{loading ? 'Criando...' : 'Criar'}</Button>
+          {step === 2 && (
+            <>
+              <div className="grid gap-2">
+                <Label htmlFor="startDate">Data de Início</Label>
+                <Input id="startDate" type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="wallet">Carteira</Label>
+                <Select value={walletId} onValueChange={setWalletId} required>
+                  <SelectTrigger id="wallet">
+                    <SelectValue placeholder="Selecione a Carteira" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {wallets.map(w => <SelectItem key={w.id} value={String(w.id)}>{w.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {availableMethods.length > 0 && (
+                <div className="grid gap-2">
+                  <Label htmlFor="method">Método de Pagamento</Label>
+                  <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                    <SelectTrigger id="method">
+                      <SelectValue placeholder="Selecione o método" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableMethods.map(methodKey => (
+                        <SelectItem key={methodKey} value={methodKey}>
+                          {PAYMENT_METHODS[methodKey as keyof typeof PAYMENT_METHODS]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <div className="grid gap-2">
+                <Label htmlFor="category">Categoria</Label>
+                <Select value={categoryId} onValueChange={setCategoryId} required>
+                  <SelectTrigger id="category">
+                    <SelectValue placeholder="Selecione a Categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map(c => (
+                      <SelectItem key={c.id} value={String(c.id)}>
+                        <div className="flex items-center gap-2">
+                          <CategoryIcon name={c.icon} className="h-4 w-4" />
+                          <span>{c.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          )}
+
+          <DialogFooter className="mt-4 gap-2">
+            {step === 1 ? (
+              <>
+                <Button type="button" variant="outline" onClick={onClose} className="w-full sm:w-auto">Cancelar</Button>
+                <Button type="submit" className="w-full sm:w-auto">Próximo</Button>
+              </>
+            ) : (
+              <>
+                <Button type="button" variant="outline" onClick={() => setStep(1)} className="w-full sm:w-auto">Voltar</Button>
+                <Button type="submit" disabled={loading} className="w-full sm:w-auto">{loading ? 'Criando...' : 'Criar'}</Button>
+              </>
+            )}
           </DialogFooter>
         </form>
       </DialogContent>

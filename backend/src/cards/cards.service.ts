@@ -37,6 +37,7 @@ export class CardsService {
 
     const cards = await this.prisma.card.findMany({
       where: { wallet_id: walletId },
+      include: { wallet: true },
     });
 
     return Promise.all(cards.map((c) => this.enrichCardWithInvoice(c)));
@@ -95,6 +96,18 @@ export class CardsService {
    * as well as the used limit (total unpaid credit expenses).
    */
   private async enrichCardWithInvoice(card: any) {
+    if (card.wallet?.type === 'MEAL_VOUCHER') {
+      // Remove wallet relation if it was included
+      const { wallet, ...cardData } = card;
+      return {
+        ...cardData,
+        current_invoice: 0,
+        due_invoice: 0,
+        total_invoice: 0,
+        available_limit: Number(cardData.card_limit) || 0,
+      };
+    }
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const currentDay = today.getDate();

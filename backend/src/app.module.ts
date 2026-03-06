@@ -24,7 +24,7 @@ import { ScheduleModule } from '@nestjs/schedule';
   imports: [
     ThrottlerModule.forRoot([{
       ttl: 60000,
-      limit: 10,
+      limit: 100,
     }]),
     ScheduleModule.forRoot(),
     ConfigModule.forRoot({ isGlobal: true }),
@@ -41,7 +41,7 @@ import { ScheduleModule } from '@nestjs/schedule';
           },
         },
         defaults: {
-          from: configService.get('MAIL_FROM') || '"No Reply" <noreply@financeapp.com>',
+          from: configService.get('MAIL_FROM') || '"No Reply" <noreply@financepro.com>',
         },
       }),
       inject: [ConfigService],

@@ -1,4 +1,4 @@
-# 💰 FinanceApp - Gestão Financeira Inteligente
+# 💰 Finance Pro - Gestão Financeira Inteligente
 
 ![Badge Status](https://img.shields.io/badge/Status-Em_Desenvolvimento-yellow)
 ![Badge License](https://img.shields.io/badge/License-MIT-blue)

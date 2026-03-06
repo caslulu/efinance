@@ -60,21 +60,23 @@ export const UpsertCategoryModal = ({ isOpen, category, onClose, onSuccess }: Up
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="name">Nome</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              required
-              placeholder="ex: Alimentação, Transporte"
-            />
+          <div className="flex items-end gap-3">
+            <div className="grid gap-2 shrink-0">
+              <Label>Ícone</Label>
+              <IconPicker value={icon} onChange={setIcon} />
+            </div>
+            <div className="grid gap-2 flex-1">
+              <Label htmlFor="name">Nome</Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                required
+                placeholder="ex: Alimentação, Transporte"
+              />
+            </div>
           </div>
-          <div className="grid gap-2">
-            <Label>Ícone</Label>
-            <IconPicker value={icon} onChange={setIcon} />
-          </div>
-          <DialogFooter>
+          <DialogFooter className="mt-4">
             <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
             <Button type="submit" disabled={loading}>
               {loading ? 'Salvando...' : category ? 'Salvar Alterações' : 'Criar'}

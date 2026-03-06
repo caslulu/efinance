@@ -51,7 +51,7 @@ export const OnboardingPage = () => {
             {step === 3 ? <CheckCircle2 size={32} /> : <Wallet size={32} />}
           </div>
           <CardTitle className="text-2xl">
-            {step === 1 && 'Bem-vindo ao FinanceApp!'}
+            {step === 1 && 'Bem-vindo ao Finance Pro!'}
             {step === 2 && 'Sua Primeira Carteira'}
             {step === 3 && 'Tudo Pronto!'}
           </CardTitle>

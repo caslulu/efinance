@@ -4,7 +4,7 @@ const randomUser = `user${Math.floor(Math.random() * 10000)}`;
 const email = `${randomUser}@test.com`;
 const password = 'password123';
 
-test.describe('FinanceApp Core Flow', () => {
+test.describe('Finance Pro Core Flow', () => {
   test('Complete flow: Register -> Create Wallet -> Add Transaction', async ({ page }) => {
     // 1. Register
     await page.goto('/register');
@@ -14,24 +14,31 @@ test.describe('FinanceApp Core Flow', () => {
     await page.fill('input#confirmPassword', password);
     await page.click('button[type="submit"]');
 
-    // Wait for verification screen or auto-login (if Google flow, but here is manual)
-    // Expect verification screen
-    await expect(page.locator('text=Código de Verificação')).toBeVisible();
+    // Wait for verification screen or auto-login
+    await expect(page.locator('text=Código de Verificação').or(page.locator('text=Verificação de Email'))).toBeVisible();
     
-    // We can't easily get the email code in E2E without backend access helpers.
-    // For now, let's assume we can't fully test registration completion without mocking API.
-    // ALTERNATIVE: Use an existing user if possible, or mock the API response.
+    // We intercept the network to bypass real email check in e2e
+    await page.route('**/auth/verify-email', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ access_token: 'fake-token', id: 1, username: randomUser })
+      });
+    });
+
+    await page.route('**/auth/profile', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ id: 1, username: randomUser })
+      });
+    });
     
-    // Since I can't check email, I will skip registration test and assume I can login with a known user 
-    // OR I will pause here.
-    
-    // BETTER: Mock the API requests to bypass email? No, Playwright hits real backend.
-    
-    // I will try to login with a user I know exists or created manually.
-    // If you haven't created a user yet, this test will fail.
-    // Let's assume 'admin' / 'admin123' exists or similar? No.
-    
-    // I will write the test but comment out the registration part and assume user is logged in
-    // or I will implement a "backdoor" or just focus on the frontend logic assuming auth works.
+    // Fill the verification code input (assuming it exists and is required to continue)
+    const verificationInput = page.locator('input[placeholder*="Código"], input[type="text"]').first();
+    if (await verificationInput.isVisible()) {
+      await verificationInput.fill('123456');
+      await page.click('button[type="submit"], button:has-text("Verificar")');
+    }
   });
 });

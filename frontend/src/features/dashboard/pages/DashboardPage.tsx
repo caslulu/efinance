@@ -116,7 +116,7 @@ export const DashboardPage = () => {
             </div>
             <DialogDescription>Transações nesta categoria nos últimos 30 dias.</DialogDescription>
           </DialogHeader>
-          <div className="mt-4 border rounded-md overflow-hidden">
+          <div className="mt-4 border rounded-md overflow-x-auto">
             <Table>
               <TableHeader className="bg-muted">
                 <TableRow>

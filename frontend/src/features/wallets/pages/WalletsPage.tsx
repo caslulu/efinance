@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import type { Wallet } from '../../../types/Wallet';
 import type { Card } from '../../../types/Card';
 import { useWallets, useSubscriptions } from '@/hooks';
+import { useDeleteCard } from '../../../hooks/useCards';
 import { AddTransactionModal } from '../components/AddTransactionModal';
 import { CreateWalletModal } from '../components/CreateWalletModal';
 import { EditWalletModal } from '../components/EditWalletModal';
@@ -13,6 +14,8 @@ import { Button } from '@/components/ui/button';
 import { ArrowRightLeft } from 'lucide-react';
 import { api } from '@/api/api';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/lib/queryClient';
 import {
   DndContext,
   closestCenter,
@@ -30,7 +33,28 @@ import {
 } from '@dnd-kit/sortable';
 import { SortableWalletCard } from '../components/SortableWalletCard';
 
+function useColumnCount() {
+  const [cols, setCols] = useState(() => {
+    if (typeof window === 'undefined') return 3;
+    if (window.innerWidth >= 1024) return 3;
+    if (window.innerWidth >= 640) return 2;
+    return 1;
+  });
+  useEffect(() => {
+    const update = () => {
+      if (window.innerWidth >= 1024) setCols(3);
+      else if (window.innerWidth >= 640) setCols(2);
+      else setCols(1);
+    };
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+  return cols;
+}
+
 export const WalletsPage = () => {
+  const queryClient = useQueryClient();
+  const columnCount = useColumnCount();
   const { data: initialWallets = [], refetch: refetchWallets } = useWallets();
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const { refetch: refetchSubscriptions } = useSubscriptions();
@@ -43,9 +67,6 @@ export const WalletsPage = () => {
   const [editCard, setEditCard] = useState<Card | null>(null);
   const [payInvoiceCard, setPayInvoiceCard] = useState<Card | null>(null);
 
-  // Cards data per wallet
-  const [cardsMap, setCardsMap] = useState<Record<number, Card[]>>({});
-
   const [transactionModal, setTransactionModal] = useState<{
     isOpen: boolean;
     type: 'INCOME' | 'EXPENSE' | null;
@@ -57,7 +78,10 @@ export const WalletsPage = () => {
   const refetchData = () => {
     refetchWallets();
     refetchSubscriptions();
-    fetchAllCards();
+    queryClient.invalidateQueries({ queryKey: queryKeys.cards });
+    queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
+    queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
+    queryClient.invalidateQueries({ queryKey: queryKeys.wallets });
   };
 
   const openTransaction = (walletId: number, type: 'INCOME' | 'EXPENSE', walletType: string) => {
@@ -74,37 +98,16 @@ export const WalletsPage = () => {
     });
   };
 
-  // Fetch cards for all wallets
-  const fetchAllCards = async () => {
-    const allWallets = initialWallets.length > 0 ? initialWallets : wallets;
-    const map: Record<number, Card[]> = {};
-    await Promise.all(
-      allWallets.map(async (w) => {
-        try {
-          const res = await api.get<Card[]>(`/cards/wallet/${w.id}`);
-          map[w.id] = Array.isArray(res.data) ? res.data : [];
-        } catch {
-          map[w.id] = [];
-        }
-      }),
-    );
-    setCardsMap(map);
-  };
-
   // Sync state with fetched data
   useEffect(() => {
     setWallets(initialWallets);
   }, [initialWallets]);
 
-  useEffect(() => {
-    if (initialWallets.length > 0) {
-      fetchAllCards();
-    }
-  }, [initialWallets]);
+  const deleteCard = useDeleteCard();
 
   const handleDeleteCard = async (id: number) => {
     try {
-      await api.delete(`/cards/${id}`);
+      await deleteCard.mutateAsync(id);
       toast.success('Cartão excluído!');
       setEditCard(null);
       refetchData();
@@ -152,9 +155,9 @@ export const WalletsPage = () => {
 
   return (
     <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <h1 className="text-3xl font-bold text-foreground">Minhas Carteiras</h1>
-        <div className="flex gap-4">
+        <div className="flex gap-4 w-full sm:w-auto">
           <Button
             variant="outline"
             onClick={() => setIsTransferOpen(true)}
@@ -177,27 +180,32 @@ export const WalletsPage = () => {
         collisionDetection={closestCenter}
         onDragEnd={handleDragEnd}
       >
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          <SortableContext
-            items={wallets.map(w => w.id)}
-            strategy={rectSortingStrategy}
-          >
-            {wallets.map((wallet) => (
-              <SortableWalletCard
-                key={wallet.id}
-                wallet={wallet}
-                cards={cardsMap[wallet.id] || []}
-                onAddFunds={() => openTransaction(wallet.id, 'INCOME', wallet.type)}
-                onAddExpense={() => openTransaction(wallet.id, 'EXPENSE', wallet.type)}
-                onEdit={() => setEditWallet(wallet)}
-                onAddCard={() => setCreateCardWalletId(wallet.id)}
-                onEditCard={(card) => setEditCard(card)}
-                onAddCardExpense={(card) => openCardExpense(card, wallet.type)}
-                onPayCardInvoice={(card) => setPayInvoiceCard(card)}
-              />
+        <SortableContext
+          items={wallets.map(w => w.id)}
+          strategy={rectSortingStrategy}
+        >
+          <div className="flex gap-6">
+            {Array.from({ length: columnCount }, (_, colIndex) => (
+              <div key={colIndex} className="flex-1 flex flex-col gap-6">
+                {wallets
+                  .filter((_, i) => i % columnCount === colIndex)
+                  .map((wallet) => (
+                    <SortableWalletCard
+                      key={wallet.id}
+                      wallet={wallet}
+                      onAddFunds={() => openTransaction(wallet.id, 'INCOME', wallet.type)}
+                      onAddExpense={() => openTransaction(wallet.id, 'EXPENSE', wallet.type)}
+                      onEdit={() => setEditWallet(wallet)}
+                      onAddCard={() => setCreateCardWalletId(wallet.id)}
+                      onEditCard={(card) => setEditCard(card)}
+                      onAddCardExpense={(card) => openCardExpense(card, wallet.type)}
+                      onPayCardInvoice={(card) => setPayInvoiceCard(card)}
+                    />
+                  ))}
+              </div>
             ))}
-          </SortableContext>
-        </div>
+          </div>
+        </SortableContext>
       </DndContext>
 
       {wallets.length === 0 && (

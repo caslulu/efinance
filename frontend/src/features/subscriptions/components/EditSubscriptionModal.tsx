@@ -13,7 +13,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { ALLOWED_METHODS, PAYMENT_METHODS, WALLET_TYPES } from '../../../constants/paymentMethods';
-import { CategoryIcon } from '@/components/IconPicker';
+import { CategoryIcon, IconPicker } from '@/components/IconPicker';
 import { api } from '@/api/api';
 import type { Wallet } from '@/types/Wallet';
 import type { Subscription } from '@/types/Subscription';
@@ -36,6 +36,8 @@ export const EditSubscriptionModal = ({ isOpen, subscription, onClose, onSuccess
     const [walletId, setWalletId] = React.useState('');
     const [categoryId, setCategoryId] = React.useState('');
     const [paymentMethod, setPaymentMethod] = React.useState<Subscription['payment_method'] | ''>('');
+    const [icon, setIcon] = React.useState('');
+    const [step, setStep] = React.useState(1);
 
     const [wallets, setWallets] = React.useState<Wallet[]>([]);
     const [categories, setCategories] = React.useState<any[]>([]);
@@ -64,6 +66,8 @@ export const EditSubscriptionModal = ({ isOpen, subscription, onClose, onSuccess
             setWalletId(String(subscription.wallet_id || ''));
             setCategoryId(String(subscription.category_id || ''));
             setPaymentMethod(subscription.payment_method || '');
+            setIcon(subscription.icon || '');
+            setStep(1);
         }
     }, [subscription, isOpen]);
 
@@ -87,6 +91,15 @@ export const EditSubscriptionModal = ({ isOpen, subscription, onClose, onSuccess
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
+        if (step === 1) {
+            if (!name || !value) {
+                toast.warning("Preencha nome e valor para continuar");
+                return;
+            }
+            setStep(2);
+            return;
+        }
+
         if (availableMethods.length > 0 && !paymentMethod) {
             toast.warning('Selecione um método de pagamento');
             return;
@@ -107,6 +120,7 @@ export const EditSubscriptionModal = ({ isOpen, subscription, onClose, onSuccess
                     wallet_id: Number(walletId),
                     category_id: Number(categoryId),
                     payment_method: paymentMethod || undefined,
+                    icon: icon || undefined,
                 }
             });
             onSuccess();
@@ -127,102 +141,127 @@ export const EditSubscriptionModal = ({ isOpen, subscription, onClose, onSuccess
                         Atualize os dados desta recorrência abaixo. Alterações afetarão apenas transações futuras não geradas ainda.
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="grid gap-4 py-4 max-h-[80vh] overflow-y-auto pr-2">
-                    <div className="grid gap-2">
-                        <Label htmlFor="edit-name">Nome / Título</Label>
-                        <Input id="edit-name" value={name} onChange={e => setName(e.target.value)} required />
-                    </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="edit-desc">Descrição (Opcional)</Label>
-                        <Input id="edit-desc" value={description} onChange={e => setDescription(e.target.value)} />
-                    </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="edit-type">Tipo</Label>
-                        <Select value={type} onValueChange={setType}>
-                            <SelectTrigger id="edit-type">
-                                <SelectValue placeholder="Selecione o tipo" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="EXPENSE">Despesa</SelectItem>
-                                <SelectItem value="INCOME">Receita</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="edit-value">Valor</Label>
-                            <CurrencyInput id="edit-value" value={value} onValueChange={setValue} required />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="edit-freq">Frequência</Label>
-                            <Select value={frequency} onValueChange={setFrequency}>
-                                <SelectTrigger id="edit-freq">
-                                    <SelectValue placeholder="Selecione a frequência" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="WEEKLY">Semanal</SelectItem>
-                                    <SelectItem value="MONTHLY">Mensal</SelectItem>
-                                    <SelectItem value="QUARTERLY">Trimestral</SelectItem>
-                                    <SelectItem value="YEARLY">Anual</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="edit-start">Data Base (Início)</Label>
-                        <Input id="edit-start" type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required />
-                    </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="edit-wallet">Carteira</Label>
-                        <Select value={walletId} onValueChange={setWalletId}>
-                            <SelectTrigger id="edit-wallet">
-                                <SelectValue placeholder="Selecione a Carteira" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {wallets.map(w => <SelectItem key={w.id} value={String(w.id)}>{w.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    {availableMethods.length > 0 && (
-                        <div className="grid gap-2">
-                            <Label htmlFor="edit-method">Método de Pagamento</Label>
-                            <Select value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as Subscription['payment_method'])}>
-                                <SelectTrigger id="edit-method">
-                                    <SelectValue placeholder="Selecione o método" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {availableMethods.map(methodKey => (
-                                        <SelectItem key={methodKey} value={methodKey}>
-                                            {PAYMENT_METHODS[methodKey as keyof typeof PAYMENT_METHODS]}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
+                <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+                    {step === 1 && (
+                        <>
+                            <div className="flex items-end gap-3">
+                                <div className="grid gap-2 shrink-0">
+                                    <Label>Ícone</Label>
+                                    <IconPicker value={icon} onChange={setIcon} />
+                                </div>
+                                <div className="grid gap-2 flex-1">
+                                    <Label htmlFor="edit-name">Nome / Título</Label>
+                                    <Input id="edit-name" value={name} onChange={e => setName(e.target.value)} required />
+                                </div>
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="edit-desc">Descrição (Opcional)</Label>
+                                <Input id="edit-desc" value={description} onChange={e => setDescription(e.target.value)} />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="edit-type">Tipo</Label>
+                                <Select value={type} onValueChange={setType}>
+                                    <SelectTrigger id="edit-type">
+                                        <SelectValue placeholder="Selecione o tipo" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="EXPENSE">Despesa</SelectItem>
+                                        <SelectItem value="INCOME">Receita</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="edit-value">Valor</Label>
+                                    <CurrencyInput id="edit-value" value={value} onValueChange={setValue} required />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="edit-freq">Frequência</Label>
+                                    <Select value={frequency} onValueChange={setFrequency}>
+                                        <SelectTrigger id="edit-freq">
+                                            <SelectValue placeholder="Selecione a frequência" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="WEEKLY">Semanal</SelectItem>
+                                            <SelectItem value="MONTHLY">Mensal</SelectItem>
+                                            <SelectItem value="QUARTERLY">Trimestral</SelectItem>
+                                            <SelectItem value="YEARLY">Anual</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                        </>
                     )}
 
-                    <div className="grid gap-2">
-                        <Label htmlFor="edit-category">Categoria</Label>
-                        <Select value={categoryId} onValueChange={setCategoryId}>
-                            <SelectTrigger id="edit-category">
-                                <SelectValue placeholder="Selecione a Categoria" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {categories.map(c => (
-                                    <SelectItem key={c.id} value={String(c.id)}>
-                                        <div className="flex items-center gap-2">
-                                            <CategoryIcon name={c.icon} className="h-4 w-4" />
-                                            <span>{c.name}</span>
-                                        </div>
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <DialogFooter>
-                        <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-                        <Button type="submit" disabled={updateMutation.isPending}>{updateMutation.isPending ? 'Salvando...' : 'Salvar'}</Button>
+                    {step === 2 && (
+                        <>
+                            <div className="grid gap-2">
+                                <Label htmlFor="edit-start">Data Base (Início)</Label>
+                                <Input id="edit-start" type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="edit-wallet">Carteira</Label>
+                                <Select value={walletId} onValueChange={setWalletId} required>
+                                    <SelectTrigger id="edit-wallet">
+                                        <SelectValue placeholder="Selecione a Carteira" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {wallets.map(w => <SelectItem key={w.id} value={String(w.id)}>{w.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {availableMethods.length > 0 && (
+                                <div className="grid gap-2">
+                                    <Label htmlFor="edit-method">Método de Pagamento</Label>
+                                    <Select value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as Subscription['payment_method'])}>
+                                        <SelectTrigger id="edit-method">
+                                            <SelectValue placeholder="Selecione o método" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {availableMethods.map(methodKey => (
+                                                <SelectItem key={methodKey} value={methodKey}>
+                                                    {PAYMENT_METHODS[methodKey as keyof typeof PAYMENT_METHODS]}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
+
+                            <div className="grid gap-2">
+                                <Label htmlFor="edit-category">Categoria</Label>
+                                <Select value={categoryId} onValueChange={setCategoryId} required>
+                                    <SelectTrigger id="edit-category">
+                                        <SelectValue placeholder="Selecione a Categoria" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {categories.map(c => (
+                                            <SelectItem key={c.id} value={String(c.id)}>
+                                                <div className="flex items-center gap-2">
+                                                    <CategoryIcon name={c.icon} className="h-4 w-4" />
+                                                    <span>{c.name}</span>
+                                                </div>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </>
+                    )}
+
+                    <DialogFooter className="mt-4 gap-2">
+                        {step === 1 ? (
+                            <>
+                                <Button type="button" variant="outline" onClick={onClose} className="w-full sm:w-auto">Cancelar</Button>
+                                <Button type="submit" className="w-full sm:w-auto">Próximo</Button>
+                            </>
+                        ) : (
+                            <>
+                                <Button type="button" variant="outline" onClick={() => setStep(1)} className="w-full sm:w-auto">Voltar</Button>
+                                <Button type="submit" disabled={updateMutation.isPending} className="w-full sm:w-auto">{updateMutation.isPending ? 'Salvando...' : 'Salvar'}</Button>
+                            </>
+                        )}
                     </DialogFooter>
                 </form>
             </DialogContent>

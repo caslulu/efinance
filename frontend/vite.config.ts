@@ -10,8 +10,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
-        name: 'FinanceApp',
-        short_name: 'FinanceApp',
+        name: 'Finance Pro',
+        short_name: 'Finance Pro',
         description: 'Gestão Financeira Inteligente',
         theme_color: '#2563eb',
         background_color: '#ffffff',

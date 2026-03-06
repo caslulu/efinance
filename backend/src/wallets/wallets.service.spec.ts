@@ -145,6 +145,7 @@ describe('WalletsService', () => {
 
     it('should throw BadRequestException if expense > current balance (Insufficient Funds)', async () => {
       const walletId = 1;
+      const amount = 150.00;
       const currentWallet = {
         id: walletId,
         user_id: userId,

@@ -31,4 +31,8 @@ export class CreateSubscriptionDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsString()
+  icon?: string;
 }

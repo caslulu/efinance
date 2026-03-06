@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { api } from '../../../api/api';
+import { useCreateCard } from '../../../hooks/useCards';
 import {
   Dialog,
   DialogContent,
@@ -48,14 +48,15 @@ export const CreateCardModal = ({
   const [closingDay, setClosingDay] = useState('');
   const [dueDay, setDueDay] = useState('');
   const [cardLimit, setCardLimit] = useState('');
-  const [loading, setLoading] = useState(false);
+  
+  const createCard = useCreateCard();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!walletId) return;
-    setLoading(true);
+    
     try {
-      await api.post('/cards', {
+      await createCard.mutateAsync({
         wallet_id: walletId,
         name,
         flag,
@@ -73,8 +74,6 @@ export const CreateCardModal = ({
       setCardLimit('');
     } catch {
       toast.error('Falha ao criar cartão');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -154,8 +153,8 @@ export const CreateCardModal = ({
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Criando...' : 'Criar'}
+            <Button type="submit" disabled={createCard.isPending}>
+              {createCard.isPending ? 'Criando...' : 'Criar'}
             </Button>
           </DialogFooter>
         </form>
