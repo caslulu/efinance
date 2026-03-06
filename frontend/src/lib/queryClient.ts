@@ -43,4 +43,7 @@ export const queryKeys = {
   
   dashboard: ['dashboard'] as const,
   dashboardCategory: (category: string) => ['dashboard', 'category', category] as const,
+
+  chatConversations: ['chat', 'conversations'] as const,
+  chatConversation: (id: number) => ['chat', 'conversations', id] as const,
 };

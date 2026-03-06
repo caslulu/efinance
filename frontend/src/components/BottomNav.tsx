@@ -10,7 +10,8 @@ import {
   Tags,
   Settings,
   User,
-  LogOut
+  LogOut,
+  Sparkles
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -65,6 +66,7 @@ export const BottomNav = () => {
             <NavItem to="/wishlists" icon={Gift} label="Wishlist" />
             <NavItem to="/subscriptions" icon={Repeat} label="Recorrências" />
             <NavItem to="/categories" icon={Tags} label="Categorias" />
+            <NavItem to="/chat" icon={Sparkles} label="Assistente IA" />
             <NavItem to="/profile" icon={User} label="Perfil" />
             <NavItem to="/settings" icon={Settings} label="Ajustes" />
           </div>

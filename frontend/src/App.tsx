@@ -17,6 +17,8 @@ import { SettingsPage } from './features/settings/pages/SettingsPage';
 import { ProfilePage } from './features/profile/pages/ProfilePage';
 import { BudgetsPage } from './features/budgets/pages/BudgetsPage';
 import { WishlistPage } from './features/wishlist/pages/WishlistPage';
+import { ChatPage } from './features/chat/pages/ChatPage';
+import { ChatWidget } from './features/chat/components/ChatWidget';
 import { useMarkPriceAlertAsRead, usePriceAlertNotifications } from './hooks';
 import { Popover, PopoverContent, PopoverTrigger } from './components/ui/popover';
 import { NotFoundPage } from './features/404/NotFoundPage';
@@ -38,7 +40,8 @@ import {
   Tags,
   Menu,
   X,
-  Bell
+  Bell,
+  Sparkles
 } from 'lucide-react';
 
 const ProtectedRoute = ({ children }: { children: ReactElement }) => {
@@ -98,6 +101,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/wishlists': 'Wishlist',
   '/subscriptions': 'Recorrências',
   '/categories': 'Categorias',
+  '/chat': 'Assistente IA',
   '/profile': 'Perfil',
   '/settings': 'Configurações',
 };
@@ -185,6 +189,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
             <NavLink to="/wishlists" icon={Gift} label="Wishlist" isCollapsed={isCollapsed} onClick={() => setIsSidebarOpen(false)} />
             <NavLink to="/subscriptions" icon={Repeat} label="Recorrências" isCollapsed={isCollapsed} onClick={() => setIsSidebarOpen(false)} />
             <NavLink to="/categories" icon={Tags} label="Categorias" isCollapsed={isCollapsed} onClick={() => setIsSidebarOpen(false)} />
+            <NavLink to="/chat" icon={Sparkles} label="Assistente IA" isCollapsed={isCollapsed} onClick={() => setIsSidebarOpen(false)} />
           </nav>
 
           <div className={`p-4 border-t ${isCollapsed ? 'px-2' : ''}`}>
@@ -328,6 +333,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
           </div>
         </main>
         <BottomNav />
+        <ChatWidget />
       </div>
     </div>
   );
@@ -442,6 +448,18 @@ function App() {
                 <Layout>
                   <ProfilePage />
                 </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chat"
+            element={
+              <ProtectedRoute>
+                <OnboardingWrapper>
+                  <Layout>
+                    <ChatPage />
+                  </Layout>
+                </OnboardingWrapper>
               </ProtectedRoute>
             }
           />

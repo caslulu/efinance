@@ -15,6 +15,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { BudgetsModule } from './budgets/budgets.module';
 import { WishlistModule } from './wishlist/wishlist.module';
 import { CardsModule } from './cards/cards.module';
+import { ChatModule } from './chat/chat.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
@@ -58,6 +59,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     BudgetsModule,
     WishlistModule,
     CardsModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [
