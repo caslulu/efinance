@@ -36,7 +36,8 @@ async function bootstrap() {
 
       if (
         allowedOrigins.has(origin) ||
-        (!isProduction && /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin))
+        (!isProduction && /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) ||
+        /^https?:\/\/(10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|192\.168\.\d+\.\d+)(:\d+)?$/.test(origin)
       ) {
         callback(null, true);
         return;
