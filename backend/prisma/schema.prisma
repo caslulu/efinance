@@ -49,6 +49,7 @@ model User {
   budgets               Budget[]
   priceAlertNotifications WishlistPriceAlertNotification[]
   chatConversations     ChatConversation[]
+  chatDailyUsages       ChatDailyUsage[]
 }
 
 model Wallet {
@@ -244,4 +245,17 @@ model ChatMessage {
   created_at      DateTime         @default(now())
 
   @@index([conversation_id])
+}
+
+model ChatDailyUsage {
+  id              Int      @id @default(autoincrement())
+  user_id         Int
+  user            User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  usage_date      DateTime @db.Date
+  questions_count Int      @default(0)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  @@unique([user_id, usage_date])
+  @@index([user_id, usage_date])
 }

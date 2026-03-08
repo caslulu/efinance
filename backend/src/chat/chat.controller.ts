@@ -9,6 +9,7 @@ import {
   Res,
   ParseIntPipe,
   UseGuards,
+  HttpException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Throttle } from '@nestjs/throttler';
@@ -46,8 +47,28 @@ export class ChatController {
       )) {
         res.write(`data: ${data}\n\n`);
       }
-    } catch (error) {
-      res.write(`data: ${JSON.stringify({ type: 'error', message: 'Erro ao gerar resposta' })}\n\n`);
+    } catch (error: unknown) {
+      const isDailyLimitError =
+        error instanceof HttpException &&
+        error.getStatus() === 429;
+
+      const errorResponse =
+        isDailyLimitError && error instanceof HttpException
+          ? error.getResponse()
+          : null;
+
+      const dailyLimitMessage =
+        typeof errorResponse === 'object' &&
+        errorResponse !== null &&
+        'message' in errorResponse &&
+        typeof errorResponse.message === 'string'
+          ? errorResponse.message
+          : 'Limite diário atingido';
+
+      const message =
+        isDailyLimitError ? dailyLimitMessage : 'Erro ao gerar resposta';
+
+      res.write(`data: ${JSON.stringify({ type: 'error', message })}\n\n`);
     } finally {
       res.end();
     }
