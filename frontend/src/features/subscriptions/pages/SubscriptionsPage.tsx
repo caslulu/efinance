@@ -17,7 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import clsx from 'clsx';
-import { Plus, Trash, PauseCircle, PlayCircle, RefreshCw, Edit2 } from 'lucide-react';
+import { Plus, Trash, PauseCircle, PlayCircle, RefreshCw, Edit2, CalendarSync, DollarSign, Activity, Moon } from 'lucide-react';
 import { CategoryIcon } from '@/components/IconPicker';
 
 const frequencyLabels: Record<string, string> = {
@@ -79,14 +79,25 @@ export const SubscriptionsPage = () => {
   };
 
   return (
-    <div className="p-8 space-y-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Recorrências</h1>
-        <div className="flex gap-4">
-          <Button variant="ghost" size="sm" onClick={handleTriggerCheck} className="text-muted-foreground" title="Verificar e gerar transações pendentes das recorrências ativas">
+    <div className="p-6 lg:p-8 space-y-8">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex items-center gap-4">
+          <div className="p-3 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/25">
+            <CalendarSync className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">Recorrências</h1>
+            <p className="text-sm text-muted-foreground">
+              {subscriptions.length} item{subscriptions.length !== 1 ? 'ns' : ''} recorrente{subscriptions.length !== 1 ? 's' : ''}
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <Button variant="outline" size="sm" onClick={handleTriggerCheck} title="Verificar e gerar transações pendentes das recorrências ativas">
             <RefreshCw className="mr-2 h-4 w-4" /> Sincronizar
           </Button>
-          <Button onClick={() => setIsCreateOpen(true)}>
+          <Button onClick={() => setIsCreateOpen(true)} size="sm">
             <Plus className="mr-2 h-4 w-4" /> Novo Recorrente
           </Button>
         </div>
@@ -94,28 +105,40 @@ export const SubscriptionsPage = () => {
 
       {subscriptions.length > 0 && (
         <div className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-lg border bg-card p-4">
-            <p className="text-sm text-muted-foreground">Custo Mensal Estimado</p>
+          <div className="group relative overflow-hidden rounded-2xl border border-border/50 bg-card p-5 transition-all hover:shadow-md hover:shadow-emerald-500/5">
+            <div className="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-emerald-500 to-teal-500" />
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
+                <DollarSign className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <p className="text-sm font-medium text-muted-foreground">Custo Mensal Estimado</p>
+            </div>
             <p className="text-2xl font-bold text-foreground">{formatCurrency(summary.monthlyTotal)}</p>
           </div>
-          <div className="rounded-lg border bg-card p-4">
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-green-500" />
-              <p className="text-sm text-muted-foreground">Ativas</p>
+          <div className="group relative overflow-hidden rounded-2xl border border-border/50 bg-card p-5 transition-all hover:shadow-md hover:shadow-green-500/5">
+            <div className="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-green-500 to-emerald-500" />
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
+                <Activity className="h-4 w-4 text-green-600 dark:text-green-400" />
+              </div>
+              <p className="text-sm font-medium text-muted-foreground">Ativas</p>
             </div>
             <p className="text-2xl font-bold text-foreground">{summary.activeCount}</p>
           </div>
-          <div className="rounded-lg border bg-card p-4">
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-yellow-500" />
-              <p className="text-sm text-muted-foreground">Pausadas</p>
+          <div className="group relative overflow-hidden rounded-2xl border border-border/50 bg-card p-5 transition-all hover:shadow-md hover:shadow-amber-500/5">
+            <div className="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-amber-500 to-yellow-500" />
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30">
+                <Moon className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              </div>
+              <p className="text-sm font-medium text-muted-foreground">Pausadas</p>
             </div>
             <p className="text-2xl font-bold text-foreground">{summary.pausedCount}</p>
           </div>
         </div>
       )}
 
-      <div className="rounded-md border bg-card">
+      <div className="rounded-2xl border border-border/50 bg-card overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
@@ -133,7 +156,7 @@ export const SubscriptionsPage = () => {
               <TableRow key={sub.id}>
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded bg-slate-100 dark:bg-slate-800">
+                    <div className="p-2 rounded-xl bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-900 shadow-sm">
                       <CategoryIcon name={sub.icon || sub.category?.icon} className="h-4 w-4 text-slate-600 dark:text-slate-400" />
                     </div>
                     <span>{sub.name}</span>
@@ -178,8 +201,16 @@ export const SubscriptionsPage = () => {
             ))}
             {subscriptions.length === 0 && !loading && (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                  Nenhuma recorrência encontrada.
+                <TableCell colSpan={7} className="h-32 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="p-4 rounded-2xl bg-muted/50">
+                      <CalendarSync className="h-8 w-8 text-muted-foreground/40" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-foreground">Nenhuma recorrência</p>
+                      <p className="text-sm text-muted-foreground">Adicione itens recorrentes para acompanhar seus gastos fixos.</p>
+                    </div>
+                  </div>
                 </TableCell>
               </TableRow>
             )}

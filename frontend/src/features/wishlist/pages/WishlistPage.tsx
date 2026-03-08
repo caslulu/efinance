@@ -249,21 +249,30 @@ export const WishlistPage = () => {
   };
 
   return (
-    <div className="p-8 space-y-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-          <Gift className="text-emerald-600 dark:text-emerald-400" />
-          Wishlist
-        </h1>
+    <div className="p-6 lg:p-8 space-y-8">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex items-center gap-4">
+          <div className="p-3 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/25">
+            <Gift className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">Wishlist</h1>
+            <p className="text-sm text-muted-foreground">
+              {wishlists.length} lista{wishlists.length !== 1 ? 's' : ''} de desejo
+            </p>
+          </div>
+        </div>
       </div>
 
-      <form onSubmit={handleCreateWishlist} className="flex gap-2 max-w-xl">
+      <form onSubmit={handleCreateWishlist} className="flex gap-3 max-w-xl">
         <Input
           value={newWishlistName}
           onChange={(event) => setNewWishlistName(event.target.value)}
           placeholder="Nome da lista (ex: Viagem, Setup)"
+          className="h-10"
         />
-        <Button type="submit" disabled={createWishlist.isPending}>
+        <Button type="submit" disabled={createWishlist.isPending} className="shrink-0">
           <Plus className="mr-2 h-4 w-4" />
           Nova Lista
         </Button>
@@ -275,24 +284,27 @@ export const WishlistPage = () => {
           <Skeleton className="h-[250px] w-full" />
         </div>
       ) : wishlists.length === 0 ? (
-        <div className="py-20 text-center border-2 border-dashed rounded-xl text-muted-foreground">
-          Você ainda não tem listas de desejo. Crie a primeira acima.
+        <div className="py-24 text-center border-2 border-dashed rounded-2xl text-muted-foreground">
+          <div className="p-4 rounded-2xl bg-muted/50 inline-block mb-4">
+            <Gift className="h-10 w-10 text-muted-foreground/40" />
+          </div>
+          <p className="font-semibold text-lg mb-1">Nenhuma lista de desejo</p>
+          <p className="text-sm">Crie a primeira lista acima para começar.</p>
         </div>
       ) : (
         <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
-          <Card>
-            <CardHeader>
-              <CardTitle>Minhas Listas</CardTitle>
+          <Card className="border-border/50 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Minhas Listas</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-1.5">
               {wishlists.map((wishlist) => {
                 const isActive = wishlist.id === activeWishlistId;
 
                 return (
                   <div
                     key={wishlist.id}
-                    className={`rounded-lg border p-3 transition ${isActive ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30' : 'hover:bg-slate-50 dark:bg-slate-900/50 dark:hover:bg-slate-800'
-                      }`}
+                    className={`group rounded-xl border p-3 transition-all duration-200 ${isActive ? 'border-emerald-500/50 bg-emerald-50/80 dark:bg-emerald-900/20 shadow-sm shadow-emerald-500/10' : 'border-border/50 hover:border-border hover:bg-muted/50'}`}
                   >
                     <button
                       type="button"
@@ -328,18 +340,18 @@ export const WishlistPage = () => {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>
+          <Card className="border-border/50 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">
                 {selectedWishlist?.name || 'Selecione uma lista'}
               </CardTitle>
               <p className="text-sm text-muted-foreground">
-                Total estimado: {formatCurrency(wishlistTotal)}
+                Total estimado: <span className="font-semibold text-foreground">{formatCurrency(wishlistTotal)}</span>
               </p>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <form onSubmit={handleCreateProduct} className="space-y-3 rounded-lg border p-4 bg-slate-50 dark:bg-slate-900/50">
-                <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Adicionar item</p>
+            <CardContent className="space-y-5">
+              <form onSubmit={handleCreateProduct} className="space-y-3 rounded-xl border border-border/50 p-4 bg-muted/30">
+                <p className="text-sm font-semibold text-foreground">Adicionar item</p>
                 <div className="relative">
                   <Input
                     value={newProductUrl}
@@ -380,7 +392,7 @@ export const WishlistPage = () => {
                     Adicionar
                   </Button>
                 </div>
-                <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                <label className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Checkbox
                     checked={newProductSendPriceAlerts}
                     onCheckedChange={(checked) => setNewProductSendPriceAlerts(Boolean(checked))}
@@ -389,7 +401,7 @@ export const WishlistPage = () => {
                 </label>
               </form>
 
-              <div className="rounded-md border bg-card">
+              <div className="rounded-xl border border-border/50 bg-card overflow-hidden">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -517,12 +529,20 @@ export const WishlistPage = () => {
 
       {/* Rename Wishlist Modal */}
       <Dialog open={renameModal !== null} onOpenChange={(open) => !open && setRenameModal(null)}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle>Renomear Lista</DialogTitle>
-            <DialogDescription>Altere o nome da sua lista de desejo.</DialogDescription>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/25">
+                <Pencil className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl">Renomear Lista</DialogTitle>
+                <DialogDescription className="mt-1">Altere o nome da sua lista de desejo.</DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+          <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent -mx-6 my-1" />
+          <div className="grid gap-4 pt-2">
             <Input
               value={renameValue}
               onChange={(e) => setRenameValue(e.target.value)}
@@ -540,12 +560,20 @@ export const WishlistPage = () => {
 
       {/* Edit Product Modal */}
       <Dialog open={editProductModal !== null} onOpenChange={(open) => !open && setEditProductModal(null)}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle>Editar Item</DialogTitle>
-            <DialogDescription>Atualize o nome e preço do item.</DialogDescription>
+        <DialogContent className="sm:max-w-[460px]">
+          <DialogHeader className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/25">
+                <Pencil className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl">Editar Item</DialogTitle>
+                <DialogDescription className="mt-1">Atualize o nome e preço do item.</DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+          <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent -mx-6 my-1" />
+          <div className="grid gap-4 pt-2">
             <div className="grid gap-2">
               <label className="text-sm font-medium">Nome do item</label>
               <Input
@@ -574,7 +602,7 @@ export const WishlistPage = () => {
                 placeholder="https://amazon.com.br/..."
               />
             </div>
-            <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+            <label className="flex items-center gap-2 text-sm text-muted-foreground">
               <Checkbox
                 checked={editProductSendPriceAlerts}
                 onCheckedChange={(checked) => setEditProductSendPriceAlerts(Boolean(checked))}
@@ -592,20 +620,31 @@ export const WishlistPage = () => {
       {/* History Modal */}
       <Dialog open={historyModal !== null} onOpenChange={(open) => !open && setHistoryModal(null)}>
         <DialogContent className="sm:max-w-[700px]">
-          <DialogHeader>
-            <DialogTitle>Histórico de Preço</DialogTitle>
-            <DialogDescription>
-              {historyModal?.productName}
-            </DialogDescription>
+          <DialogHeader className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 shadow-lg shadow-purple-500/25">
+                <History className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl">Histórico de Preço</DialogTitle>
+                <DialogDescription className="mt-1">
+                  {historyModal?.productName}
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
+          <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent -mx-6 my-1" />
           <div className="py-4">
             {loadingHistory ? (
               <div className="flex justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-emerald-500 dark:text-emerald-400" />
               </div>
             ) : productHistory.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-                Nenhum histórico de preço registrado ainda.
+              <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-xl">
+                <div className="p-3 rounded-xl bg-muted/50 inline-block mb-3">
+                  <History className="h-8 w-8 text-muted-foreground/40" />
+                </div>
+                <p className="font-medium">Nenhum histórico de preço registrado ainda.</p>
               </div>
             ) : (
               <div className="h-[300px] w-full">

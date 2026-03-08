@@ -18,6 +18,7 @@ import { api } from '@/api/api';
 import type { Wallet } from '@/types/Wallet';
 import type { Subscription } from '@/types/Subscription';
 import { useUpdateSubscription } from '@/hooks';
+import { Pencil } from 'lucide-react';
 
 interface EditSubscriptionModalProps {
     isOpen: boolean;
@@ -134,14 +135,27 @@ export const EditSubscriptionModal = ({ isOpen, subscription, onClose, onSuccess
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                    <DialogTitle>Editar Item Recorrente</DialogTitle>
-                    <DialogDescription>
-                        Atualize os dados desta recorrência abaixo. Alterações afetarão apenas transações futuras não geradas ainda.
-                    </DialogDescription>
+            <DialogContent className="sm:max-w-[480px]">
+                <DialogHeader className="space-y-3">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/25">
+                            <Pencil className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                            <DialogTitle className="text-xl">Editar Item Recorrente</DialogTitle>
+                            <DialogDescription className="mt-1">
+                                Atualize os dados desta recorrência. Alterações afetam apenas transações futuras.
+                            </DialogDescription>
+                        </div>
+                    </div>
+                    {/* Step indicator */}
+                    <div className="flex items-center gap-2 pt-1">
+                        <div className={`h-1.5 flex-1 rounded-full transition-colors ${step >= 1 ? 'bg-blue-500' : 'bg-muted'}`} />
+                        <div className={`h-1.5 flex-1 rounded-full transition-colors ${step >= 2 ? 'bg-blue-500' : 'bg-muted'}`} />
+                    </div>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+                <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent -mx-6 my-1" />
+                <form onSubmit={handleSubmit} className="grid gap-5 pt-2">
                     {step === 1 && (
                         <>
                             <div className="flex items-end gap-3">
@@ -250,7 +264,7 @@ export const EditSubscriptionModal = ({ isOpen, subscription, onClose, onSuccess
                         </>
                     )}
 
-                    <DialogFooter className="mt-4 gap-2">
+                    <DialogFooter className="pt-2 gap-2">
                         {step === 1 ? (
                             <>
                                 <Button type="button" variant="outline" onClick={onClose} className="w-full sm:w-auto">Cancelar</Button>

@@ -16,6 +16,7 @@ import { ALLOWED_METHODS, PAYMENT_METHODS, WALLET_TYPES } from '../../../constan
 import { CategoryIcon, IconPicker } from '@/components/IconPicker';
 import { api } from '@/api/api';
 import type { Wallet } from '@/types/Wallet';
+import { CalendarSync } from 'lucide-react';
 
 interface CreateSubscriptionModalProps {
   isOpen: boolean;
@@ -119,14 +120,27 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Novo Item Recorrente</DialogTitle>
-          <DialogDescription>
-            Configure uma nova transação recorrente ou assinatura abaixo.
-          </DialogDescription>
+      <DialogContent className="sm:max-w-[480px]">
+        <DialogHeader className="space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/25">
+              <CalendarSync className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <DialogTitle className="text-xl">Novo Item Recorrente</DialogTitle>
+              <DialogDescription className="mt-1">
+                Configure uma nova transação recorrente ou assinatura abaixo.
+              </DialogDescription>
+            </div>
+          </div>
+          {/* Step indicator */}
+          <div className="flex items-center gap-2 pt-1">
+            <div className={`h-1.5 flex-1 rounded-full transition-colors ${step >= 1 ? 'bg-emerald-500' : 'bg-muted'}`} />
+            <div className={`h-1.5 flex-1 rounded-full transition-colors ${step >= 2 ? 'bg-emerald-500' : 'bg-muted'}`} />
+          </div>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent -mx-6 my-1" />
+        <form onSubmit={handleSubmit} className="grid gap-5 pt-2">
           {step === 1 && (
             <>
               <div className="flex items-end gap-3">
@@ -235,7 +249,7 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
             </>
           )}
 
-          <DialogFooter className="mt-4 gap-2">
+          <DialogFooter className="pt-2 gap-2">
             {step === 1 ? (
               <>
                 <Button type="button" variant="outline" onClick={onClose} className="w-full sm:w-auto">Cancelar</Button>
