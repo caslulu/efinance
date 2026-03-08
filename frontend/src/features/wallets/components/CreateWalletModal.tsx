@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { WALLET_TYPES } from '../../../constants/paymentMethods';
+import { Wallet as WalletIcon } from 'lucide-react';
 
 interface CreateWalletModalProps {
   isOpen: boolean;
@@ -62,14 +63,22 @@ export const CreateWalletModal = ({ isOpen, onClose, onSuccess }: CreateWalletMo
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Nova Carteira</DialogTitle>
-          <DialogDescription>
-            Crie uma nova carteira para organizar suas finanças.
-          </DialogDescription>
+      <DialogContent className="sm:max-w-[460px]">
+        <DialogHeader className="space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/25">
+              <WalletIcon className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <DialogTitle className="text-xl">Nova Carteira</DialogTitle>
+              <DialogDescription className="mt-1">
+                Crie uma nova carteira para organizar suas finanças.
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent -mx-6 my-1" />
+        <form onSubmit={handleSubmit} className="grid gap-5 pt-2">
           <div className="grid gap-2">
             <Label htmlFor="name">Nome</Label>
             <Input
@@ -101,9 +110,9 @@ export const CreateWalletModal = ({ isOpen, onClose, onSuccess }: CreateWalletMo
               required
             />
           </div>
-          <div className="flex items-center justify-between mt-2">
+          <div className="flex items-center justify-between p-3.5 rounded-xl bg-muted/50 border border-border/50">
             <div className="space-y-0.5">
-              <Label>Apenas Transferências</Label>
+              <Label className="text-sm font-medium">Apenas Transferências</Label>
               <p className="text-xs text-muted-foreground">
                 Desabilita lançamentos manuais (útil para contas correntes onde só entra o salário).
               </p>
@@ -114,7 +123,7 @@ export const CreateWalletModal = ({ isOpen, onClose, onSuccess }: CreateWalletMo
             />
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="pt-2">
             <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
             <Button type="submit" disabled={loading}>
               {loading ? 'Criando...' : 'Criar'}

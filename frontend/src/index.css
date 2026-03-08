@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -70,3 +72,200 @@
     padding-bottom: env(safe-area-inset-bottom);
   }
 }
+
+/* Transactions Page — Editorial Finance Aesthetic */
+.tx-page {
+  font-family: 'DM Sans', system-ui, sans-serif;
+}
+
+.tx-serif {
+  font-family: 'Instrument Serif', Georgia, serif;
+}
+
+/* Staggered entrance animation */
+@keyframes tx-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes tx-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes tx-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes tx-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.tx-stagger > * {
+  animation: tx-slide-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.tx-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.tx-stagger > *:nth-child(2) { animation-delay: 60ms; }
+.tx-stagger > *:nth-child(3) { animation-delay: 120ms; }
+.tx-stagger > *:nth-child(4) { animation-delay: 180ms; }
+.tx-stagger > *:nth-child(5) { animation-delay: 240ms; }
+.tx-stagger > *:nth-child(6) { animation-delay: 300ms; }
+.tx-stagger > *:nth-child(7) { animation-delay: 360ms; }
+.tx-stagger > *:nth-child(8) { animation-delay: 420ms; }
+.tx-stagger > *:nth-child(9) { animation-delay: 480ms; }
+.tx-stagger > *:nth-child(10) { animation-delay: 540ms; }
+
+.tx-card-enter {
+  animation: tx-scale-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Grain texture overlay for depth */
+.tx-grain::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.03;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  z-index: 1;
+}
+
+.dark .tx-grain::before {
+  opacity: 0.06;
+}
+
+/* Transaction row hover effect */
+.tx-row {
+  transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tx-row:hover {
+  transform: translateX(4px);
+}
+
+/* Smooth filter panel */
+.tx-filter-panel {
+  transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  transform-origin: top;
+}
+
+.tx-filter-panel[data-open="false"] {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  margin-top: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.tx-filter-panel[data-open="true"] {
+  max-height: 500px;
+  opacity: 1;
+}
+
+/* Timeline connector line */
+.tx-timeline::before {
+  content: '';
+  position: absolute;
+  left: 24px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(to bottom, transparent, hsl(var(--border)), transparent);
+}
+
+@media (max-width: 768px) {
+  .tx-timeline::before {
+    left: 16px;
+  }
+}
+
+/* Summary stat shimmer on hover */
+.tx-stat-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.tx-stat-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.06) 45%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.06) 55%, transparent 60%);
+  background-size: 200% 100%;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.tx-stat-card:hover::after {
+  opacity: 1;
+  animation: tx-shimmer 1.5s ease-in-out;
+}
+
+@keyframes wallet-enter {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-wallet-enter {
+  animation: wallet-enter 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  opacity: 0;
+}
+
+/* Modal dialog refinements */
+.modal-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, hsl(var(--border)), transparent);
+}
+
+/* Summary card accent strip */
+.accent-strip-top::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: 999px 999px 0 0;
+}
+
+/* Page entrance stagger */
+@keyframes page-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-page-enter > * {
+  animation: page-fade-up 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-page-enter > *:nth-child(1) { animation-delay: 0ms; }
+.animate-page-enter > *:nth-child(2) { animation-delay: 80ms; }
+.animate-page-enter > *:nth-child(3) { animation-delay: 160ms; }
+.animate-page-enter > *:nth-child(4) { animation-delay: 240ms; }

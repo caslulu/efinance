@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { GeminiService } from './gemini.service';
 import { ChatContextService } from './chat-context.service';
@@ -28,6 +34,8 @@ Regras:
 Dados financeiros atuais do usuário:
 `;
 
+const DAILY_QUESTION_LIMIT = 15;
+
 @Injectable()
 export class ChatService {
   constructor(
@@ -37,6 +45,8 @@ export class ChatService {
   ) {}
 
   async sendMessage(userId: number, dto: CreateMessageDto) {
+    await this.reserveDailyQuestionSlot(userId);
+
     // Get or create conversation
     let conversation;
     if (dto.conversationId) {
@@ -105,6 +115,8 @@ export class ChatService {
   }
 
   async *sendMessageStream(userId: number, dto: CreateMessageDto) {
+    await this.reserveDailyQuestionSlot(userId);
+
     // Get or create conversation
     let conversation;
     if (dto.conversationId) {
@@ -223,5 +235,64 @@ export class ChatService {
       where: { id: conversationId },
       data: { title },
     });
+  }
+
+  private async reserveDailyQuestionSlot(userId: number) {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const incrementResult = await this.prisma.chatDailyUsage.updateMany({
+      where: {
+        user_id: userId,
+        usage_date: startOfDay,
+        questions_count: { lt: DAILY_QUESTION_LIMIT },
+      },
+      data: {
+        questions_count: {
+          increment: 1,
+        },
+      },
+    });
+
+    if (incrementResult.count === 1) return;
+
+    try {
+      await this.prisma.chatDailyUsage.create({
+        data: {
+          user_id: userId,
+          usage_date: startOfDay,
+          questions_count: 1,
+        },
+      });
+      return;
+    } catch (error: unknown) {
+      const isUniqueViolation =
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002';
+
+      if (!isUniqueViolation) {
+        throw error;
+      }
+    }
+
+    const retryIncrementResult = await this.prisma.chatDailyUsage.updateMany({
+      where: {
+        user_id: userId,
+        usage_date: startOfDay,
+        questions_count: { lt: DAILY_QUESTION_LIMIT },
+      },
+      data: {
+        questions_count: {
+          increment: 1,
+        },
+      },
+    });
+
+    if (retryIncrementResult.count === 0) {
+      throw new HttpException(
+        `Você atingiu o limite diário de ${DAILY_QUESTION_LIMIT} perguntas para o assistente AI. Tente novamente amanhã.`,
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
   }
 }

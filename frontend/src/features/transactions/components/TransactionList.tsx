@@ -1,21 +1,14 @@
 import { useState } from 'react';
 import clsx from 'clsx';
 import type { Transaction } from '../../../types/Transaction';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Edit2, Clock } from 'lucide-react';
+import { Edit2, Clock, ArrowUpRight, ArrowDownRight, Repeat, CreditCard } from 'lucide-react';
 import { EditTransactionModal } from './EditTransactionModal';
 import { PAYMENT_METHODS } from '../../../constants/paymentMethods';
 import { CategoryIcon } from '@/components/IconPicker';
+import { formatCurrency } from '@/lib/utils';
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -32,104 +25,169 @@ export const TransactionList = ({
 }: TransactionListProps) => {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
+  if (transactions.length === 0) {
+    return (
+      <div className="text-center py-12 text-muted-foreground text-sm">
+        Nenhuma transação encontrada.
+      </div>
+    );
+  }
+
+  // Group transactions by date
+  const byDate: Record<string, Transaction[]> = {};
+  transactions.forEach(tx => {
+    const dateKey = new Date(tx.transaction_date).toLocaleDateString('pt-BR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'short',
+    });
+    if (!byDate[dateKey]) byDate[dateKey] = [];
+    byDate[dateKey].push(tx);
+  });
+
   return (
     <>
-      <div className="rounded-md border overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {onToggleSelect && <TableHead className="w-[30px]"></TableHead>}
-              <TableHead>Data</TableHead>
-              <TableHead>Nome</TableHead>
-              <TableHead>Categoria</TableHead>
-              <TableHead>Método</TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead>Parcela</TableHead>
-              <TableHead className="text-right">Valor</TableHead>
-              <TableHead className="w-[50px]"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {transactions.map((tx) => {
-              const isFutureTransaction = tx.is_processed === false || new Date(tx.transaction_date) > new Date();
-              return (
-              <TableRow key={tx.id} className={clsx(
-                selectedIds.has(tx.id) ? "bg-muted/50" : "",
-                isFutureTransaction && tx.id > 0 ? "opacity-70" : ""
-              )}>
-                {onToggleSelect && (
-                  <TableCell>
-                    <div title={tx.id < 0 ? "Transações projetadas não podem ser apagadas." : ""}>
-                      <Checkbox
-                        checked={selectedIds.has(tx.id)}
-                        onCheckedChange={() => onToggleSelect(tx.id)}
-                        disabled={tx.id < 0}
-                      />
-                    </div>
-                  </TableCell>
-                )}
-                <TableCell>
-                  {new Date(tx.transaction_date).toLocaleDateString()}
-                </TableCell>
-                <TableCell className="font-medium max-w-[200px]" title={tx.description}>
-                  <div className="flex items-center gap-2">
-                    <span className="truncate">{tx.description || '-'}</span>
-                    {isFutureTransaction && tx.id > 0 && (
-                      <Badge variant="outline" className="shrink-0 border-amber-500 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 text-[10px] px-1.5 py-0 gap-1">
-                        <Clock className="h-3 w-3" />
-                        Futura
-                      </Badge>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded bg-slate-100 dark:bg-slate-800">
-                      <CategoryIcon name={tx.TransactionCategory?.icon} className="h-3.5 w-3.5 text-slate-600 dark:text-slate-400" />
-                    </div>
-                    <span>{tx.TransactionCategory?.name || 'Sem Categoria'}</span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {tx.payment_method ? PAYMENT_METHODS[tx.payment_method as keyof typeof PAYMENT_METHODS] || tx.payment_method : '-'}
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    variant="outline"
+      <div className="space-y-5 tx-stagger">
+        {Object.entries(byDate).map(([dateLabel, dateTxs]) => (
+          <div key={dateLabel}>
+            {/* Date sub-header */}
+            <div className="flex items-center gap-3 mb-2.5 px-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground capitalize">
+                {dateLabel}
+              </span>
+              <div className="h-px flex-1 bg-border/50" />
+              <span className="text-[11px] text-muted-foreground tabular-nums">
+                {dateTxs.length} item{dateTxs.length > 1 ? 's' : ''}
+              </span>
+            </div>
+
+            {/* Transaction cards */}
+            <div className="space-y-1.5">
+              {dateTxs.map(tx => {
+                const isFutureTransaction = tx.is_processed === false || new Date(tx.transaction_date) > new Date();
+                const isIncome = tx.transaction_type === 'INCOME';
+                const isSelected = selectedIds.has(tx.id);
+                const isVirtual = tx.id < 0;
+
+                return (
+                  <div
+                    key={tx.id}
                     className={clsx(
-                      tx.transaction_type === 'INCOME'
-                        ? 'border-green-500 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 dark:text-green-400'
-                        : 'border-red-500 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 dark:text-red-400'
+                      'tx-row group relative flex items-center gap-3 p-3 md:p-4 rounded-xl border transition-all cursor-pointer',
+                      isSelected
+                        ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/40'
+                        : 'bg-card border-transparent hover:border-border/80 hover:bg-accent/30',
+                      isFutureTransaction && tx.id > 0 && 'opacity-65',
+                      isVirtual && 'opacity-50 border-dashed border-border/40'
                     )}
+                    onClick={() => !isVirtual && setEditingTransaction(tx)}
                   >
-                    {tx.transaction_type === 'INCOME' ? 'RECEITA' : 'DESPESA'}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  {tx.installment_total ? `${tx.installment_number}/${tx.installment_total}` : '-'}
-                </TableCell>
-                <TableCell className={clsx("text-right font-bold",
-                  tx.transaction_type === 'INCOME' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-                )}>
-                  {tx.transaction_type === 'EXPENSE' ? '- ' : '+ '}
-                  R$ {Number(tx.value).toFixed(2)}
-                </TableCell>
-                <TableCell>
-                  <Button variant="ghost" size="icon" onClick={() => setEditingTransaction(tx)}>
-                    <Edit2 className="h-4 w-4" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            );})}
-            {transactions.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={onToggleSelect ? 9 : 8} className="h-24 text-center text-muted-foreground">
-                  Nenhuma transação encontrada.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+                    {/* Checkbox */}
+                    {onToggleSelect && (
+                      <div
+                        className="shrink-0"
+                        onClick={e => { e.stopPropagation(); onToggleSelect(tx.id); }}
+                        title={isVirtual ? 'Transações projetadas não podem ser apagadas.' : ''}
+                      >
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => onToggleSelect(tx.id)}
+                          disabled={isVirtual}
+                          className="data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
+                        />
+                      </div>
+                    )}
+
+                    {/* Type icon */}
+                    <div className={clsx(
+                      'shrink-0 w-9 h-9 rounded-xl flex items-center justify-center',
+                      isIncome
+                        ? 'bg-emerald-100 dark:bg-emerald-900/30'
+                        : 'bg-red-100 dark:bg-red-900/20'
+                    )}>
+                      {isVirtual ? (
+                        <Repeat size={14} className="text-violet-500" />
+                      ) : isIncome ? (
+                        <ArrowDownRight size={14} className="text-emerald-600 dark:text-emerald-400" />
+                      ) : (
+                        <ArrowUpRight size={14} className="text-red-500 dark:text-red-400" />
+                      )}
+                    </div>
+
+                    {/* Main content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-foreground truncate">
+                          {tx.description || 'Sem descrição'}
+                        </span>
+                        {isFutureTransaction && tx.id > 0 && (
+                          <Badge variant="outline" className="shrink-0 border-amber-400/50 text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-900/15 text-[9px] px-1.5 py-0 gap-0.5 font-bold">
+                            <Clock className="h-2.5 w-2.5" />
+                            Futura
+                          </Badge>
+                        )}
+                        {isVirtual && (
+                          <Badge variant="outline" className="shrink-0 border-violet-400/50 text-violet-600 dark:text-violet-400 bg-violet-50/50 dark:bg-violet-900/15 text-[9px] px-1.5 py-0 gap-0.5 font-bold">
+                            <Repeat className="h-2.5 w-2.5" />
+                            Projeção
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 mt-0.5">
+                        {/* Category */}
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <CategoryIcon name={tx.TransactionCategory?.icon} className="h-3 w-3" />
+                          <span className="truncate max-w-[100px]">{tx.TransactionCategory?.name || 'Outros'}</span>
+                        </div>
+                        {/* Payment method */}
+                        {tx.payment_method && (
+                          <>
+                            <span className="text-border">·</span>
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <CreditCard size={10} />
+                              <span>{PAYMENT_METHODS[tx.payment_method as keyof typeof PAYMENT_METHODS] || tx.payment_method}</span>
+                            </div>
+                          </>
+                        )}
+                        {/* Installment */}
+                        {tx.installment_total && tx.installment_total > 1 && (
+                          <>
+                            <span className="text-border">·</span>
+                            <span className="text-xs text-muted-foreground tabular-nums">
+                              {tx.installment_number}/{tx.installment_total}x
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Amount */}
+                    <div className="shrink-0 text-right">
+                      <p className={clsx(
+                        'text-sm font-bold tabular-nums',
+                        isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'
+                      )}>
+                        {isIncome ? '+' : '-'} {formatCurrency(Number(tx.value))}
+                      </p>
+                    </div>
+
+                    {/* Edit button (appears on hover) */}
+                    {!isVirtual && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="shrink-0 w-8 h-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => { e.stopPropagation(); setEditingTransaction(tx); }}
+                      >
+                        <Edit2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
 
       <EditTransactionModal

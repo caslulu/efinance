@@ -1,44 +1,19 @@
 import clsx from 'clsx';
 import { formatCurrency } from '@/lib/utils';
 import type { Card } from '../../../types/Card';
-import { Button } from '@/components/ui/button';
-import { CreditCard, Pencil, ReceiptText } from 'lucide-react';
+import { Pencil, ReceiptText, CreditCard } from 'lucide-react';
 import { FaCcVisa, FaCcMastercard, FaCcAmex } from 'react-icons/fa';
 
-const FLAG_LABELS: Record<string, string> = {
-  VISA: 'Visa',
-  MASTERCARD: 'Mastercard',
-  ELO: 'Elo',
-  AMEX: 'Amex',
-  HIPERCARD: 'Hipercard',
-  OTHER: 'Outra',
-};
-
-const FLAG_COLORS: Record<string, string> = {
-  VISA: 'text-blue-600 dark:text-blue-400',
-  MASTERCARD: 'text-red-600 dark:text-red-400',
-  ELO: 'text-yellow-600 dark:text-yellow-400',
-  AMEX: 'text-cyan-600 dark:text-cyan-400',
-  HIPERCARD: 'text-orange-600 dark:text-orange-400',
-  OTHER: 'text-gray-500',
-};
-
-const FLAG_BG_COLORS: Record<string, string> = {
-  VISA: 'bg-blue-600 dark:bg-blue-400',
-  MASTERCARD: 'bg-red-600 dark:bg-red-400',
-  ELO: 'bg-yellow-600 dark:bg-yellow-400',
-  AMEX: 'bg-cyan-600 dark:bg-cyan-400',
-  HIPERCARD: 'bg-orange-600 dark:bg-orange-400',
-  OTHER: 'bg-gray-500',
-};
-
-const FLAG_ICONS: Record<string, any> = {
-  VISA: FaCcVisa,
-  MASTERCARD: FaCcMastercard,
-  AMEX: FaCcAmex,
-  ELO: CreditCard,
-  HIPERCARD: CreditCard,
-  OTHER: CreditCard,
+const FLAG_CONFIG: Record<
+  string,
+  { label: string; gradient: string; Icon: React.ComponentType<{ className?: string }> }
+> = {
+  VISA: { label: 'Visa', gradient: 'from-blue-600 to-blue-800', Icon: FaCcVisa },
+  MASTERCARD: { label: 'Mastercard', gradient: 'from-red-600 to-orange-700', Icon: FaCcMastercard },
+  ELO: { label: 'Elo', gradient: 'from-yellow-600 to-amber-700', Icon: CreditCard },
+  AMEX: { label: 'Amex', gradient: 'from-cyan-600 to-teal-700', Icon: FaCcAmex },
+  HIPERCARD: { label: 'Hipercard', gradient: 'from-orange-600 to-red-700', Icon: CreditCard },
+  OTHER: { label: 'Outra', gradient: 'from-gray-600 to-slate-700', Icon: CreditCard },
 };
 
 interface CardItemProps {
@@ -54,105 +29,110 @@ export const CardItem = ({ card, onEdit, onAddExpense, onPayInvoice }: CardItemP
     ? Math.min(100, ((Number(card.total_invoice || 0)) / Number(card.card_limit)) * 100)
     : 0;
 
-  return (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-4 shadow-sm relative overflow-hidden transition-all hover:shadow-md">
-      {/* Decorative side border */}
-      <div className={clsx("absolute top-0 left-0 w-1 h-full", FLAG_BG_COLORS[card.flag] || 'bg-gray-500')} />
+  const config = FLAG_CONFIG[card.flag] || FLAG_CONFIG.OTHER;
+  const FlagIcon = config.Icon;
 
-      {/* Header */}
-      <div className="flex items-center justify-between pl-1">
-        <div className="flex items-center gap-2">
-          {(() => {
-            const FlagIcon = FLAG_ICONS[card.flag] || CreditCard;
-            return <FlagIcon className={clsx('h-6 w-6', FLAG_COLORS[card.flag] || 'text-gray-500')} />;
-          })()}
-          <span className="text-sm font-bold text-foreground">{card.name}</span>
-          <span className={clsx('text-[10px] font-bold uppercase tracking-wider', FLAG_COLORS[card.flag] || 'text-gray-500')}>
-            {FLAG_LABELS[card.flag] || card.flag}
-          </span>
-        </div>
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+  return (
+    <div className="rounded-xl overflow-hidden border border-border/40 bg-card shadow-sm hover:shadow-md transition-all duration-200 group/card">
+      {/* Card Header - styled like a physical credit card */}
+      <div className={clsx('relative px-4 py-3 bg-gradient-to-r text-white', config.gradient)}>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.1)_0%,_transparent_60%)]" />
+        <div className="relative flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <FlagIcon className="h-6 w-6 text-white/80" />
+            <span className="text-sm font-bold tracking-wide">{card.name}</span>
+          </div>
+          <button
+            className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors opacity-0 group-hover/card:opacity-100"
             onClick={onEdit}
           >
             <Pencil className="h-3 w-3" />
-          </Button>
+          </button>
         </div>
       </div>
 
-      {/* Invoice Info */}
-      <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-muted/30 border border-muted">
-        <div className="space-y-1">
-          <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wide">Fatura Fechada</p>
-          <p
-            className={clsx(
-              'text-sm font-bold',
-              Number(card.due_invoice) > 0
-                ? 'text-red-600 dark:text-red-400'
-                : 'text-muted-foreground',
-            )}
+      <div className="p-4 space-y-3">
+        {/* Invoice Grid */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/60 mb-0.5">
+              Fatura Fechada
+            </p>
+            <p
+              className={clsx(
+                'text-sm font-bold font-display',
+                Number(card.due_invoice) > 0 ? 'text-red-500' : 'text-muted-foreground/50',
+              )}
+            >
+              {formatCurrency(Number(card.due_invoice || 0))}
+            </p>
+          </div>
+          <div>
+            <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/60 mb-0.5">
+              Fatura Aberta
+            </p>
+            <p className="text-sm font-bold font-display text-foreground">
+              {formatCurrency(Number(card.current_invoice || 0))}
+            </p>
+          </div>
+        </div>
+
+        {/* Limit Progress */}
+        <div className="space-y-1.5">
+          <div className="flex justify-between items-center">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/60">
+              Limite
+            </span>
+            <span
+              className={clsx(
+                'text-[10px] font-bold',
+                limitUsedPercent > 90
+                  ? 'text-red-500'
+                  : limitUsedPercent > 70
+                    ? 'text-amber-500'
+                    : 'text-muted-foreground/60',
+              )}
+            >
+              {limitUsedPercent.toFixed(0)}%
+            </span>
+          </div>
+          <div className="relative w-full h-1.5 rounded-full bg-muted/40 overflow-hidden">
+            <div
+              className={clsx(
+                'absolute inset-y-0 left-0 rounded-full transition-all duration-500',
+                limitUsedPercent > 90
+                  ? 'bg-gradient-to-r from-red-500 to-red-400'
+                  : limitUsedPercent > 70
+                    ? 'bg-gradient-to-r from-amber-500 to-yellow-400'
+                    : 'bg-gradient-to-r from-emerald-500 to-teal-400',
+              )}
+              style={{ width: `${limitUsedPercent}%` }}
+            />
+          </div>
+          <div className="flex justify-between text-[9px] font-medium text-muted-foreground/50">
+            <span>Disp: {formatCurrency(Number(card.available_limit || 0))}</span>
+            <span>Total: {formatCurrency(Number(card.card_limit))}</span>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 pt-1">
+          <button
+            className="flex-1 text-xs font-semibold py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 transition-colors"
+            onClick={onAddExpense}
           >
-            {formatCurrency(Number(card.due_invoice || 0))}
-          </p>
+            Despesa
+          </button>
+          {hasInvoice && (
+            <button
+              className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-colors shadow-sm"
+              onClick={onPayInvoice}
+            >
+              <ReceiptText className="h-3.5 w-3.5" />
+              Pagar Fatura
+            </button>
+          )}
         </div>
-        <div className="space-y-1">
-          <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wide">Fatura Aberta</p>
-          <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
-            {formatCurrency(Number(card.current_invoice || 0))}
-          </p>
-        </div>
-      </div>
-
-      {/* Limit Bar */}
-      <div className="space-y-1.5">
-        <div className="flex justify-between items-center text-[10px] uppercase font-bold text-muted-foreground">
-          <span>Limite Usado</span>
-          <span className={limitUsedPercent > 90 ? "text-red-500" : ""}>
-            {limitUsedPercent.toFixed(0)}%
-          </span>
-        </div>
-        <div className="w-full bg-muted/50 rounded-full h-2 overflow-hidden">
-          <div
-            className={clsx(
-              'h-full transition-all rounded-full',
-              limitUsedPercent > 90
-                ? 'bg-red-500'
-                : limitUsedPercent > 70
-                  ? 'bg-yellow-500'
-                  : 'bg-emerald-500',
-            )}
-            style={{ width: `${limitUsedPercent}%` }}
-          />
-        </div>
-        <div className="flex justify-between text-[10px] font-medium text-muted-foreground pt-1">
-          <span>Disp: {formatCurrency(Number(card.available_limit || 0))}</span>
-          <span>Total: {formatCurrency(Number(card.card_limit))}</span>
-        </div>
-      </div>
-
-      {/* Actions */}
-      <div className="flex gap-2 pt-1">
-        <Button
-          variant="outline"
-          size="sm"
-          className="flex-1 text-red-600 dark:text-red-400 border-red-200 hover:bg-red-50 dark:hover:bg-red-900/20 text-xs h-8 font-semibold"
-          onClick={onAddExpense}
-        >
-          Despesa
-        </Button>
-        {hasInvoice && (
-          <Button
-            size="sm"
-            className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm flex items-center gap-1.5 text-xs h-8 font-semibold"
-            onClick={onPayInvoice}
-          >
-            <ReceiptText className="h-3.5 w-3.5" />
-            Pagar Fatura
-          </Button>
-        )}
       </div>
     </div>
   );

@@ -1,6 +1,4 @@
 import { useEffect, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, TrendingUp } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 
@@ -9,7 +7,9 @@ export function MonthFlowCarousel({ data }: { data: any }) {
 
   useEffect(() => {
     if (data?.monthFlow && carouselRef.current) {
-      const currentMonthIndex = data.monthFlow.findIndex((m: any) => !m.isProjected);
+      const currentMonthIndex = data.monthFlow.findIndex((m: any, i: number) =>
+        !m.isProjected && (i === data.monthFlow.length - 1 || data.monthFlow[i + 1]?.isProjected)
+      );
       if (currentMonthIndex === -1) return;
 
       setTimeout(() => {
@@ -29,33 +29,55 @@ export function MonthFlowCarousel({ data }: { data: any }) {
   };
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="flex items-center gap-2 text-base font-semibold">
-          <TrendingUp size={18} className="text-emerald-500" />
-          Fluxo de Despesas (24 meses)
-        </CardTitle>
-        <div className="flex gap-2">
-          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => scroll('left')}>
-            <ChevronLeft size={16} />
-          </Button>
-          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => scroll('right')}>
-            <ChevronRight size={16} />
-          </Button>
+    <div className="dash-card overflow-hidden">
+      <div className="px-5 pt-5 pb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+            <TrendingUp size={15} className="text-emerald-500" />
+          </div>
+          <h3 className="text-sm font-semibold text-foreground">Fluxo de Despesas</h3>
+          <span className="text-[10px] text-muted-foreground">24 meses</span>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div ref={carouselRef} className="flex gap-4 overflow-x-hidden py-2 px-1">
-          {data.monthFlow.map((month: any, i: number) => (
-            <div key={i} className={`min-w-[140px] p-3 rounded-lg border flex flex-col items-center justify-center transition-all ${month.isProjected ? 'bg-emerald-900/20 border-emerald-100 border-dashed' : 'bg-card shadow-sm border-border'
-              } ${!month.isProjected && data.monthFlow[i + 1]?.isProjected ? 'ring-2 ring-emerald-500 ring-offset-2' : ''}`}>
-              <span className="text-[10px] font-bold text-muted-foreground uppercase">{month.name}</span>
-              <span className={`text-base font-bold ${month.isProjected ? 'text-emerald-500' : 'text-foreground'}`}>{formatCurrency(month.value)}</span>
-              <span className="text-[9px] text-muted-foreground">{month.isProjected ? 'Projetado' : 'Realizado'}</span>
-            </div>
-          ))}
+        <div className="flex gap-1.5">
+          <button
+            onClick={() => scroll('left')}
+            className="w-8 h-8 rounded-xl border border-border/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all"
+          >
+            <ChevronLeft size={14} />
+          </button>
+          <button
+            onClick={() => scroll('right')}
+            className="w-8 h-8 rounded-xl border border-border/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all"
+          >
+            <ChevronRight size={14} />
+          </button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+      <div className="px-5 pb-5">
+        <div ref={carouselRef} className="flex gap-3 overflow-x-hidden py-1 px-0.5">
+          {data.monthFlow.map((month: any, i: number) => {
+            const isCurrent = !month.isProjected && data.monthFlow[i + 1]?.isProjected;
+            return (
+              <div
+                key={i}
+                className={`min-w-[136px] p-3.5 rounded-2xl border flex flex-col items-center justify-center gap-1 transition-all duration-300
+                  ${month.isProjected
+                    ? 'bg-emerald-500/[0.04] border-dashed border-emerald-500/15'
+                    : 'bg-card border-border/40 hover:border-border'}
+                  ${isCurrent ? 'ring-2 ring-emerald-500/40 ring-offset-2 ring-offset-background shadow-lg shadow-emerald-500/5' : ''}`}
+              >
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{month.name}</span>
+                <span className={`text-base font-bold tabular-nums ${month.isProjected ? 'text-emerald-500' : 'text-foreground'}`}>
+                  {formatCurrency(month.value)}
+                </span>
+                <span className={`text-[9px] font-medium ${month.isProjected ? 'text-emerald-500/60' : 'text-muted-foreground'}`}>
+                  {month.isProjected ? 'Projetado' : 'Realizado'}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }

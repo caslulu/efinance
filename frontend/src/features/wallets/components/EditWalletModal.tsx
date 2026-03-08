@@ -16,7 +16,7 @@ import {
 import { WALLET_TYPES } from '../../../constants/paymentMethods';
 import type { Wallet } from '../../../types/Wallet';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Pencil } from 'lucide-react';
 
 interface EditWalletModalProps {
   isOpen: boolean;
@@ -85,14 +85,22 @@ export const EditWalletModal = ({ isOpen, wallet, onClose, onSuccess }: EditWall
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Editar Carteira</DialogTitle>
-            <DialogDescription>
-              Atualize os dados da sua carteira.
-            </DialogDescription>
+        <DialogContent className="sm:max-w-[460px]">
+          <DialogHeader className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/25">
+                <Pencil className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl">Editar Carteira</DialogTitle>
+                <DialogDescription className="mt-1">
+                  Atualize os dados da sua carteira.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+          <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent -mx-6 my-1" />
+          <form onSubmit={handleSubmit} className="grid gap-5 pt-2">
             <div className="grid gap-2">
               <Label htmlFor="name">Nome</Label>
               <Input
@@ -115,9 +123,9 @@ export const EditWalletModal = ({ isOpen, wallet, onClose, onSuccess }: EditWall
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center justify-between mt-2">
+            <div className="flex items-center justify-between p-3.5 rounded-xl bg-muted/50 border border-border/50">
               <div className="space-y-0.5">
-                <Label>Apenas Transferências</Label>
+                <Label className="text-sm font-medium">Apenas Transferências</Label>
                 <p className="text-xs text-muted-foreground">
                   Desabilita lançamentos manuais nesta carteira.
                 </p>
@@ -128,7 +136,7 @@ export const EditWalletModal = ({ isOpen, wallet, onClose, onSuccess }: EditWall
               />
             </div>
 
-            <DialogFooter className="flex !justify-between">
+            <DialogFooter className="flex !justify-between pt-2">
               <Button
                 type="button"
                 variant="ghost"
