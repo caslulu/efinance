@@ -16,7 +16,10 @@ async function bootstrap() {
     prefix: '/uploads/',
   });
 
-  const configuredOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
+  const configuredOrigins = (
+    process.env.FRONTEND_URL ||
+    'http://localhost:5173,https://localhost,https://127.0.0.1,https://efinancepro.me,https://www.efinancepro.me'
+  )
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
@@ -36,7 +39,8 @@ async function bootstrap() {
 
       if (
         allowedOrigins.has(origin) ||
-        (!isProduction && /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) ||
+        (!isProduction && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) ||
+        /^https?:\/\/([a-z0-9-]+\.)*orb\.local(:\d+)?$/i.test(origin) ||
         /^https?:\/\/(10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|192\.168\.\d+\.\d+)(:\d+)?$/.test(origin)
       ) {
         callback(null, true);

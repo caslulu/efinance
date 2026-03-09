@@ -4,7 +4,7 @@ if (!import.meta.env.VITE_API_URL) {
   console.warn("VITE_API_URL is not defined in the environment variables.");
 }
 
-const apiBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/+$/, '');
+const apiBaseUrl = (import.meta.env.VITE_API_URL || '/api').replace(/\/+$/, '');
 let authToken: string | null = null;
 
 export const setApiAuthToken = (token: string | null) => {

@@ -33,4 +33,6 @@ lazy-lock.json
 *.db
 *.sqlite
 *.sqlite-journal
+frontend/certs/
+frontend/certbot/
 GEMINI.md

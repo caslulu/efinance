@@ -156,6 +156,10 @@ export class UsersService {
 
   async removeProfile(userId: number) {
     return this.prisma.$transaction(async (tx) => {
+      // 0. Delete Chat related data (user -> chat conversations has no DB-level cascade)
+      await tx.chatConversation.deleteMany({ where: { user_id: userId } });
+      await tx.chatDailyUsage.deleteMany({ where: { user_id: userId } });
+
       // 1. Delete Wishlist related data
       const wishlists = await tx.wishlist.findMany({ where: { user_id: userId } });
       const wishlistIds = wishlists.map(w => w.id);

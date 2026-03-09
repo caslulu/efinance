@@ -30,6 +30,8 @@ services:
       - DATABASE_URL=postgresql://${DB_USER:-financeuser}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-financepro}?schema=public
       - NODE_ENV=production
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - FRONTEND_URL=${FRONTEND_URL:-https://efinancepro.me,https://www.efinancepro.me,https://frontend.financeapp.orb.local,https://localhost,http://localhost:5173}
+      - BACKEND_URL=${BACKEND_URL:-https://efinancepro.me/api}
     volumes:
       - uploads:/app/uploads
     expose:
@@ -46,6 +48,10 @@ services:
       - backend
     ports:
       - "80:80"
+      - "443:443"
+    volumes:
+      - ${LETSENCRYPT_PATH:-./frontend/certs}:/etc/letsencrypt
+      - ${CERTBOT_WWW_PATH:-./frontend/certbot}:/var/www/certbot
 
 volumes:
   pgdata:
