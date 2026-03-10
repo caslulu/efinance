@@ -35,4 +35,8 @@ export class CreateSubscriptionDto {
   @IsOptional()
   @IsString()
   icon?: string;
+
+  @IsOptional()
+  @IsNumber()
+  card_id?: number;
 }

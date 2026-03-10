@@ -16,6 +16,7 @@ import { ALLOWED_METHODS, PAYMENT_METHODS, WALLET_TYPES } from '../../../constan
 import { CategoryIcon, IconPicker } from '@/components/IconPicker';
 import { api } from '@/api/api';
 import type { Wallet } from '@/types/Wallet';
+import type { Card } from '@/types/Card';
 import { CalendarSync } from 'lucide-react';
 
 interface CreateSubscriptionModalProps {
@@ -35,9 +36,11 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
   const [categoryId, setCategoryId] = React.useState('');
   const [paymentMethod, setPaymentMethod] = React.useState('');
   const [icon, setIcon] = React.useState<string>('');
+  const [cardId, setCardId] = React.useState('');
   const [step, setStep] = React.useState(1);
 
   const [wallets, setWallets] = React.useState<Wallet[]>([]);
+  const [cards, setCards] = React.useState<Card[]>([]);
   const [categories, setCategories] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(false);
 
@@ -46,11 +49,30 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
       setPaymentMethod('');
       setDescription('');
       setIcon('');
+      setCardId('');
+      setCards([]);
       setStep(1);
       api.get('/wallets').then(res => setWallets(res.data));
       api.get('/categories').then(res => setCategories(res.data));
     }
   }, [isOpen]);
+
+  React.useEffect(() => {
+    if (walletId) {
+      api.get<Card[]>(`/cards/wallet/${walletId}`).then(res => {
+        setCards(Array.isArray(res.data) ? res.data : []);
+      });
+    } else {
+      setCards([]);
+    }
+    setCardId('');
+  }, [walletId]);
+
+  React.useEffect(() => {
+    if (paymentMethod !== 'CREDIT') {
+      setCardId('');
+    }
+  }, [paymentMethod]);
 
   const getAvailableMethods = () => {
     const selectedWallet = wallets.find(w => String(w.id) === walletId);
@@ -90,6 +112,11 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
       return;
     }
 
+    if (paymentMethod === 'CREDIT' && cards.length > 0 && !cardId) {
+      toast.warning('Selecione um cartão de crédito');
+      return;
+    }
+
     setLoading(true);
     try {
       await api.post('/subscriptions', {
@@ -103,6 +130,7 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
         wallet_id: Number(walletId),
         category_id: Number(categoryId),
         payment_method: paymentMethod || undefined,
+        card_id: cardId ? Number(cardId) : undefined,
       });
       onSuccess();
       onClose();
@@ -111,6 +139,7 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
       setIcon('');
       setValue('');
       setPaymentMethod('');
+      setCardId('');
     } catch (error) {
       toast.error('Falha ao criar item recorrente');
     } finally {
@@ -221,6 +250,24 @@ export const CreateSubscriptionModal = ({ isOpen, onClose, onSuccess }: CreateSu
                       {availableMethods.map(methodKey => (
                         <SelectItem key={methodKey} value={methodKey}>
                           {PAYMENT_METHODS[methodKey as keyof typeof PAYMENT_METHODS]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {paymentMethod === 'CREDIT' && cards.length > 0 && (
+                <div className="grid gap-2">
+                  <Label htmlFor="card">Cartão de Crédito</Label>
+                  <Select value={cardId} onValueChange={setCardId}>
+                    <SelectTrigger id="card">
+                      <SelectValue placeholder="Selecione o cartão" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cards.map(c => (
+                        <SelectItem key={c.id} value={String(c.id)}>
+                          {c.name} ({c.flag})
                         </SelectItem>
                       ))}
                     </SelectContent>

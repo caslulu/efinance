@@ -76,7 +76,8 @@ model Card {
   closing_day  Int
   due_day      Int
   card_limit   Decimal       @db.Decimal(10, 2)
-  transactions Transaction[]
+  transactions    Transaction[]
+  subscriptions   Subscription[]
 }
 
 model Transaction {
@@ -120,6 +121,8 @@ model Subscription {
   next_billing_date DateTime
   payment_method    String?
   icon              String?
+  card_id           Int?
+  card              Card?              @relation(fields: [card_id], references: [id], onDelete: SetNull)
   
   transactions      Transaction[]      @relation("SubscriptionTransactions")
 }

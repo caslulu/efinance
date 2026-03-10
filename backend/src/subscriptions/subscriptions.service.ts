@@ -34,6 +34,11 @@ export class SubscriptionsService {
     const category = await this.prisma.transactionCategory.findUnique({ where: { id: createSubscriptionDto.category_id } });
     if (!category || category.user_id !== userId) throw new NotFoundException('Category not found');
 
+    if (createSubscriptionDto.card_id) {
+      const card = await this.prisma.card.findUnique({ where: { id: createSubscriptionDto.card_id } });
+      if (!card || card.wallet_id !== createSubscriptionDto.wallet_id) throw new NotFoundException('Card not found');
+    }
+
     const nextDate = new Date(createSubscriptionDto.start_date);
     
     const sub = await this.prisma.subscription.create({
@@ -77,6 +82,7 @@ export class SubscriptionsService {
         is_recurring: true,
         subscription_id: sub.id,
         payment_method: sub.payment_method || undefined,
+        card_id: sub.card_id || undefined,
       });
 
       let nextDate: Date;
