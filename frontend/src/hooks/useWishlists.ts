@@ -1,11 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/api';
 import { queryKeys } from '@/lib/queryClient';
+import { normalizeWishlistScrapeResponse } from '@/features/wishlist/utils';
 import type {
   PriceAlertNotificationsResponse,
   Wishlist,
   WishlistProduct,
   WishlistProductHistory,
+  WishlistScrapeResponse,
+  WishlistScrapeResponseRaw,
 } from '@/types/Wishlist';
 
 export function useWishlists() {
@@ -134,11 +137,11 @@ export function useDeleteWishlistProduct() {
 export function useScrapeProductUrl() {
   return useMutation({
     mutationFn: async (url: string) => {
-      const res = await api.get<{ name: string | null; price: number | null; image: string | null }>(
+      const res = await api.get<WishlistScrapeResponseRaw>(
         '/wishlists/scrape-url',
         { params: { url } },
       );
-      return res.data;
+      return normalizeWishlistScrapeResponse(res.data, url) satisfies WishlistScrapeResponse;
     },
   });
 }

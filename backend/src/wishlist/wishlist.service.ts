@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { MailerService } from '@nestjs-modules/mailer';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateWishlistDto } from './dto/create-wishlist.dto';
 import { UpdateWishlistDto } from './dto/update-wishlist.dto';
@@ -14,7 +14,7 @@ export class WishlistService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailerService: MailerService,
-  ) { }
+  ) {}
 
   create(userId: number, createWishlistDto: CreateWishlistDto) {
     return this.prisma.wishlist.create({
@@ -111,11 +111,10 @@ export class WishlistService {
       data: {
         wishlist_product_id: product.id,
         price: product.price,
-      }
+      },
     });
 
     return product;
-
   }
 
   async updateProduct(
@@ -184,7 +183,11 @@ export class WishlistService {
     });
   }
 
-  async getProductHistory(wishlistId: number, productId: number, userId: number) {
+  async getProductHistory(
+    wishlistId: number,
+    productId: number,
+    userId: number,
+  ) {
     await this.findOne(wishlistId, userId);
 
     const product = await this.prisma.wishlistProduct.findFirst({
@@ -205,22 +208,23 @@ export class WishlistService {
   }
 
   async getPriceAlertNotifications(userId: number) {
-    const notifications = await this.prisma.wishlistPriceAlertNotification.findMany({
-      where: { user_id: userId },
-      include: {
-        wishlistProduct: {
-          select: {
-            id: true,
-            name_product: true,
-            url: true,
+    const notifications =
+      await this.prisma.wishlistPriceAlertNotification.findMany({
+        where: { user_id: userId },
+        include: {
+          wishlistProduct: {
+            select: {
+              id: true,
+              name_product: true,
+              url: true,
+            },
           },
         },
-      },
-      orderBy: {
-        notified_at: 'desc',
-      },
-      take: 20,
-    });
+        orderBy: {
+          notified_at: 'desc',
+        },
+        take: 20,
+      });
 
     const unreadCount = await this.prisma.wishlistPriceAlertNotification.count({
       where: {
@@ -236,12 +240,14 @@ export class WishlistService {
   }
 
   async markPriceAlertAsRead(userId: number, notificationId: number) {
-    const existing = await this.prisma.wishlistPriceAlertNotification.findFirst({
-      where: {
-        id: notificationId,
-        user_id: userId,
+    const existing = await this.prisma.wishlistPriceAlertNotification.findFirst(
+      {
+        where: {
+          id: notificationId,
+          user_id: userId,
+        },
       },
-    });
+    );
 
     if (!existing) {
       throw new NotFoundException('Notificação não encontrada');
@@ -253,8 +259,10 @@ export class WishlistService {
     });
   }
 
-  @Cron(CronExpression.EVERY_HOUR)
+  @Cron('0 */6 * * *')
   async checkWishlistPriceDrops() {
+    this.logger.log('Checking wishlist price changes...');
+
     const products = await this.prisma.wishlistProduct.findMany({
       where: {
         send_price_alerts: true,
@@ -285,7 +293,9 @@ export class WishlistService {
         const scraped = await this.scrapeProductUrl(targetUrl);
         if (!scraped.price || scraped.price <= 0) continue;
 
-        const previousPrice = Number(product.last_checked_price ?? product.price);
+        const previousPrice = Number(
+          product.last_checked_price ?? product.price,
+        );
         const currentPrice = scraped.price;
 
         if (currentPrice < previousPrice || currentPrice > previousPrice) {
@@ -293,7 +303,7 @@ export class WishlistService {
             data: {
               wishlist_product_id: product.id,
               price: currentPrice,
-            }
+            },
           });
         }
 
@@ -329,17 +339,23 @@ export class WishlistService {
             last_checked_price: currentPrice,
           },
         });
-      } catch (error) {
+      } catch {
         this.logger.warn(
           `Falha ao processar alerta de preço para produto ${product.id}`,
         );
       }
     }
+
+    this.logger.log(
+      `Wishlist price check finished for ${products.length} product(s).`,
+    );
   }
 
-  async scrapeProductUrl(
-    url: string,
-  ): Promise<{ name: string | null; price: number | null; image: string | null }> {
+  async scrapeProductUrl(url: string): Promise<{
+    name: string | null;
+    price: number | null;
+    image: string | null;
+  }> {
     try {
       if (this.isAmazonUrl(url)) {
         return this.scrapeAmazonProduct(url);
@@ -361,29 +377,38 @@ export class WishlistService {
     return /mercadolivre\.com\.br|mercadolibre\.com/i.test(url);
   }
 
-  private async scrapeAmazonProduct(
-    url: string,
-  ): Promise<{ name: string | null; price: number | null; image: string | null }> {
+  private async scrapeAmazonProduct(url: string): Promise<{
+    name: string | null;
+    price: number | null;
+    image: string | null;
+  }> {
     const html = await this.fetchText(url);
     if (!html) return { name: null, price: null, image: null };
 
-    const name = this.stripHtml(
-      html.match(/<span[^>]*id="productTitle"[^>]*>([\s\S]*?)<\/span>/i)?.[1] || '',
-    ) || null;
+    const name =
+      this.stripHtml(
+        html.match(
+          /<span[^>]*id="productTitle"[^>]*>([\s\S]*?)<\/span>/i,
+        )?.[1] || '',
+      ) || null;
 
     const price = this.extractAmazonCardPrice(html);
 
     const image =
       html.match(/<img[^>]*id="landingImage"[^>]*src="([^"]+)"/i)?.[1] ||
-      html.match(/<img[^>]*class="[^"]*a-dynamic-image[^"]*"[^>]*src="([^"]+)"/i)?.[1] ||
+      html.match(
+        /<img[^>]*class="[^"]*a-dynamic-image[^"]*"[^>]*src="([^"]+)"/i,
+      )?.[1] ||
       null;
 
     return { name, price, image };
   }
 
-  private async scrapeMercadoLivreProduct(
-    url: string,
-  ): Promise<{ name: string | null; price: number | null; image: string | null }> {
+  private async scrapeMercadoLivreProduct(url: string): Promise<{
+    name: string | null;
+    price: number | null;
+    image: string | null;
+  }> {
     // Try the official API first if URL contains item ID (MLB-\d+)
     const itemIdMatch = url.match(/MLB[-]?(\d+)/i);
     if (itemIdMatch) {
@@ -431,17 +456,21 @@ export class WishlistService {
     const html = await this.fetchText(url);
     if (!html) return { name: null, price: null, image: null };
 
-    const name = this.stripHtml(
-      html.match(/<h1[^>]*class="[^"]*ui-pdp-title[^"]*"[^>]*>([\s\S]*?)<\/h1>/i)?.[1] || '',
-    ) || null;
+    const name =
+      this.stripHtml(
+        html.match(
+          /<h1[^>]*class="[^"]*ui-pdp-title[^"]*"[^>]*>([\s\S]*?)<\/h1>/i,
+        )?.[1] || '',
+      ) || null;
 
     const price = this.parseBrazilianMoney(
       html.match(/R\$\s*([\d.]+(?:,\d{2})?)/i)?.[1] || null,
     );
 
     const image =
-      html.match(/<img[^>]*class="[^"]*ui-pdp-image[^"]*"[^>]*src="([^"]+)"/i)?.[1] ||
-      null;
+      html.match(
+        /<img[^>]*class="[^"]*ui-pdp-image[^"]*"[^>]*src="([^"]+)"/i,
+      )?.[1] || null;
 
     return { name, price, image };
   }

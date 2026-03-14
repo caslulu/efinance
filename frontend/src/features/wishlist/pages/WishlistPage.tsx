@@ -2,6 +2,11 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
+  isSupportedWishlistProductUrl,
+  normalizeWishlistScrapeResponse,
+  parseWishlistPrice,
+} from '@/features/wishlist/utils';
+import {
   useCreateWishlist,
   useCreateWishlistProduct,
   useDeleteWishlist,
@@ -95,18 +100,17 @@ export const WishlistPage = () => {
 
       const trimmed = url.trim();
       if (!trimmed || !trimmed.startsWith('http')) return;
-
-      // Only scrape Amazon and Mercado Livre URLs
-      const isSupported =
-        /amazon\.com\.br/i.test(trimmed) || /mercadolivre\.com\.br|mercadolibre\.com/i.test(trimmed);
-      if (!isSupported) return;
+      if (!isSupportedWishlistProductUrl(trimmed)) return;
 
       debounceTimerRef.current = setTimeout(async () => {
         setScrapeLoading(true);
         try {
-          const result = await scrapeUrl.mutateAsync(trimmed);
+          const result = normalizeWishlistScrapeResponse(
+            await scrapeUrl.mutateAsync(trimmed),
+            trimmed,
+          );
           if (result.price && result.price > 0) {
-            setNewProductPrice(String(result.price));
+            setNewProductPrice(result.price.toFixed(2));
           }
           if (result.name && !newProductName.trim()) {
             setNewProductName(result.name);
@@ -177,14 +181,18 @@ export const WishlistPage = () => {
   const handleCreateProduct = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!activeWishlistId) return;
-    if (!newProductName.trim() || !newProductPrice.trim()) return;
+    const parsedPrice = parseWishlistPrice(newProductPrice);
+    if (!newProductName.trim() || parsedPrice === null) {
+      toast.warning('Informe um nome e um preco valido');
+      return;
+    }
 
     try {
       await createProduct.mutateAsync({
         wishlistId: activeWishlistId,
         data: {
           name_product: newProductName.trim(),
-          price: Number(newProductPrice),
+          price: parsedPrice,
           send_price_alerts: newProductSendPriceAlerts,
           ...(newProductUrl.trim() ? { url: newProductUrl.trim() } : {}),
         },
@@ -217,8 +225,8 @@ export const WishlistPage = () => {
   const handleUpdateProduct = async () => {
     if (!editProductModal || !editProductName.trim()) return;
 
-    const parsedPrice = Number(editProductPrice);
-    if (Number.isNaN(parsedPrice) || parsedPrice <= 0) {
+    const parsedPrice = parseWishlistPrice(editProductPrice);
+    if (parsedPrice === null) {
       toast.warning('Preço inválido');
       return;
     }
@@ -356,13 +364,6 @@ export const WishlistPage = () => {
                   <Input
                     value={newProductUrl}
                     onChange={(event) => handleUrlChange(event.target.value)}
-                    onPaste={(event) => {
-                      const pasted = event.clipboardData.getData('text');
-                      if (pasted) {
-                        // Let the onChange fire, but also trigger immediately for paste
-                        setTimeout(() => handleUrlChange(pasted), 0);
-                      }
-                    }}
                     placeholder="URL do produto (cole o link da Amazon ou Mercado Livre)"
                     className="pr-10"
                   />
@@ -380,12 +381,11 @@ export const WishlistPage = () => {
                     placeholder="Nome do item"
                   />
                   <Input
-                    type="number"
-                    step="0.01"
-                    min="0.01"
+                    type="text"
+                    inputMode="decimal"
                     value={newProductPrice}
                     onChange={(event) => setNewProductPrice(event.target.value)}
-                    placeholder="Preço"
+                    placeholder="Preco"
                   />
                   <Button type="submit" disabled={!activeWishlistId || createProduct.isPending}>
                     <Plus className="mr-2 h-4 w-4" />
@@ -586,9 +586,8 @@ export const WishlistPage = () => {
             <div className="grid gap-2">
               <label className="text-sm font-medium">Preço</label>
               <Input
-                type="number"
-                step="0.01"
-                min="0.01"
+                type="text"
+                inputMode="decimal"
                 value={editProductPrice}
                 onChange={(e) => setEditProductPrice(e.target.value)}
                 placeholder="Preço alvo"

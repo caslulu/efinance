@@ -35,6 +35,26 @@ export interface PriceAlertNotificationsResponse {
   notifications: PriceAlertNotification[];
 }
 
+export interface WishlistScrapeResponse {
+  name: string | null;
+  price: number | null;
+  image: string | null;
+}
+
+export interface WishlistScrapeResponseRaw {
+  name?: string | null;
+  title?: string | null;
+  productName?: string | null;
+  name_product?: string | null;
+  price?: number | string | null;
+  salePrice?: number | string | null;
+  currentPrice?: number | string | null;
+  amount?: number | string | null;
+  image?: string | null;
+  imageUrl?: string | null;
+  thumbnail?: string | null;
+}
+
 export interface Wishlist {
   id: number;
   user_id: number;

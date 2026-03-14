@@ -5,6 +5,23 @@ import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { Frequency, SubscriptionStatus } from '@prisma/client';
 
+type SubscriptionBillingRecord = {
+  id: number;
+  user_id: number;
+  wallet_id: number;
+  category_id: number;
+  name: string;
+  description: string | null;
+  value: { toNumber?: () => number } | number;
+  transaction_type: string;
+  frequency: Frequency;
+  status: SubscriptionStatus;
+  start_date: Date;
+  next_billing_date: Date;
+  payment_method: string | null;
+  card_id?: number | null;
+};
+
 @Injectable()
 export class SubscriptionsService {
   constructor(
@@ -28,19 +45,28 @@ export class SubscriptionsService {
   }
 
   async create(userId: number, createSubscriptionDto: CreateSubscriptionDto) {
-    const wallet = await this.prisma.wallet.findUnique({ where: { id: createSubscriptionDto.wallet_id } });
-    if (!wallet || wallet.user_id !== userId) throw new NotFoundException('Wallet not found');
+    const wallet = await this.prisma.wallet.findUnique({
+      where: { id: createSubscriptionDto.wallet_id },
+    });
+    if (!wallet || wallet.user_id !== userId)
+      throw new NotFoundException('Wallet not found');
 
-    const category = await this.prisma.transactionCategory.findUnique({ where: { id: createSubscriptionDto.category_id } });
-    if (!category || category.user_id !== userId) throw new NotFoundException('Category not found');
+    const category = await this.prisma.transactionCategory.findUnique({
+      where: { id: createSubscriptionDto.category_id },
+    });
+    if (!category || category.user_id !== userId)
+      throw new NotFoundException('Category not found');
 
     if (createSubscriptionDto.card_id) {
-      const card = await this.prisma.card.findUnique({ where: { id: createSubscriptionDto.card_id } });
-      if (!card || card.wallet_id !== createSubscriptionDto.wallet_id) throw new NotFoundException('Card not found');
+      const card = await this.prisma.card.findUnique({
+        where: { id: createSubscriptionDto.card_id },
+      });
+      if (!card || card.wallet_id !== createSubscriptionDto.wallet_id)
+        throw new NotFoundException('Card not found');
     }
 
     const nextDate = new Date(createSubscriptionDto.start_date);
-    
+
     const sub = await this.prisma.subscription.create({
       data: {
         ...createSubscriptionDto,
@@ -59,7 +85,7 @@ export class SubscriptionsService {
 
   async triggerCheck() {
     const today = new Date();
-    
+
     const dueSubscriptions = await this.prisma.subscription.findMany({
       where: {
         status: SubscriptionStatus.ACTIVE,
@@ -71,7 +97,7 @@ export class SubscriptionsService {
 
     const results: string[] = [];
 
-    for (const sub of dueSubscriptions) {
+    for (const sub of dueSubscriptions as SubscriptionBillingRecord[]) {
       await this.transactionsService.create(sub.user_id, {
         transaction_date: sub.next_billing_date.toISOString(),
         wallet_id: sub.wallet_id,
@@ -125,11 +151,16 @@ export class SubscriptionsService {
 
   async findOne(id: number, userId: number) {
     const sub = await this.prisma.subscription.findUnique({ where: { id } });
-    if (!sub || sub.user_id !== userId) throw new NotFoundException('Subscription not found');
+    if (!sub || sub.user_id !== userId)
+      throw new NotFoundException('Subscription not found');
     return sub;
   }
 
-  async update(id: number, userId: number, updateSubscriptionDto: UpdateSubscriptionDto) {
+  async update(
+    id: number,
+    userId: number,
+    updateSubscriptionDto: UpdateSubscriptionDto,
+  ) {
     await this.findOne(id, userId);
     return this.prisma.subscription.update({
       where: { id },
@@ -139,7 +170,7 @@ export class SubscriptionsService {
 
   async remove(id: number, userId: number) {
     await this.findOne(id, userId);
-    
+
     // Delete all associated transactions first
     await this.prisma.transaction.deleteMany({
       where: { subscription_id: id },
