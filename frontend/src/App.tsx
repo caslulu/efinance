@@ -17,6 +17,7 @@ import { SettingsPage } from './features/settings/pages/SettingsPage';
 import { ProfilePage } from './features/profile/pages/ProfilePage';
 import { BudgetsPage } from './features/budgets/pages/BudgetsPage';
 import { WishlistPage } from './features/wishlist/pages/WishlistPage';
+import { InvestmentsPage } from './features/investments/pages/InvestmentsPage';
 import { ChatPage } from './features/chat/pages/ChatPage';
 import { ChatWidget } from './features/chat/components/ChatWidget';
 import { useMarkPriceAlertAsRead, usePriceAlertNotifications } from './hooks';
@@ -37,6 +38,7 @@ import {
   Target,
   Gift,
   Repeat,
+  TrendingUp,
   Tags,
   Menu,
   X,
@@ -99,6 +101,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/transactions': 'Histórico de Transações',
   '/budgets': 'Metas de Gastos',
   '/wishlists': 'Wishlist',
+  '/investments': 'Investimentos',
   '/subscriptions': 'Recorrências',
   '/categories': 'Categorias',
   '/chat': 'Assistente IA',
@@ -187,6 +190,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
             <NavLink to="/transactions" icon={ArrowLeftRight} label="Transações" isCollapsed={isCollapsed} onClick={() => setIsSidebarOpen(false)} />
             <NavLink to="/budgets" icon={Target} label="Metas" isCollapsed={isCollapsed} onClick={() => setIsSidebarOpen(false)} />
             <NavLink to="/wishlists" icon={Gift} label="Wishlist" isCollapsed={isCollapsed} onClick={() => setIsSidebarOpen(false)} />
+            <NavLink to="/investments" icon={TrendingUp} label="Investimentos" isCollapsed={isCollapsed} onClick={() => setIsSidebarOpen(false)} />
             <NavLink to="/subscriptions" icon={Repeat} label="Recorrências" isCollapsed={isCollapsed} onClick={() => setIsSidebarOpen(false)} />
             <NavLink to="/categories" icon={Tags} label="Categorias" isCollapsed={isCollapsed} onClick={() => setIsSidebarOpen(false)} />
             <NavLink to="/chat" icon={Sparkles} label="Assistente IA" isCollapsed={isCollapsed} onClick={() => setIsSidebarOpen(false)} />
@@ -442,6 +446,18 @@ function App() {
             }
           />
           <Route
+            path="/investments"
+            element={
+              <ProtectedRoute>
+                <OnboardingWrapper>
+                  <Layout>
+                    <InvestmentsPage />
+                  </Layout>
+                </OnboardingWrapper>
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/profile"
             element={
               <ProtectedRoute>
@@ -464,6 +480,7 @@ function App() {
             }
           />
           <Route path="/perfil" element={<Navigate to="/profile" replace />} />
+          <Route path="/investimentos" element={<Navigate to="/investments" replace />} />
           <Route path="/configuracoes" element={<Navigate to="/settings" replace />} />
           <Route path="/settings/profile" element={<Navigate to="/profile" replace />} />
           <Route path="/configuracoes/perfil" element={<Navigate to="/profile" replace />} />
