@@ -9,6 +9,7 @@ import {
   Minus,
   Pencil,
   CreditCard,
+  FileUp,
   ChevronDown,
   ChevronUp,
   Landmark,
@@ -29,6 +30,7 @@ interface WalletCardProps {
   onEditCard: (card: CardType) => void;
   onAddCardExpense: (card: CardType) => void;
   onPayCardInvoice: (card: CardType) => void;
+  onImportStatement: () => void;
 }
 
 const TYPE_CONFIG: Record<
@@ -100,6 +102,7 @@ export const WalletCard = ({
   onEditCard,
   onAddCardExpense,
   onPayCardInvoice,
+  onImportStatement,
 }: WalletCardProps) => {
   const [isCardsExpanded, setIsCardsExpanded] = useState(false);
   const config = TYPE_CONFIG[wallet.type] || TYPE_CONFIG.OTHER;
@@ -136,14 +139,25 @@ export const WalletCard = ({
               </span>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-all duration-200 text-muted-foreground hover:text-foreground"
-            onClick={onEdit}
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </Button>
+          <div className="flex items-center gap-1 opacity-0 transition-all duration-200 group-hover:opacity-100">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-emerald-500"
+              onClick={onImportStatement}
+              title="Importar extrato"
+            >
+              <FileUp className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+              onClick={onEdit}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
 
         {/* Balance */}
