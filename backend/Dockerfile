@@ -16,7 +16,7 @@ RUN npm run build
 # ---- Production Stage ----
 FROM node:20-alpine AS runner
 
-RUN apk add --no-cache openssl
+RUN apk add --no-cache openssl curl
 
 WORKDIR /app
 

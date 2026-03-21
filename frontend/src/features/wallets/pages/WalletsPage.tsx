@@ -10,6 +10,7 @@ import { PayInvoiceModal } from '../components/PayInvoiceModal';
 import { TransferModal } from '../components/TransferModal';
 import { CreateCardModal } from '../components/CreateCardModal';
 import { EditCardModal } from '../components/EditCardModal';
+import { ImportStatementModal } from '../components/ImportStatementModal';
 import { Button } from '@/components/ui/button';
 import {
   ArrowRightLeft,
@@ -90,6 +91,7 @@ export const WalletsPage = () => {
   const [createCardWalletId, setCreateCardWalletId] = useState<number | null>(null);
   const [editCard, setEditCard] = useState<Card | null>(null);
   const [payInvoiceCard, setPayInvoiceCard] = useState<Card | null>(null);
+  const [importWallet, setImportWallet] = useState<Wallet | null>(null);
 
   const [transactionModal, setTransactionModal] = useState<{
     isOpen: boolean;
@@ -267,6 +269,7 @@ export const WalletsPage = () => {
                             onEditCard={(card) => setEditCard(card)}
                             onAddCardExpense={(card) => openCardExpense(card, wallet.type)}
                             onPayCardInvoice={(card) => setPayInvoiceCard(card)}
+                            onImportStatement={() => setImportWallet(wallet)}
                           />
                         </div>
                       ))}
@@ -306,6 +309,7 @@ export const WalletsPage = () => {
       <CreateCardModal isOpen={!!createCardWalletId} walletId={createCardWalletId} onClose={() => setCreateCardWalletId(null)} onSuccess={refetchData} />
       <EditCardModal isOpen={!!editCard} card={editCard} onClose={() => setEditCard(null)} onSuccess={refetchData} onDelete={handleDeleteCard} />
       <PayInvoiceModal isOpen={!!payInvoiceCard} card={payInvoiceCard} onClose={() => setPayInvoiceCard(null)} onSuccess={refetchData} />
+      <ImportStatementModal wallet={importWallet} open={!!importWallet} onClose={() => setImportWallet(null)} />
       <AddTransactionModal
         isOpen={transactionModal.isOpen}
         type={transactionModal.type}

@@ -40,6 +40,10 @@ export const queryKeys = {
 
   cards: ['cards'] as const,
   cardsByWallet: (walletId: number) => ['cards', 'wallet', walletId] as const,
+
+  investments: ['investments'] as const,
+  investmentMarketData: (symbols: string[], periods: number[], market: string) =>
+    ['investments', 'market-data', market, symbols.join(','), periods.join(',')] as const,
   
   dashboard: ['dashboard'] as const,
   dashboardCategory: (category: string) => ['dashboard', 'category', category] as const,
