@@ -107,6 +107,11 @@ export const WalletCard = ({
   const [isCardsExpanded, setIsCardsExpanded] = useState(false);
   const config = TYPE_CONFIG[wallet.type] || TYPE_CONFIG.OTHER;
   const TypeIcon = config.icon;
+  const isInvestmentWallet = wallet.type === 'INVESTMENT';
+  const headlineValue = isInvestmentWallet
+    ? Number(wallet.displayValue ?? 0)
+    : Number(wallet.actual_cash);
+  const availableCash = Number(wallet.availableCash ?? wallet.actual_cash);
 
   return (
     <div
@@ -164,7 +169,7 @@ export const WalletCard = ({
         <div>
           <div className="flex items-center justify-between mb-1">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-              Saldo Disponível
+              {isInvestmentWallet ? 'Valor Investido' : 'Saldo Disponível'}
             </p>
             {wallet.is_transfer_only && (
               <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
@@ -173,8 +178,18 @@ export const WalletCard = ({
             )}
           </div>
           <p className="font-display text-3xl font-extrabold tracking-tight text-foreground">
-            {formatCurrency(Number(wallet.actual_cash))}
+            {formatCurrency(headlineValue)}
           </p>
+          {isInvestmentWallet && (
+            <div className="mt-2 space-y-1">
+              <p className="text-[11px] text-muted-foreground">
+                Caixa disponível: <span className="font-medium text-foreground">{formatCurrency(availableCash)}</span>
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                Posições: <span className="font-medium text-foreground">{wallet.positionsCount ?? 0}</span>
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Action Buttons */}

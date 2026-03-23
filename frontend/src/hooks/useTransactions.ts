@@ -29,6 +29,7 @@ export function useCreateTransaction() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
       queryClient.invalidateQueries({ queryKey: queryKeys.wallets });
+      queryClient.invalidateQueries({ queryKey: queryKeys.investmentPortfolio });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
       queryClient.invalidateQueries({ queryKey: queryKeys.budgetStatus });
     },
@@ -52,6 +53,7 @@ export function useUpdateTransaction() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
       queryClient.invalidateQueries({ queryKey: queryKeys.wallets });
+      queryClient.invalidateQueries({ queryKey: queryKeys.investmentPortfolio });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
       queryClient.invalidateQueries({ queryKey: queryKeys.budgetStatus });
     },
@@ -68,6 +70,7 @@ export function useDeleteTransaction() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
       queryClient.invalidateQueries({ queryKey: queryKeys.wallets });
+      queryClient.invalidateQueries({ queryKey: queryKeys.investmentPortfolio });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
       queryClient.invalidateQueries({ queryKey: queryKeys.budgetStatus });
     },
@@ -132,6 +135,7 @@ export function useConfirmStatementImport() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
       queryClient.invalidateQueries({ queryKey: queryKeys.wallets });
+      queryClient.invalidateQueries({ queryKey: queryKeys.investmentPortfolio });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
       queryClient.invalidateQueries({ queryKey: queryKeys.budgetStatus });
     },

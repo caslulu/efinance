@@ -5,6 +5,15 @@ import { PrismaService } from '../prisma/prisma.service';
 export class ChatContextService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private excludeInternalCashflowFilter() {
+    return {
+      NOT: [
+        { payment_method: 'TRANSFER' as const },
+        { payment_method: 'INVESTMENT' as const },
+      ],
+    };
+  }
+
   async buildFinancialContext(userId: number): Promise<string> {
     const today = new Date();
     const thirtyDaysAgo = new Date();
@@ -35,7 +44,7 @@ export class ChatContextService {
         where: {
           wallet: { user_id: userId },
           transaction_type: 'EXPENSE',
-          payment_method: { not: 'TRANSFER' },
+          ...this.excludeInternalCashflowFilter(),
           transaction_date: { gte: thirtyDaysAgo, lte: today },
         },
         include: { TransactionCategory: true, wallet: { select: { name: true } } },
@@ -48,7 +57,7 @@ export class ChatContextService {
         where: {
           wallet: { user_id: userId },
           transaction_type: 'INCOME',
-          payment_method: { not: 'TRANSFER' },
+          ...this.excludeInternalCashflowFilter(),
           transaction_date: { gte: thirtyDaysAgo, lte: today },
         },
         include: { TransactionCategory: true },
@@ -91,7 +100,7 @@ export class ChatContextService {
         where: {
           wallet: { user_id: userId },
           transaction_type: 'EXPENSE',
-          payment_method: { not: 'TRANSFER' },
+          ...this.excludeInternalCashflowFilter(),
           transaction_date: { gte: startOfMonth, lte: endOfMonth },
         },
         _sum: { value: true },
@@ -102,7 +111,7 @@ export class ChatContextService {
         where: {
           wallet: { user_id: userId },
           transaction_type: 'INCOME',
-          payment_method: { not: 'TRANSFER' },
+          ...this.excludeInternalCashflowFilter(),
           transaction_date: { gte: startOfMonth, lte: endOfMonth },
         },
         _sum: { value: true },

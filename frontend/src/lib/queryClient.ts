@@ -42,6 +42,7 @@ export const queryKeys = {
   cardsByWallet: (walletId: number) => ['cards', 'wallet', walletId] as const,
 
   investments: ['investments'] as const,
+  investmentPortfolio: ['investments', 'portfolio'] as const,
   investmentMarketData: (symbols: string[], periods: number[], market: string) =>
     ['investments', 'market-data', market, symbols.join(','), periods.join(',')] as const,
   

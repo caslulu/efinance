@@ -109,6 +109,21 @@ export class InvestmentMarketDataService {
     return results;
   }
 
+  async getUsdBrlRateValue(): Promise<number | null> {
+    return this.getUsdBrlRate();
+  }
+
+  async getDividendEvents(
+    symbol: string,
+    market: InvestmentMarket,
+  ): Promise<Array<{ amount: number; date: string; type: 'DIVIDEND' | 'JCP' }>> {
+    if (market !== 'BR') {
+      return [];
+    }
+
+    return this.fetchFundamentusDividendEvents(symbol.trim().toUpperCase());
+  }
+
   private async getSingle(
     symbol: string,
     periods: number[],
@@ -567,6 +582,64 @@ export class InvestmentMarketDataService {
     } catch {
       return null;
     }
+  }
+
+  private async fetchFundamentusDividendEvents(
+    symbol: string,
+  ): Promise<Array<{ amount: number; date: string; type: 'DIVIDEND' | 'JCP' }>> {
+    const detailsUrl =
+      `${this.fundamentusBaseUrl}/detalhes.php?papel=` +
+      encodeURIComponent(symbol);
+    const detailsHtml = await this.fetchText(detailsUrl, {
+      referer: `${this.fundamentusBaseUrl}/`,
+    }).catch(() => null);
+
+    if (!detailsHtml) {
+      return [];
+    }
+
+    const isFund = detailsHtml.includes(`fii_proventos.php?papel=${symbol}`);
+    const path = isFund ? 'fii_proventos.php' : 'proventos.php';
+    const referer =
+      `${this.fundamentusBaseUrl}/detalhes.php?papel=` +
+      encodeURIComponent(symbol);
+    const url =
+      `${this.fundamentusBaseUrl}/${path}?papel=${encodeURIComponent(symbol)}&tipo=2`;
+    const html = await this.fetchText(url, { referer }).catch(() => null);
+
+    if (!html) {
+      return [];
+    }
+
+    const rows = this.extractTableRows(html);
+    if (rows.length === 0) {
+      return [];
+    }
+
+    return rows
+      .map((row) => {
+        const rawType = (isFund ? row[1] : row[2] || '').trim();
+        const amount = this.parseBrazilianNumber(isFund ? row[3] : row[1]);
+        const rawDate = isFund ? row[2] || row[0] : row[3] || row[0];
+        const paymentTimestamp = this.parseBrazilianDateToMarketTimestamp(rawDate);
+
+        if (!rawType || amount === null || paymentTimestamp === null) {
+          return null;
+        }
+
+        return {
+          amount,
+          date: new Date(paymentTimestamp).toISOString(),
+          type: /jcp/i.test(rawType) ? 'JCP' : 'DIVIDEND',
+        };
+      })
+      .filter(
+        (
+          event,
+        ): event is { amount: number; date: string; type: 'DIVIDEND' | 'JCP' } =>
+          event !== null,
+      )
+      .sort((left, right) => left.date.localeCompare(right.date));
   }
 
   private async fetchJson(

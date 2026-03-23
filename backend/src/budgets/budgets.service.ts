@@ -5,6 +5,15 @@ import { PrismaService } from '../prisma/prisma.service';
 export class BudgetsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private excludeInternalCashflowFilter() {
+    return {
+      NOT: [
+        { payment_method: 'TRANSFER' as const },
+        { payment_method: 'INVESTMENT' as const },
+      ],
+    };
+  }
+
   async findAll(userId: number) {
     const budgets = await this.prisma.budget.findMany({
       where: { user_id: userId },
@@ -58,6 +67,7 @@ export class BudgetsService {
           wallet: { user_id: userId },
           category_id: budget.category_id,
           transaction_type: 'EXPENSE',
+          ...this.excludeInternalCashflowFilter(),
           transaction_date: {
             gte: startOfMonth,
             lte: endOfMonth,

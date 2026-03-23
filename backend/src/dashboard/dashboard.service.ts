@@ -1,13 +1,24 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { BudgetsService } from '../budgets/budgets.service';
+import { InvestmentPortfolioService } from '../investments/investment-portfolio.service';
 
 @Injectable()
 export class DashboardService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly budgetsService: BudgetsService
+    private readonly budgetsService: BudgetsService,
+    private readonly investmentPortfolioService: InvestmentPortfolioService,
   ) { }
+
+  private excludeInternalCashflowFilter() {
+    return {
+      NOT: [
+        { payment_method: 'TRANSFER' as const },
+        { payment_method: 'INVESTMENT' as const },
+      ],
+    };
+  }
 
   async getOverview(userId: number, startDateStr?: string, endDateStr?: string) {
     const today = new Date();
@@ -48,7 +59,7 @@ export class DashboardService {
       where: {
         wallet: { user_id: userId },
         transaction_type: 'EXPENSE',
-        payment_method: { not: 'TRANSFER' },
+        ...this.excludeInternalCashflowFilter(),
         transaction_date: {
           gte: periodStart,
           lte: periodEnd,
@@ -79,7 +90,7 @@ export class DashboardService {
       where: {
         wallet: { user_id: userId },
         transaction_type: 'EXPENSE',
-        payment_method: { not: 'TRANSFER' },
+        ...this.excludeInternalCashflowFilter(),
         transaction_date: {
           gte: twelveMonthsAgo,
           lte: oneYearFuture,
@@ -155,7 +166,7 @@ export class DashboardService {
     });
 
     // 6. Totals, Savings Rate & Net Worth
-    const [totalWallets, totalInvestments, totalExpensesMonth, totalIncomesMonth] = await Promise.all([
+    const [totalWallets, totalInvestments, portfolioSummary, totalExpensesMonth, totalIncomesMonth] = await Promise.all([
       this.prisma.wallet.aggregate({
         where: { user_id: userId },
         _sum: { actual_cash: true },
@@ -164,11 +175,12 @@ export class DashboardService {
         where: { wallet: { user_id: userId } },
         _sum: { current_amount: true },
       }),
+      this.investmentPortfolioService.getPortfolioSummary(userId),
       this.prisma.transaction.aggregate({
         where: {
           wallet: { user_id: userId },
           transaction_type: 'EXPENSE',
-          payment_method: { not: 'TRANSFER' },
+          ...this.excludeInternalCashflowFilter(),
           transaction_date: { gte: periodStart, lte: periodEnd },
         },
         _sum: { value: true },
@@ -177,7 +189,7 @@ export class DashboardService {
         where: {
           wallet: { user_id: userId },
           transaction_type: 'INCOME',
-          payment_method: { not: 'TRANSFER' },
+          ...this.excludeInternalCashflowFilter(),
           transaction_date: { gte: periodStart, lte: periodEnd },
         },
         _sum: { value: true },
@@ -189,7 +201,9 @@ export class DashboardService {
     const savingsRate = income > 0 ? ((income - expense) / income) * 100 : 0;
 
     const cash = Number(totalWallets._sum.actual_cash || 0);
-    const invested = Number(totalInvestments._sum.current_amount || 0);
+    const invested =
+      Number(totalInvestments._sum.current_amount || 0) +
+      portfolioSummary.totalPortfolioValue;
 
     const budgetSummary = await this.budgetsService.getBudgetStatus(userId);
 
@@ -197,7 +211,7 @@ export class DashboardService {
       where: {
         wallet: { user_id: userId },
         transaction_type: 'EXPENSE',
-        payment_method: { not: 'TRANSFER' },
+        ...this.excludeInternalCashflowFilter(),
         transaction_date: { gte: periodStart, lte: periodEnd },
       },
       select: {
@@ -236,7 +250,7 @@ export class DashboardService {
       where: {
         wallet: { user_id: userId },
         transaction_type: 'EXPENSE',
-        payment_method: { not: 'TRANSFER' },
+        ...this.excludeInternalCashflowFilter(),
         transaction_date: { gte: sevenDaysAgo, lte: new Date() },
       },
       _sum: { value: true },
@@ -248,7 +262,7 @@ export class DashboardService {
       where: {
         wallet: { user_id: userId },
         transaction_type: 'EXPENSE',
-        payment_method: { not: 'TRANSFER' },
+        ...this.excludeInternalCashflowFilter(),
         transaction_date: {
           gte: startOfPreviousMonth,
           lte: endOfCurrentMonth,
@@ -348,6 +362,7 @@ export class DashboardService {
           }
         },
         transaction_type: 'EXPENSE',
+        ...this.excludeInternalCashflowFilter(),
         transaction_date: { gte: oneMonthAgo, lte: today }
       },
       include: {

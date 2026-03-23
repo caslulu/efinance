@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -6,22 +7,31 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getErrorMessage } from '@/lib/utils';
-import { toast } from 'sonner';
+import {
+  useInvestmentMarketData,
+  useInvestmentPortfolio,
+  useWallets,
+} from '@/hooks';
 import {
   ArrowDownRight,
   ArrowUpRight,
+  BriefcaseBusiness,
   CalendarDays,
   CircleDollarSign,
   Globe2,
+  Landmark,
+  Plus,
   RefreshCcw,
   Search,
   TrendingUp,
 } from 'lucide-react';
-import { useInvestmentMarketData } from '@/hooks';
 import type {
   InvestmentDualCurrencyValue,
   InvestmentMarketItem,
 } from '@/types/InvestmentMarket';
+import type { InvestmentPortfolioPosition } from '@/types/InvestmentPortfolio';
+import { CreateWalletModal } from '@/features/wallets/components/CreateWalletModal';
+import { InvestmentOperationModal } from '../components/InvestmentOperationModal';
 
 const DEFAULT_SYMBOLS_BY_MARKET = {
   BR: 'MXRF11,HGLG11,PETR4',
@@ -59,14 +69,8 @@ const getAlternateCurrencyValue = (
   values: InvestmentDualCurrencyValue,
   primaryCurrency: string,
 ) => {
-  if (primaryCurrency === 'USD') {
-    return values.brl;
-  }
-
-  if (primaryCurrency === 'BRL') {
-    return values.usd;
-  }
-
+  if (primaryCurrency === 'USD') return values.brl;
+  if (primaryCurrency === 'BRL') return values.usd;
   return null;
 };
 
@@ -98,6 +102,12 @@ const directionIcon: Record<string, ReactNode> = {
   UP: <ArrowUpRight className="h-3.5 w-3.5" />,
   DOWN: <ArrowDownRight className="h-3.5 w-3.5" />,
   FLAT: <CircleDollarSign className="h-3.5 w-3.5" />,
+};
+
+const resolveDirection = (value: number): 'UP' | 'DOWN' | 'FLAT' => {
+  if (value > 0) return 'UP';
+  if (value < 0) return 'DOWN';
+  return 'FLAT';
 };
 
 function ChangePill({
@@ -225,14 +235,105 @@ function InvestmentRow({ item }: { item: InvestmentMarketItem }) {
   );
 }
 
+function PortfolioPositionRow({ position }: { position: InvestmentPortfolioPosition }) {
+  const direction = resolveDirection(position.gainLossBrl);
+
+  return (
+    <TableRow className="border-b border-border/30 hover:bg-muted/30 transition-colors">
+      <TableCell className="min-w-[170px]">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <p className="font-semibold text-foreground">{position.symbol}</p>
+            <Badge variant="outline" className="text-[10px] uppercase tracking-[0.18em]">
+              {position.market}
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground">{position.walletName}</p>
+          <p className="text-[11px] text-muted-foreground">
+            {position.shortName || position.longName || position.marketSymbol}
+          </p>
+        </div>
+      </TableCell>
+      <TableCell className="font-medium">
+        {formatDecimal(position.quantity, 6)}
+      </TableCell>
+      <TableCell>
+        <div className="space-y-1">
+          <div className="font-medium">{formatMoney(position.averageCost, position.currency)}</div>
+          <div className="text-[11px] text-muted-foreground">
+            {formatMoney(position.averageCostBrl, 'BRL')}
+          </div>
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="space-y-1">
+          <div className="font-medium">{formatMoney(position.currentPrice, position.currency)}</div>
+          <div className="text-[11px] text-muted-foreground">
+            {formatMoney(position.currentPriceBrl, 'BRL')}
+          </div>
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="space-y-1">
+          <div className="font-medium">{formatMoney(position.currentValue, position.currency)}</div>
+          <div className="text-[11px] text-muted-foreground">
+            {formatMoney(position.currentValueBrl, 'BRL')}
+          </div>
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="space-y-2">
+          <ChangePill
+            amount={position.gainLossBrl}
+            percent={position.gainLossPercent}
+            direction={direction}
+            currency="BRL"
+          />
+          <div className="text-[11px] text-muted-foreground">
+            {formatMoney(position.gainLoss, position.currency)}
+          </div>
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="space-y-1">
+          <div className="font-medium">{formatMoney(position.dividendsReceivedBrl + position.jcpReceivedBrl, 'BRL')}</div>
+          <div className="text-[11px] text-muted-foreground">
+            Dividendos: {formatMoney(position.dividendsReceived, position.currency)}
+          </div>
+          <div className="text-[11px] text-muted-foreground">
+            JCP: {formatMoney(position.jcpReceived, position.currency)}
+          </div>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+}
+
 export const InvestmentsPage = () => {
   const [market, setMarket] = useState<InvestmentMarketScope>('BR');
   const [inputValue, setInputValue] = useState<string>(DEFAULT_SYMBOLS_BY_MARKET.BR);
   const [symbols, setSymbols] = useState(() => parseSymbols(DEFAULT_SYMBOLS_BY_MARKET.BR));
   const [submittedAt, setSubmittedAt] = useState<Date | null>(new Date());
+  const [isCreateWalletOpen, setIsCreateWalletOpen] = useState(false);
+  const [isOperationOpen, setIsOperationOpen] = useState(false);
   const periods = DEFAULT_PERIODS;
 
-  const { data = [], isLoading, isFetching, error } = useInvestmentMarketData({
+  const {
+    data: wallets = [],
+    refetch: refetchWallets,
+  } = useWallets();
+  const {
+    data: portfolio,
+    isLoading: isPortfolioLoading,
+    error: portfolioError,
+    refetch: refetchPortfolio,
+  } = useInvestmentPortfolio();
+  const {
+    data: data = [],
+    isLoading,
+    isFetching,
+    error,
+  } = useInvestmentMarketData({
     symbols,
     periods,
     market,
@@ -244,28 +345,18 @@ export const InvestmentsPage = () => {
     }
   }, [error]);
 
-  const handleMarketChange = (nextMarket: InvestmentMarketScope) => {
-    setMarket(nextMarket);
-    const nextSymbolsInput = DEFAULT_SYMBOLS_BY_MARKET[nextMarket];
-    setInputValue(nextSymbolsInput);
-    setSymbols(parseSymbols(nextSymbolsInput));
-    setSubmittedAt(new Date());
-  };
-
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const nextSymbols = parseSymbols(inputValue);
-
-    if (!nextSymbols.length) {
-      toast.error('Digite ao menos um ticker válido.');
-      return;
+  useEffect(() => {
+    if (portfolioError) {
+      toast.error(getErrorMessage(portfolioError, 'Falha ao carregar a carteira de investimentos'));
     }
+  }, [portfolioError]);
 
-    setSymbols(nextSymbols);
-    setSubmittedAt(new Date());
-  };
+  const investmentWallets = useMemo(
+    () => wallets.filter((wallet) => wallet.type === 'INVESTMENT'),
+    [wallets],
+  );
 
-  const summary = useMemo(() => {
+  const marketSummary = useMemo(() => {
     const consulted = data.length;
     const avgDayChange = consulted
       ? data.reduce((sum, item) => sum + item.dayChange.percent, 0) / consulted
@@ -302,6 +393,27 @@ export const InvestmentsPage = () => {
     };
   }, [data]);
 
+  const handleMarketChange = (nextMarket: InvestmentMarketScope) => {
+    setMarket(nextMarket);
+    const nextSymbolsInput = DEFAULT_SYMBOLS_BY_MARKET[nextMarket];
+    setInputValue(nextSymbolsInput);
+    setSymbols(parseSymbols(nextSymbolsInput));
+    setSubmittedAt(new Date());
+  };
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const nextSymbols = parseSymbols(inputValue);
+
+    if (!nextSymbols.length) {
+      toast.error('Digite ao menos um ticker válido.');
+      return;
+    }
+
+    setSymbols(nextSymbols);
+    setSubmittedAt(new Date());
+  };
+
   return (
     <div className="min-h-screen space-y-6">
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-emerald-950 to-teal-900 px-6 py-8 text-white shadow-2xl shadow-emerald-950/20">
@@ -310,15 +422,37 @@ export const InvestmentsPage = () => {
         <div className="absolute bottom-0 left-1/4 h-56 w-56 rounded-full bg-teal-400/10 blur-3xl" />
 
         <div className="relative space-y-6">
-          <div className="space-y-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-emerald-100">
-              <TrendingUp className="h-3.5 w-3.5" />
-              Market data
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="space-y-3">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-emerald-100">
+                <TrendingUp className="h-3.5 w-3.5" />
+                Market data + carteira
+              </div>
+              <h1 className="text-3xl font-black tracking-tight sm:text-4xl">Investimentos</h1>
+              <p className="max-w-2xl text-sm text-emerald-100/80 sm:text-base">
+                Acompanhe seu portfólio, registre compras e vendas e consulte cotações e dividendos de ativos no Brasil e no exterior.
+              </p>
             </div>
-            <h1 className="text-3xl font-black tracking-tight sm:text-4xl">Investimentos</h1>
-            <p className="max-w-2xl text-sm text-emerald-100/80 sm:text-base">
-              Consulte cotação, variação diária, movimento em múltiplos períodos e o último dividendo dos ativos no Brasil e no exterior.
-            </p>
+
+            <div className="flex flex-wrap gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="border-white/15 bg-white/10 text-white hover:bg-white/15"
+                onClick={() => setIsCreateWalletOpen(true)}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Nova carteira de investimentos
+              </Button>
+              <Button
+                type="button"
+                className="bg-emerald-500 text-emerald-950 hover:bg-emerald-400"
+                onClick={() => setIsOperationOpen(true)}
+              >
+                <BriefcaseBusiness className="mr-2 h-4 w-4" />
+                Registrar operação
+              </Button>
+            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="grid gap-3 rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-sm lg:grid-cols-[1fr_auto]">
@@ -389,9 +523,9 @@ export const InvestmentsPage = () => {
             <Badge variant="outline" className="border-white/15 bg-white/10 text-white">
               {market === 'BR' ? 'Mercado BR' : 'Mercado internacional (EUA)'}
             </Badge>
-            {summary.usdBrlRate !== null && (
+            {marketSummary.usdBrlRate !== null && (
               <Badge variant="outline" className="border-white/15 bg-white/10 text-white">
-                USD/BRL {formatDecimal(summary.usdBrlRate, 4)}
+                USD/BRL {formatDecimal(marketSummary.usdBrlRate, 4)}
               </Badge>
             )}
             {periods.map((period) => (
@@ -409,18 +543,195 @@ export const InvestmentsPage = () => {
         </div>
       </div>
 
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card className="border-border/50 bg-card/90 shadow-sm backdrop-blur">
+          <CardHeader className="pb-3">
+            <CardDescription>Patrimônio investido</CardDescription>
+            <CardTitle className="text-3xl">
+              {isPortfolioLoading
+                ? '...'
+                : formatMoney(portfolio?.summary.totalPortfolioValue || 0, 'BRL')}
+            </CardTitle>
+          </CardHeader>
+        </Card>
+        <Card className="border-border/50 bg-card/90 shadow-sm backdrop-blur">
+          <CardHeader className="pb-3">
+            <CardDescription>Ganho / perda total</CardDescription>
+            <CardTitle className={`text-3xl ${(portfolio?.summary.totalGainLoss || 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+              {portfolio ? formatPercent(portfolio.summary.totalGainLossPercent) : '0,00%'}
+            </CardTitle>
+            <CardDescription>
+              {formatMoney(portfolio?.summary.totalGainLoss || 0, 'BRL')}
+            </CardDescription>
+          </CardHeader>
+        </Card>
+        <Card className="border-border/50 bg-card/90 shadow-sm backdrop-blur">
+          <CardHeader className="pb-3">
+            <CardDescription>Proventos acumulados</CardDescription>
+            <CardTitle className="text-3xl">
+              {formatMoney(
+                (portfolio?.summary.totalDividends || 0) + (portfolio?.summary.totalJcp || 0),
+                'BRL',
+              )}
+            </CardTitle>
+          </CardHeader>
+        </Card>
+        <Card className="border-border/50 bg-card/90 shadow-sm backdrop-blur">
+          <CardHeader className="pb-3">
+            <CardDescription>Carteiras de investimento</CardDescription>
+            <CardTitle className="text-3xl">{investmentWallets.length}</CardTitle>
+            <CardDescription>
+              {portfolio?.summary.totalPositions || 0} posiç{(portfolio?.summary.totalPositions || 0) === 1 ? 'ão' : 'ões'}
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+
+      <Card className="overflow-hidden border-border/50 bg-card/90 shadow-sm backdrop-blur">
+        <CardHeader className="border-b border-border/50 bg-muted/30">
+          <CardTitle className="flex items-center gap-2 text-xl">
+            <Landmark className="h-5 w-5 text-emerald-500" />
+            Minha carteira
+          </CardTitle>
+          <CardDescription>
+            Resumo das carteiras de investimento e das posições do seu usuário.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6 p-6">
+          {isPortfolioLoading ? (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <Skeleton key={index} className="h-36 rounded-2xl" />
+              ))}
+            </div>
+          ) : portfolio && portfolio.wallets.length > 0 ? (
+            <>
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {portfolio.wallets.map((wallet) => (
+                  <div
+                    key={wallet.walletId}
+                    className="rounded-2xl border border-border/50 bg-gradient-to-br from-card via-card to-muted/30 p-5 shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">{wallet.walletName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {wallet.positionsCount} posiç{wallet.positionsCount === 1 ? 'ão' : 'ões'}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="uppercase tracking-[0.18em]">
+                        INVEST
+                      </Badge>
+                    </div>
+
+                    <div className="mt-5 space-y-3">
+                      <div>
+                        <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                          Valor investido
+                        </p>
+                        <p className="text-2xl font-black text-foreground">
+                          {formatMoney(wallet.displayValue, 'BRL')}
+                        </p>
+                      </div>
+                      <div className="grid gap-2 text-sm">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-muted-foreground">Caixa disponível</span>
+                          <span className="font-medium">{formatMoney(wallet.availableCash, 'BRL')}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-muted-foreground">Ganho / perda</span>
+                          <span className={wallet.totalGainLoss >= 0 ? 'text-emerald-600 font-semibold' : 'text-rose-600 font-semibold'}>
+                            {formatMoney(wallet.totalGainLoss, 'BRL')}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-muted-foreground">Rentabilidade</span>
+                          <span className={wallet.totalGainLossPercent >= 0 ? 'text-emerald-600 font-semibold' : 'text-rose-600 font-semibold'}>
+                            {formatPercent(wallet.totalGainLossPercent)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-muted-foreground">Proventos</span>
+                          <span className="font-medium">{formatMoney(wallet.totalDividends, 'BRL')}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="overflow-x-auto rounded-2xl border border-border/50">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/40">
+                      <TableHead>Ativo</TableHead>
+                      <TableHead>Quantidade</TableHead>
+                      <TableHead>Preço médio</TableHead>
+                      <TableHead>Preço atual</TableHead>
+                      <TableHead>Valor atual</TableHead>
+                      <TableHead>P/L</TableHead>
+                      <TableHead>Proventos</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {portfolio.positions.length > 0 ? (
+                      portfolio.positions.map((position) => (
+                        <PortfolioPositionRow key={position.positionId} position={position} />
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={7} className="py-12 text-center">
+                          <div className="mx-auto max-w-md space-y-2">
+                            <p className="font-semibold text-foreground">
+                              Você ainda não tem posições abertas
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              Crie uma carteira de investimento, transfira saldo e registre sua primeira compra.
+                            </p>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-border/60 bg-muted/30 px-6 py-12 text-center">
+              <div className="mx-auto flex max-w-lg flex-col items-center gap-4">
+                <div className="rounded-2xl bg-emerald-500/10 p-4 text-emerald-600">
+                  <BriefcaseBusiness className="h-8 w-8" />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-lg font-semibold text-foreground">
+                    Nenhuma carteira de investimento criada ainda
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Crie uma carteira do tipo investimento para começar a montar seu portfólio e acompanhar posições, ganhos e proventos.
+                  </p>
+                </div>
+                <Button onClick={() => setIsCreateWalletOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Criar carteira de investimentos
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="border-border/50 bg-card/90 shadow-sm backdrop-blur">
           <CardHeader className="pb-3">
             <CardDescription>Ativos consultados</CardDescription>
-            <CardTitle className="text-3xl">{summary.consulted}</CardTitle>
+            <CardTitle className="text-3xl">{marketSummary.consulted}</CardTitle>
           </CardHeader>
         </Card>
         <Card className="border-border/50 bg-card/90 shadow-sm backdrop-blur">
           <CardHeader className="pb-3">
             <CardDescription>Variação média do dia</CardDescription>
-            <CardTitle className={`text-3xl ${summary.avgDayChange >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-              {formatPercent(summary.avgDayChange)}
+            <CardTitle className={`text-3xl ${marketSummary.avgDayChange >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+              {formatPercent(marketSummary.avgDayChange)}
             </CardTitle>
           </CardHeader>
         </Card>
@@ -428,16 +739,16 @@ export const InvestmentsPage = () => {
           <CardHeader className="pb-3">
             <CardDescription>Último dividendo encontrado</CardDescription>
             <CardTitle className="text-2xl">
-              {summary.latestDividendItem?.latestDividend
-                ? formatMoney(summary.latestDividendItem.latestDividend.amount, summary.latestDividendItem.currency)
+              {marketSummary.latestDividendItem?.latestDividend
+                ? formatMoney(marketSummary.latestDividendItem.latestDividend.amount, marketSummary.latestDividendItem.currency)
                 : '—'}
             </CardTitle>
-            {summary.latestDividendAlternateValue !== null &&
-              summary.latestDividendAlternateCurrency && (
+            {marketSummary.latestDividendAlternateValue !== null &&
+              marketSummary.latestDividendAlternateCurrency && (
               <CardDescription>
                 {formatMoney(
-                  summary.latestDividendAlternateValue,
-                  summary.latestDividendAlternateCurrency,
+                  marketSummary.latestDividendAlternateValue,
+                  marketSummary.latestDividendAlternateCurrency,
                 )}
               </CardDescription>
             )}
@@ -449,7 +760,7 @@ export const InvestmentsPage = () => {
         <CardHeader className="border-b border-border/50 bg-muted/30">
           <CardTitle className="flex items-center gap-2 text-xl">
             <CircleDollarSign className="h-5 w-5 text-emerald-500" />
-            Cotações e dividendos
+            Cotações e dividendos do mercado
           </CardTitle>
           <CardDescription>
             Comparativo de preço, fechamento anterior, períodos e faixa de 52 semanas.
@@ -478,7 +789,7 @@ export const InvestmentsPage = () => {
                     </TableRow>
                   ))
                 ) : data.length > 0 ? (
-                  data.map((item) => <InvestmentRow key={item.symbol} item={item} />)
+                  data.map((item) => <InvestmentRow key={`${item.marketSymbol}-${item.symbol}`} item={item} />)
                 ) : (
                   <TableRow>
                     <TableCell colSpan={6} className="py-14 text-center">
@@ -501,6 +812,25 @@ export const InvestmentsPage = () => {
           </div>
         </CardContent>
       </Card>
+
+      <CreateWalletModal
+        isOpen={isCreateWalletOpen}
+        onClose={() => setIsCreateWalletOpen(false)}
+        onSuccess={() => {
+          refetchWallets();
+          refetchPortfolio();
+        }}
+        defaultType="INVESTMENT"
+        lockType
+        title="Nova carteira de investimentos"
+        description="Crie uma carteira dedicada para registrar compras, vendas e acompanhar suas posições."
+      />
+
+      <InvestmentOperationModal
+        isOpen={isOperationOpen}
+        onClose={() => setIsOperationOpen(false)}
+        wallets={wallets}
+      />
     </div>
   );
 };

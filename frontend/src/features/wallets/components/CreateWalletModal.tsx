@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { api } from '../../../api/api';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
@@ -21,6 +21,10 @@ interface CreateWalletModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  defaultType?: string;
+  lockType?: boolean;
+  title?: string;
+  description?: string;
 }
 
 const WALLET_TYPE_OPTIONS = [
@@ -31,12 +35,26 @@ const WALLET_TYPE_OPTIONS = [
   { value: 'OTHER', label: WALLET_TYPES.OTHER },
 ];
 
-export const CreateWalletModal = ({ isOpen, onClose, onSuccess }: CreateWalletModalProps) => {
+export const CreateWalletModal = ({
+  isOpen,
+  onClose,
+  onSuccess,
+  defaultType = 'BANK',
+  lockType = false,
+  title = 'Nova Carteira',
+  description = 'Crie uma nova carteira para organizar suas finanças.',
+}: CreateWalletModalProps) => {
   const [name, setName] = useState('');
-  const [type, setType] = useState('BANK');
+  const [type, setType] = useState(defaultType);
   const [balance, setBalance] = useState('');
   const [isTransferOnly, setIsTransferOnly] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setType(defaultType);
+    }
+  }, [defaultType, isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +70,7 @@ export const CreateWalletModal = ({ isOpen, onClose, onSuccess }: CreateWalletMo
       onClose();
       setName('');
       setBalance('');
-      setType('BANK');
+      setType(defaultType);
       setIsTransferOnly(false);
     } catch {
       toast.error('Falha ao criar carteira');
@@ -70,9 +88,9 @@ export const CreateWalletModal = ({ isOpen, onClose, onSuccess }: CreateWalletMo
               <WalletIcon className="h-5 w-5 text-white" />
             </div>
             <div>
-              <DialogTitle className="text-xl">Nova Carteira</DialogTitle>
+              <DialogTitle className="text-xl">{title}</DialogTitle>
               <DialogDescription className="mt-1">
-                Crie uma nova carteira para organizar suas finanças.
+                {description}
               </DialogDescription>
             </div>
           </div>
@@ -88,19 +106,21 @@ export const CreateWalletModal = ({ isOpen, onClose, onSuccess }: CreateWalletMo
               required
             />
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="type">Tipo</Label>
-            <Select value={type} onValueChange={setType}>
-              <SelectTrigger id="type">
-                <SelectValue placeholder="Selecione o tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                {WALLET_TYPE_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {!lockType && (
+            <div className="grid gap-2">
+              <Label htmlFor="type">Tipo</Label>
+              <Select value={type} onValueChange={setType}>
+                <SelectTrigger id="type">
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {WALLET_TYPE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="grid gap-2">
             <Label htmlFor="balance">Saldo Inicial</Label>
             <CurrencyInput

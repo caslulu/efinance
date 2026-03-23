@@ -3,10 +3,14 @@ import { CreateWalletDto } from './dto/create-wallet.dto';
 import { UpdateWalletDto } from './dto/update-wallet.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { Decimal } from '@prisma/client/runtime/library';
+import { InvestmentPortfolioService } from '../investments/investment-portfolio.service';
 
 @Injectable()
 export class WalletsService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly investmentPortfolioService: InvestmentPortfolioService,
+  ) { }
 
   async create(userId: number, createWalletDto: CreateWalletDto) {
     return this.prisma.wallet.create({
@@ -18,11 +22,13 @@ export class WalletsService {
   }
 
   async findAll(userId: number) {
-    return this.prisma.wallet.findMany({
+    const wallets = await this.prisma.wallet.findMany({
       where: { user_id: userId },
       orderBy: { order: 'asc' },
       include: { cards: true },
     });
+
+    return this.enrichWalletsWithInvestmentMetrics(userId, wallets);
   }
 
   async findOne(id: number, userId: number) {
@@ -35,7 +41,8 @@ export class WalletsService {
       throw new NotFoundException(`Wallet #${id} not found`);
     }
 
-    return wallet;
+    const [enrichedWallet] = await this.enrichWalletsWithInvestmentMetrics(userId, [wallet]);
+    return enrichedWallet;
   }
 
   async addIncoming(id: number, userId: number, amount: number) {
@@ -195,5 +202,38 @@ export class WalletsService {
     );
 
     return { message: 'Wallets reordenados com sucesso' };
+  }
+
+  private async enrichWalletsWithInvestmentMetrics<T extends {
+    id: number;
+    type: string;
+    actual_cash: Decimal;
+  }>(userId: number, wallets: T[]): Promise<Array<T & {
+    portfolioValue?: number;
+    availableCash?: number;
+    positionsCount?: number;
+    displayValue?: number;
+  }>> {
+    if (!wallets.some((wallet) => wallet.type === 'INVESTMENT')) {
+      return wallets;
+    }
+
+    const walletSummaries = await this.investmentPortfolioService.getWalletDisplaySummaries(userId);
+
+    return wallets.map((wallet) => {
+      if (wallet.type !== 'INVESTMENT') {
+        return wallet;
+      }
+
+      const summary = walletSummaries.get(wallet.id);
+
+      return {
+        ...wallet,
+        portfolioValue: summary?.portfolioValue ?? 0,
+        availableCash: summary?.availableCash ?? Number(wallet.actual_cash),
+        positionsCount: summary?.positionsCount ?? 0,
+        displayValue: summary?.displayValue ?? 0,
+      };
+    });
   }
 }

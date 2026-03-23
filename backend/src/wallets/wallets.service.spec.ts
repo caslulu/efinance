@@ -3,6 +3,7 @@ import { WalletsService } from './wallets.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Decimal } from '@prisma/client/runtime/library';
+import { InvestmentPortfolioService } from '../investments/investment-portfolio.service';
 
 const mockPrismaService = {
   wallet: {
@@ -11,6 +12,10 @@ const mockPrismaService = {
     update: jest.fn(),
     findMany: jest.fn(),
   },
+};
+
+const mockInvestmentPortfolioService = {
+  getWalletDisplaySummaries: jest.fn(),
 };
 
 describe('WalletsService', () => {
@@ -26,6 +31,10 @@ describe('WalletsService', () => {
           provide: PrismaService,
           useValue: mockPrismaService,
         },
+        {
+          provide: InvestmentPortfolioService,
+          useValue: mockInvestmentPortfolioService,
+        },
       ],
     }).compile();
 
@@ -33,6 +42,7 @@ describe('WalletsService', () => {
     prisma = module.get<PrismaService>(PrismaService);
 
     jest.clearAllMocks();
+    mockInvestmentPortfolioService.getWalletDisplaySummaries.mockResolvedValue(new Map());
   });
 
   it('should be defined', () => {

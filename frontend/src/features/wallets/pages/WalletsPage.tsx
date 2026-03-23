@@ -102,7 +102,14 @@ export const WalletsPage = () => {
   }>({ isOpen: false, type: null, walletId: null });
 
   const totalBalance = useMemo(
-    () => wallets.reduce((sum, w) => sum + Number(w.actual_cash), 0),
+    () =>
+      wallets.reduce((sum, wallet) => {
+        if (wallet.type === 'INVESTMENT') {
+          return sum + Number(wallet.displayValue ?? 0) + Number(wallet.availableCash ?? wallet.actual_cash);
+        }
+
+        return sum + Number(wallet.actual_cash);
+      }, 0),
     [wallets],
   );
 
@@ -111,7 +118,9 @@ export const WalletsPage = () => {
     wallets.forEach((w) => {
       if (!grouped[w.type]) grouped[w.type] = { count: 0, total: 0 };
       grouped[w.type].count++;
-      grouped[w.type].total += Number(w.actual_cash);
+      grouped[w.type].total += w.type === 'INVESTMENT'
+        ? Number(w.displayValue ?? 0) + Number(w.availableCash ?? w.actual_cash)
+        : Number(w.actual_cash);
     });
     return grouped;
   }, [wallets]);
