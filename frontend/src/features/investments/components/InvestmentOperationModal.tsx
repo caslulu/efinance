@@ -182,10 +182,6 @@ export function InvestmentOperationModal({
           return;
         }
 
-        if (!cdbCdiRate || Number(cdbCdiRate) <= 0) {
-          toast.error('Informe o CDI anual utilizado no cálculo.');
-          return;
-        }
       }
     }
 
@@ -207,7 +203,10 @@ export function InvestmentOperationModal({
             ? Number(cdbCdiPercentage)
             : undefined,
         cdb_cdi_rate:
-          assetType === 'CDB' && operationType === 'BUY'
+          assetType === 'CDB' &&
+          operationType === 'BUY' &&
+          cdbCdiRate.trim() &&
+          Number(cdbCdiRate) > 0
             ? Number(cdbCdiRate)
             : undefined,
       });
@@ -412,7 +411,7 @@ export function InvestmentOperationModal({
                       />
                     </div>
                     <div className="grid gap-2 sm:col-span-2">
-                      <Label htmlFor="operation-cdb-cdi-rate">CDI anual (%)</Label>
+                      <Label htmlFor="operation-cdb-cdi-rate">CDI anual (%) opcional</Label>
                       <Input
                         id="operation-cdb-cdi-rate"
                         type="number"
@@ -421,7 +420,7 @@ export function InvestmentOperationModal({
                         min="0.01"
                         value={cdbCdiRate}
                         onChange={(event) => setCdbCdiRate(event.target.value)}
-                        placeholder="10.65"
+                        placeholder="Automático"
                       />
                     </div>
                   </>
@@ -443,7 +442,7 @@ export function InvestmentOperationModal({
                     {assetType === 'CDB'
                       ? operationType === 'SELL'
                         ? 'Informe o principal resgatado e o valor efetivamente recebido para registrar o resgate.'
-                        : 'O valor atual do CDB será estimado usando o CDI anual informado, o percentual contratado e capitalização em dias úteis.'
+                        : 'O valor atual do CDB será estimado usando o percentual contratado, capitalização em dias úteis e o CDI informado ou o CDI padrão do sistema.'
                       : 'A operação será registrada com o preço atual do ativo no momento do envio.'}
                   </p>
                 </div>
@@ -479,7 +478,7 @@ export function InvestmentOperationModal({
                           : 'Informe o valor'
                         : cdbCdiRate
                         ? `${cdbCdiRate}% a.a.`
-                        : 'Informe o CDI'}
+                        : 'CDI padrão do sistema'}
                     </div>
                   </div>
                 </div>

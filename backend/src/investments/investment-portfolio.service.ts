@@ -96,6 +96,7 @@ type ManualValuationSummary = {
 const ZERO = new Decimal(0);
 const EPSILON = new Decimal('0.000001');
 const BUSINESS_DAYS_IN_YEAR = 252;
+const DEFAULT_CDB_CDI_RATE = new Decimal('10.65');
 
 @Injectable()
 export class InvestmentPortfolioService {
@@ -307,6 +308,34 @@ export class InvestmentPortfolioService {
       wallets: walletSummaries,
       positions: positionSummaries,
     };
+  }
+
+  private async resolveDefaultCdbCdiRate(): Promise<Decimal> {
+    try {
+      const indicator = await this.prisma.economicIndicator.findFirst({
+        where: {
+          name: {
+            contains: 'CDI',
+            mode: 'insensitive',
+          },
+        },
+        orderBy: [{ last_update: 'desc' }, { id: 'desc' }],
+        select: {
+          current_rate: true,
+        },
+      });
+
+      if (indicator?.current_rate) {
+        const rate = new Decimal(indicator.current_rate);
+        if (rate.gt(ZERO)) {
+          return rate;
+        }
+      }
+    } catch {
+      // Falls back to the system default CDI rate when the indicator is unavailable.
+    }
+
+    return DEFAULT_CDB_CDI_RATE;
   }
 
   private async loadMarketDataMap(
@@ -1169,11 +1198,14 @@ export class InvestmentPortfolioService {
         if (!dto.cdb_cdi_percentage || dto.cdb_cdi_percentage <= 0) {
           throw new BadRequestException('Informe o percentual do CDI do CDB');
         }
-
-        if (!dto.cdb_cdi_rate || dto.cdb_cdi_rate <= 0) {
-          throw new BadRequestException('Informe o valor anual do CDI');
-        }
       }
+
+      const resolvedCdbCdiRate =
+        operationType === InvestmentOperationType.BUY
+          ? dto.cdb_cdi_rate && dto.cdb_cdi_rate > 0
+            ? new Decimal(dto.cdb_cdi_rate)
+            : await this.resolveDefaultCdbCdiRate()
+          : null;
 
       return {
         walletId: dto.wallet_id,
@@ -1191,10 +1223,7 @@ export class InvestmentPortfolioService {
           operationType === InvestmentOperationType.BUY
             ? new Decimal(dto.cdb_cdi_percentage)
             : null,
-        cdbCdiRate:
-          operationType === InvestmentOperationType.BUY
-            ? new Decimal(dto.cdb_cdi_rate)
-            : null,
+        cdbCdiRate: resolvedCdbCdiRate,
         transactionDate,
         notes: dto.notes?.trim() || null,
       };

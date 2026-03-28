@@ -32,6 +32,9 @@ const prismaMock = {
     findMany: jest.fn(),
     update: jest.fn(),
   },
+  economicIndicator: {
+    findFirst: jest.fn(),
+  },
   investmentOperation: {
     findMany: jest.fn(),
     create: jest.fn(),
@@ -75,6 +78,7 @@ describe('InvestmentPortfolioService', () => {
     jest.clearAllMocks();
 
     txMock.transactionCategory.findFirst.mockResolvedValue({ id: 9 });
+    prismaMock.economicIndicator.findFirst.mockResolvedValue(null);
     marketDataMock.getDividendEvents.mockResolvedValue([]);
     marketDataMock.getMany.mockResolvedValue([]);
   });
@@ -422,6 +426,101 @@ describe('InvestmentPortfolioService', () => {
           unit_price: new Decimal(1),
           cdb_cdi_percentage: new Decimal(120),
           cdb_cdi_rate: new Decimal(10.5),
+        }),
+      }),
+    );
+  });
+
+  it('should use the latest CDI indicator when a CDB buy omits the annual CDI rate', async () => {
+    prismaMock.economicIndicator.findFirst.mockResolvedValue({
+      current_rate: new Decimal('11.25'),
+    });
+    prismaMock.wallet.findUnique.mockResolvedValue({
+      id: 1,
+      user_id: 7,
+      type: 'INVESTMENT',
+      actual_cash: new Decimal(5000),
+      name: 'Banco',
+    });
+    prismaMock.investmentOperation.findMany.mockResolvedValue([]);
+    txMock.investmentOperation.create.mockResolvedValue({
+      id: 31,
+      wallet_id: 1,
+      type: 'BUY',
+      symbol: 'CDB INTER 110% CDI',
+      market: 'BR',
+      asset_type: 'CDB',
+      currency: 'BRL',
+      quantity: new Decimal(1500),
+      unit_price: new Decimal(1),
+      gross_amount: new Decimal(1500),
+      gross_amount_brl: new Decimal(1500),
+      fx_rate: null,
+      cdb_cdi_percentage: new Decimal(110),
+      cdb_cdi_rate: new Decimal('11.25'),
+      transaction_date: new Date('2026-03-21T12:00:00.000Z'),
+      source_event_key: null,
+      notes: null,
+      created_at: new Date('2026-03-21T12:00:00.000Z'),
+    });
+    txMock.investmentOperation.findMany.mockResolvedValue([
+      {
+        id: 31,
+        wallet_id: 1,
+        type: 'BUY',
+        symbol: 'CDB INTER 110% CDI',
+        market: 'BR',
+        asset_type: 'CDB',
+        currency: 'BRL',
+        quantity: new Decimal(1500),
+        unit_price: new Decimal(1),
+        gross_amount: new Decimal(1500),
+        gross_amount_brl: new Decimal(1500),
+        fx_rate: null,
+        cdb_cdi_percentage: new Decimal(110),
+        cdb_cdi_rate: new Decimal('11.25'),
+        transaction_date: new Date('2026-03-21T12:00:00.000Z'),
+        source_event_key: null,
+        notes: null,
+        created_at: new Date('2026-03-21T12:00:00.000Z'),
+      },
+    ]);
+    txMock.investmentPosition.upsert.mockResolvedValue({ id: 10 });
+
+    await expect(
+      service.createOperation(7, {
+        wallet_id: 1,
+        operation_type: 'BUY',
+        asset_type: 'CDB',
+        symbol: 'CDB Inter 110% CDI',
+        market: 'BR',
+        transaction_date: '2026-03-21T12:00:00.000Z',
+        gross_amount: 1500,
+        cdb_cdi_percentage: 110,
+      }),
+    ).resolves.toEqual({
+      operationId: 31,
+      walletId: 1,
+      symbol: 'CDB INTER 110% CDI',
+      market: 'BR',
+    });
+
+    expect(prismaMock.economicIndicator.findFirst).toHaveBeenCalledWith({
+      where: {
+        name: {
+          contains: 'CDI',
+          mode: 'insensitive',
+        },
+      },
+      orderBy: [{ last_update: 'desc' }, { id: 'desc' }],
+      select: {
+        current_rate: true,
+      },
+    });
+    expect(txMock.investmentOperation.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          cdb_cdi_rate: new Decimal('11.25'),
         }),
       }),
     );
