@@ -9,6 +9,7 @@ import {
   InvestmentChangeDirection,
   InvestmentMarket,
   InvestmentMarketData,
+  InvestmentPriceHistoryPoint,
   InvestmentPeriodChange,
   InvestmentPriceChange,
 } from './investment-market-data.types';
@@ -74,6 +75,7 @@ export class InvestmentMarketDataService {
   private readonly fundamentusBaseUrl = 'https://www.fundamentus.com.br';
   private readonly defaultTimeoutMs = 12000;
   private readonly cacheTtlMs = 60_000;
+  private readonly priceHistoryWindow = 90;
   private readonly cache = new Map<string, CachedMarketDataEntry>();
   private fxRateCache: CachedFxRateEntry | null = null;
 
@@ -261,6 +263,7 @@ export class InvestmentMarketDataService {
           usdBrlRate,
         ),
       },
+      priceHistory: this.buildPriceHistory(history, 'BRL', usdBrlRate),
       priceRange: {
         high52w: high52w ?? currentPrice,
         low52w: low52w ?? currentPrice,
@@ -346,6 +349,7 @@ export class InvestmentMarketDataService {
           usdBrlRate,
         ),
       },
+      priceHistory: this.buildPriceHistory(pricePoints, currency, usdBrlRate),
       priceRange: {
         high52w:
           this.roundNullable(meta.fiftyTwoWeekHigh) ?? currentPrice,
@@ -419,6 +423,7 @@ export class InvestmentMarketDataService {
         ),
         latestDividend: null,
       },
+      priceHistory: this.buildPriceHistory(history, 'USD', usdBrlRate),
       priceRange: {
         high52w: this.roundNumber(
           Math.max(...recent52w.map((point) => point.close)),
@@ -470,6 +475,21 @@ export class InvestmentMarketDataService {
         );
       })
       .filter((change): change is InvestmentPeriodChange => change !== null);
+  }
+
+  private buildPriceHistory(
+    points: PricePoint[],
+    currency: string,
+    usdBrlRate: number | null,
+  ): InvestmentPriceHistoryPoint[] {
+    return points
+      .slice(-this.priceHistoryWindow)
+      .map((point) => ({
+        date: new Date(point.timestamp).toISOString(),
+        close: point.close,
+        closeBrl:
+          this.buildCurrencyValues(point.close, currency, usdBrlRate).brl,
+      }));
   }
 
   private buildPeriodChangeFromHistory(

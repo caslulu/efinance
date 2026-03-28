@@ -16,6 +16,7 @@ export type PortfolioPositionSummary = {
   walletName: string;
   symbol: string;
   market: 'BR' | 'GLOBAL';
+  assetType: 'LISTED' | 'CDB';
   marketSymbol: string;
   quantity: number;
   currency: string;
@@ -37,6 +38,8 @@ export type PortfolioPositionSummary = {
   jcpReceived: number;
   jcpReceivedBrl: number;
   marketTime: string | null;
+  cdbCdiPercentage: number | null;
+  cdbCdiRate: number | null;
 };
 
 export type InvestmentPortfolioResponse = {

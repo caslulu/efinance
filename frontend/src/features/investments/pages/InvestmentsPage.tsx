@@ -32,6 +32,7 @@ import type {
 import type { InvestmentPortfolioPosition } from '@/types/InvestmentPortfolio';
 import { CreateWalletModal } from '@/features/wallets/components/CreateWalletModal';
 import { InvestmentOperationModal } from '../components/InvestmentOperationModal';
+import { InvestmentChartsSection } from '../components/InvestmentChartsSection';
 
 const DEFAULT_SYMBOLS_BY_MARKET = {
   BR: 'MXRF11,HGLG11,PETR4',
@@ -237,6 +238,24 @@ function InvestmentRow({ item }: { item: InvestmentMarketItem }) {
 
 function PortfolioPositionRow({ position }: { position: InvestmentPortfolioPosition }) {
   const direction = resolveDirection(position.gainLossBrl);
+  const isCdb = position.assetType === 'CDB';
+  const quantityLabel = isCdb
+    ? formatMoney(position.quantity, 'BRL')
+    : formatDecimal(position.quantity, 6);
+  const averageCostLabel = isCdb
+    ? formatMoney(position.investedAmountBrl, 'BRL')
+    : formatMoney(position.averageCost, position.currency);
+  const averageCostSecondary = isCdb
+    ? position.cdbCdiPercentage !== null && position.cdbCdiRate !== null
+      ? `${formatDecimal(position.cdbCdiPercentage, 2)}% do CDI | CDI ${formatDecimal(position.cdbCdiRate, 2)}% a.a.`
+      : 'Principal remanescente'
+    : formatMoney(position.averageCostBrl, 'BRL');
+  const currentPriceLabel = isCdb
+    ? formatPercent((position.currentPrice - 1) * 100)
+    : formatMoney(position.currentPrice, position.currency);
+  const currentPriceSecondary = isCdb
+    ? `Fator ${formatDecimal(position.currentPrice, 4)}x`
+    : formatMoney(position.currentPriceBrl, 'BRL');
 
   return (
     <TableRow className="border-b border-border/30 hover:bg-muted/30 transition-colors">
@@ -245,7 +264,7 @@ function PortfolioPositionRow({ position }: { position: InvestmentPortfolioPosit
           <div className="flex items-center gap-2">
             <p className="font-semibold text-foreground">{position.symbol}</p>
             <Badge variant="outline" className="text-[10px] uppercase tracking-[0.18em]">
-              {position.market}
+              {isCdb ? 'CDB' : position.market}
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground">{position.walletName}</p>
@@ -255,21 +274,21 @@ function PortfolioPositionRow({ position }: { position: InvestmentPortfolioPosit
         </div>
       </TableCell>
       <TableCell className="font-medium">
-        {formatDecimal(position.quantity, 6)}
+        {quantityLabel}
       </TableCell>
       <TableCell>
         <div className="space-y-1">
-          <div className="font-medium">{formatMoney(position.averageCost, position.currency)}</div>
+          <div className="font-medium">{averageCostLabel}</div>
           <div className="text-[11px] text-muted-foreground">
-            {formatMoney(position.averageCostBrl, 'BRL')}
+            {averageCostSecondary}
           </div>
         </div>
       </TableCell>
       <TableCell>
         <div className="space-y-1">
-          <div className="font-medium">{formatMoney(position.currentPrice, position.currency)}</div>
+          <div className="font-medium">{currentPriceLabel}</div>
           <div className="text-[11px] text-muted-foreground">
-            {formatMoney(position.currentPriceBrl, 'BRL')}
+            {currentPriceSecondary}
           </div>
         </div>
       </TableCell>
@@ -586,6 +605,12 @@ export const InvestmentsPage = () => {
           </CardHeader>
         </Card>
       </div>
+
+      <InvestmentChartsSection
+        portfolio={portfolio}
+        marketData={data}
+        isMarketLoading={isLoading || isFetching}
+      />
 
       <Card className="overflow-hidden border-border/50 bg-card/90 shadow-sm backdrop-blur">
         <CardHeader className="border-b border-border/50 bg-muted/30">

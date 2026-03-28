@@ -27,6 +27,7 @@ export interface InvestmentPortfolioPosition {
   walletName: string;
   symbol: string;
   market: 'BR' | 'GLOBAL';
+  assetType: 'LISTED' | 'CDB';
   marketSymbol: string;
   quantity: number;
   currency: string;
@@ -48,6 +49,8 @@ export interface InvestmentPortfolioPosition {
   jcpReceived: number;
   jcpReceivedBrl: number;
   marketTime: string | null;
+  cdbCdiPercentage: number | null;
+  cdbCdiRate: number | null;
 }
 
 export interface InvestmentPortfolio {
@@ -59,10 +62,13 @@ export interface InvestmentPortfolio {
 export interface CreateInvestmentOperationPayload {
   wallet_id: number;
   operation_type: 'BUY' | 'SELL' | 'DIVIDEND' | 'JCP';
+  asset_type?: 'LISTED' | 'CDB';
   symbol: string;
   market: 'BR' | 'GLOBAL';
   transaction_date: string;
   quantity?: number;
   gross_amount?: number;
   notes?: string;
+  cdb_cdi_percentage?: number;
+  cdb_cdi_rate?: number;
 }

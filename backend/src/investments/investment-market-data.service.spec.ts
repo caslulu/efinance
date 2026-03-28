@@ -121,6 +121,28 @@ describe('InvestmentMarketDataService', () => {
         low52w: 27.53,
       },
     });
+    expect(result[0].priceHistory).toEqual([
+      {
+        date: '2026-02-18T00:00:00.000Z',
+        close: 40,
+        closeBrl: 40,
+      },
+      {
+        date: '2026-02-26T00:00:00.000Z',
+        close: 42,
+        closeBrl: 42,
+      },
+      {
+        date: '2026-03-13T00:00:00.000Z',
+        close: 44,
+        closeBrl: 44,
+      },
+      {
+        date: '2026-03-19T00:00:00.000Z',
+        close: 45.67,
+        closeBrl: 45.67,
+      },
+    ]);
     expect(result[0].periodChanges).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -186,6 +208,7 @@ describe('InvestmentMarketDataService', () => {
         },
         latestDividend: null,
       },
+      priceHistory: [],
       priceRange: {
         high52w: 488.54,
         low52w: 138.8,

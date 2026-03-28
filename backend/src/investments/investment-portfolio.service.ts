@@ -23,12 +23,15 @@ type InvestmentOperationLike = {
   type: InvestmentOperationType;
   symbol: string;
   market: PrismaInvestmentMarket;
+  asset_type: string;
   currency: string;
   quantity: Decimal | null;
   unit_price: Decimal | null;
   gross_amount: Decimal;
   gross_amount_brl: Decimal;
   fx_rate: Decimal | null;
+  cdb_cdi_percentage: Decimal | null;
+  cdb_cdi_rate: Decimal | null;
   transaction_date: Date;
   source_event_key: string | null;
   notes: string | null;
@@ -51,6 +54,7 @@ type PositionReplayState = {
 type NormalizedManualOperation = {
   walletId: number;
   operationType: InvestmentOperationType;
+  assetType: 'LISTED' | 'CDB';
   symbol: string;
   market: PrismaInvestmentMarket;
   currency: string;
@@ -59,6 +63,8 @@ type NormalizedManualOperation = {
   grossAmount: Decimal;
   grossAmountBrl: Decimal;
   fxRate: Decimal | null;
+  cdbCdiPercentage: Decimal | null;
+  cdbCdiRate: Decimal | null;
   transactionDate: Date;
   notes: string | null;
 };
@@ -70,8 +76,26 @@ type WalletWithPortfolioFields = {
   actual_cash: Decimal;
 };
 
+type CdbLot = {
+  principal: Decimal;
+  cdiPercentage: Decimal;
+  cdiRate: Decimal;
+  transactionDate: Date;
+};
+
+type ManualValuationSummary = {
+  currentValue: number;
+  currentPrice: number;
+  marketTime: string;
+  cdbCdiPercentage: number | null;
+  cdbCdiRate: number | null;
+  shortName: string | null;
+  longName: string | null;
+};
+
 const ZERO = new Decimal(0);
 const EPSILON = new Decimal('0.000001');
+const BUSINESS_DAYS_IN_YEAR = 252;
 
 @Injectable()
 export class InvestmentPortfolioService {
@@ -96,6 +120,7 @@ export class InvestmentPortfolioService {
         wallet_id: wallet.id,
         symbol: normalized.symbol,
         market: normalized.market,
+        asset_type: normalized.assetType,
       },
       orderBy: [{ transaction_date: 'asc' }, { id: 'asc' }],
     });
@@ -116,12 +141,15 @@ export class InvestmentPortfolioService {
           type: normalized.operationType,
           symbol: normalized.symbol,
           market: normalized.market,
+          asset_type: normalized.assetType,
           currency: normalized.currency,
           quantity: normalized.quantity,
           unit_price: normalized.unitPrice,
           gross_amount: normalized.grossAmount,
           gross_amount_brl: normalized.grossAmountBrl,
           fx_rate: normalized.fxRate,
+          cdb_cdi_percentage: normalized.cdbCdiPercentage,
+          cdb_cdi_rate: normalized.cdbCdiRate,
           transaction_date: normalized.transactionDate,
           notes: normalized.notes,
         },
@@ -134,17 +162,20 @@ export class InvestmentPortfolioService {
         wallet.id,
         normalized.symbol,
         normalized.market,
+        normalized.assetType,
       );
 
       return createdOperation;
     });
 
-    await this.syncAutomaticDividendsForWalletSymbol(
-      userId,
-      wallet.id,
-      normalized.symbol,
-      normalized.market,
-    );
+    if (normalized.assetType === 'LISTED') {
+      await this.syncAutomaticDividendsForWalletSymbol(
+        userId,
+        wallet.id,
+        normalized.symbol,
+        normalized.market,
+      );
+    }
 
     return {
       operationId: operation.id,
@@ -220,9 +251,12 @@ export class InvestmentPortfolioService {
       };
     }
 
-    const marketDataMap = await this.loadMarketDataMap(positions);
+    const [marketDataMap, manualValuationMap] = await Promise.all([
+      this.loadMarketDataMap(positions),
+      this.loadManualValuationMap(userId, positions),
+    ]);
     const positionSummaries = positions.map((position) =>
-      this.toPositionSummary(position, marketDataMap),
+      this.toPositionSummary(position, marketDataMap, manualValuationMap),
     );
 
     await this.persistPositionSnapshots(positionSummaries);
@@ -279,6 +313,7 @@ export class InvestmentPortfolioService {
     positions: Array<{
       symbol: string;
       market: PrismaInvestmentMarket;
+      asset_type: string;
     }>,
   ): Promise<Map<string, Awaited<ReturnType<InvestmentMarketDataService['getMany']>>[number]>> {
     const map = new Map<
@@ -291,6 +326,9 @@ export class InvestmentPortfolioService {
     };
 
     positions.forEach((position) => {
+      if (position.asset_type === 'CDB') {
+        return;
+      }
       groupedSymbols[position.market].add(position.symbol);
     });
 
@@ -314,6 +352,63 @@ export class InvestmentPortfolioService {
     return map;
   }
 
+  private async loadManualValuationMap(
+    userId: number,
+    positions: Array<{
+      wallet_id: number;
+      symbol: string;
+      market: PrismaInvestmentMarket;
+      asset_type: string;
+    }>,
+  ): Promise<Map<string, ManualValuationSummary>> {
+    const cdbPositions = positions.filter((position) => position.asset_type === 'CDB');
+    if (cdbPositions.length === 0) {
+      return new Map();
+    }
+
+    const operations = await this.prisma.investmentOperation.findMany({
+      where: {
+        wallet: { user_id: userId },
+        asset_type: 'CDB',
+      },
+      orderBy: [{ transaction_date: 'asc' }, { id: 'asc' }],
+    });
+
+    const map = new Map<string, ManualValuationSummary>();
+    const groupedOperations = new Map<string, InvestmentOperationLike[]>();
+
+    operations.forEach((operation) => {
+      const key = this.buildPositionKey(
+        operation.wallet_id,
+        operation.market,
+        operation.symbol,
+        operation.asset_type,
+      );
+      const bucket = groupedOperations.get(key);
+
+      if (bucket) {
+        bucket.push(operation);
+        return;
+      }
+
+      groupedOperations.set(key, [operation]);
+    });
+
+    cdbPositions.forEach((position) => {
+      const key = this.buildPositionKey(
+        position.wallet_id,
+        position.market,
+        position.symbol,
+        position.asset_type,
+      );
+      const positionOperations = groupedOperations.get(key) ?? [];
+
+      map.set(key, this.calculateCdbPositionSummary(positionOperations, position.symbol));
+    });
+
+    return map;
+  }
+
   private toPositionSummary(
     position: {
       id: number;
@@ -321,6 +416,7 @@ export class InvestmentPortfolioService {
       wallet: { id: number; name: string; actual_cash: Decimal };
       symbol: string;
       market: PrismaInvestmentMarket;
+      asset_type: string;
       currency: string;
       quantity: Decimal;
       average_cost: Decimal;
@@ -338,19 +434,34 @@ export class InvestmentPortfolioService {
       string,
       Awaited<ReturnType<InvestmentMarketDataService['getMany']>>[number]
     >,
+    manualValuationMap: Map<string, ManualValuationSummary>,
   ): PortfolioPositionSummary {
+    const manualValuation =
+      manualValuationMap.get(
+        this.buildPositionKey(
+          position.wallet_id,
+          position.market,
+          position.symbol,
+          position.asset_type,
+        ),
+      ) ?? null;
     const marketItem =
       marketDataMap.get(this.buildMarketKey(position.market, position.symbol)) ??
       null;
     const quantity = Number(position.quantity);
     const currentPrice =
-      marketItem?.price ?? Number(position.last_market_price || ZERO);
+      manualValuation?.currentPrice ??
+      marketItem?.price ??
+      Number(position.last_market_price || ZERO);
     const currentPriceBrl =
+      manualValuation?.currentPrice ??
       marketItem?.currencyValues.price.brl ??
       Number(position.last_market_price_brl || ZERO) ??
       0;
-    const currentValue = quantity * currentPrice;
-    const currentValueBrl = quantity * currentPriceBrl;
+    const currentValue =
+      manualValuation?.currentValue ?? quantity * currentPrice;
+    const currentValueBrl =
+      manualValuation?.currentValue ?? quantity * currentPriceBrl;
     const investedAmount = Number(position.invested_amount);
     const investedAmountBrl = Number(position.invested_amount_brl);
     const gainLoss = currentValue - investedAmount;
@@ -362,11 +473,12 @@ export class InvestmentPortfolioService {
       walletName: position.wallet.name,
       symbol: position.symbol,
       market: position.market,
+      assetType: position.asset_type === 'CDB' ? 'CDB' : 'LISTED',
       marketSymbol: marketItem?.marketSymbol ?? position.symbol,
       quantity: this.roundQuantity(quantity),
       currency: position.currency,
-      shortName: marketItem?.shortName ?? null,
-      longName: marketItem?.longName ?? null,
+      shortName: manualValuation?.shortName ?? marketItem?.shortName ?? null,
+      longName: manualValuation?.longName ?? marketItem?.longName ?? null,
       averageCost: Number(position.average_cost),
       averageCostBrl:
         quantity > 0
@@ -393,9 +505,12 @@ export class InvestmentPortfolioService {
       jcpReceived: this.roundMarketValue(Number(position.jcp_received)),
       jcpReceivedBrl: this.roundMoney(Number(position.jcp_received_brl)),
       marketTime:
+        manualValuation?.marketTime ??
         marketItem?.marketTime ??
         position.last_market_at?.toISOString() ??
         null,
+      cdbCdiPercentage: manualValuation?.cdbCdiPercentage ?? null,
+      cdbCdiRate: manualValuation?.cdbCdiRate ?? null,
     };
   }
 
@@ -461,6 +576,7 @@ export class InvestmentPortfolioService {
       where: {
         wallet: { user_id: userId },
         market: PrismaInvestmentMarket.BR,
+        asset_type: 'LISTED',
       },
       select: {
         wallet_id: true,
@@ -504,6 +620,7 @@ export class InvestmentPortfolioService {
         wallet_id: wallet.id,
         symbol,
         market,
+        asset_type: 'LISTED',
       },
       orderBy: [{ transaction_date: 'asc' }, { id: 'asc' }],
     });
@@ -548,6 +665,7 @@ export class InvestmentPortfolioService {
           event.type === 'JCP'
             ? InvestmentOperationType.JCP
             : InvestmentOperationType.DIVIDEND,
+        assetType: 'LISTED',
         symbol,
         market,
         currency: 'BRL',
@@ -556,6 +674,8 @@ export class InvestmentPortfolioService {
         grossAmount,
         grossAmountBrl: this.roundMoneyDecimal(grossAmount),
         fxRate: null,
+        cdbCdiPercentage: null,
+        cdbCdiRate: null,
         transactionDate: new Date(event.date),
         notes: 'Sincronizado automaticamente do provedor de mercado',
       };
@@ -567,12 +687,15 @@ export class InvestmentPortfolioService {
             type: normalized.operationType,
             symbol: normalized.symbol,
             market: normalized.market,
+            asset_type: normalized.assetType,
             currency: normalized.currency,
             quantity: null,
             unit_price: null,
             gross_amount: normalized.grossAmount,
             gross_amount_brl: normalized.grossAmountBrl,
             fx_rate: null,
+            cdb_cdi_percentage: null,
+            cdb_cdi_rate: null,
             transaction_date: normalized.transactionDate,
             notes: normalized.notes,
             source_event_key: sourceEventKey,
@@ -581,7 +704,13 @@ export class InvestmentPortfolioService {
 
         await this.applyWalletCashMovement(tx, wallet.id, normalized);
         await this.createMirrorTransaction(tx, userId, wallet.id, normalized);
-        await this.rebuildPositionAggregate(tx, wallet.id, symbol, market);
+        await this.rebuildPositionAggregate(
+          tx,
+          wallet.id,
+          symbol,
+          market,
+          normalized.assetType,
+        );
 
         return createdOperation;
       });
@@ -636,12 +765,15 @@ export class InvestmentPortfolioService {
       type: candidate.operationType,
       symbol: candidate.symbol,
       market: candidate.market,
+      asset_type: candidate.assetType,
       currency: candidate.currency,
       quantity: candidate.quantity,
       unit_price: candidate.unitPrice,
       gross_amount: candidate.grossAmount,
       gross_amount_brl: candidate.grossAmountBrl,
       fx_rate: candidate.fxRate,
+      cdb_cdi_percentage: candidate.cdbCdiPercentage,
+      cdb_cdi_rate: candidate.cdbCdiRate,
       transaction_date: candidate.transactionDate,
       source_event_key: null,
       notes: candidate.notes,
@@ -656,30 +788,37 @@ export class InvestmentPortfolioService {
     walletId: number,
     symbol: string,
     market: PrismaInvestmentMarket,
+    assetType: 'LISTED' | 'CDB',
   ) {
     const operations = await tx.investmentOperation.findMany({
       where: {
         wallet_id: walletId,
         symbol,
         market,
+        asset_type: assetType,
       },
       orderBy: [{ transaction_date: 'asc' }, { id: 'asc' }],
     });
     const replayed = this.replayOperations(operations);
     const currency = operations[operations.length - 1]?.currency ?? this.resolveCurrency(market);
+    const resolvedAssetType =
+      (operations[operations.length - 1]?.asset_type as 'LISTED' | 'CDB' | undefined) ??
+      assetType;
 
     const position = await tx.investmentPosition.upsert({
       where: {
-        wallet_id_symbol_market: {
+        wallet_id_symbol_market_asset_type: {
           wallet_id: walletId,
           symbol,
           market,
+          asset_type: resolvedAssetType,
         },
       },
       create: {
         wallet_id: walletId,
         symbol,
         market,
+        asset_type: resolvedAssetType,
         currency,
         quantity: replayed.quantity,
         average_cost: replayed.averageCost,
@@ -693,6 +832,7 @@ export class InvestmentPortfolioService {
         jcp_received_brl: replayed.jcpReceivedBrl,
       },
       update: {
+        asset_type: resolvedAssetType,
         currency,
         quantity: replayed.quantity,
         average_cost: replayed.averageCost,
@@ -712,6 +852,7 @@ export class InvestmentPortfolioService {
         wallet_id: walletId,
         symbol,
         market,
+        asset_type: resolvedAssetType,
       },
       data: {
         position_id: position.id,
@@ -852,6 +993,20 @@ export class InvestmentPortfolioService {
   private buildTransactionDescription(
     normalized: NormalizedManualOperation,
   ): string {
+    if (
+      normalized.assetType === 'CDB' &&
+      normalized.operationType === InvestmentOperationType.BUY
+    ) {
+      return `Aporte em CDB ${normalized.symbol}`;
+    }
+
+    if (
+      normalized.assetType === 'CDB' &&
+      normalized.operationType === InvestmentOperationType.SELL
+    ) {
+      return `Resgate de CDB ${normalized.symbol}`;
+    }
+
     if (normalized.operationType === InvestmentOperationType.BUY) {
       return `Compra de ${this.formatDecimal(normalized.quantity)} ${normalized.symbol}`;
     }
@@ -957,7 +1112,10 @@ export class InvestmentPortfolioService {
     dto: CreateInvestmentOperationDto,
   ): Promise<NormalizedManualOperation> {
     const operationType = dto.operation_type as InvestmentOperationType;
-    const market = dto.market === 'GLOBAL'
+    const assetType = dto.asset_type === 'CDB' ? 'CDB' : 'LISTED';
+    const market = assetType === 'CDB'
+      ? PrismaInvestmentMarket.BR
+      : dto.market === 'GLOBAL'
       ? PrismaInvestmentMarket.GLOBAL
       : PrismaInvestmentMarket.BR;
     const symbol = this.normalizeSymbol(dto.symbol);
@@ -971,6 +1129,75 @@ export class InvestmentPortfolioService {
       throw new BadRequestException(
         'Operações de investimento não podem ser registradas com data futura nesta versão',
       );
+    }
+
+    if (assetType === 'CDB') {
+      if (
+        operationType !== InvestmentOperationType.BUY &&
+        operationType !== InvestmentOperationType.SELL
+      ) {
+        throw new BadRequestException(
+          'CDB aceita apenas aporte e resgate manuais nesta versão',
+        );
+      }
+
+      if (!dto.gross_amount || dto.gross_amount <= 0) {
+        throw new BadRequestException(
+          operationType === InvestmentOperationType.SELL
+            ? 'Valor do resgate deve ser maior que zero'
+            : 'Valor do aporte deve ser maior que zero',
+        );
+      }
+
+      const grossAmount = this.roundMoneyDecimal(new Decimal(dto.gross_amount));
+      const quantity =
+        operationType === InvestmentOperationType.SELL
+          ? dto.quantity
+            ? this.roundQuantityDecimal(new Decimal(dto.quantity))
+            : null
+          : this.roundQuantityDecimal(new Decimal(dto.gross_amount));
+
+      if (!quantity || quantity.lte(ZERO)) {
+        throw new BadRequestException(
+          operationType === InvestmentOperationType.SELL
+            ? 'Informe o principal resgatado'
+            : 'Valor do aporte deve ser maior que zero',
+        );
+      }
+
+      if (operationType === InvestmentOperationType.BUY) {
+        if (!dto.cdb_cdi_percentage || dto.cdb_cdi_percentage <= 0) {
+          throw new BadRequestException('Informe o percentual do CDI do CDB');
+        }
+
+        if (!dto.cdb_cdi_rate || dto.cdb_cdi_rate <= 0) {
+          throw new BadRequestException('Informe o valor anual do CDI');
+        }
+      }
+
+      return {
+        walletId: dto.wallet_id,
+        operationType,
+        assetType,
+        symbol,
+        market: PrismaInvestmentMarket.BR,
+        currency: 'BRL',
+        quantity,
+        unitPrice: new Decimal(1),
+        grossAmount,
+        grossAmountBrl: grossAmount,
+        fxRate: null,
+        cdbCdiPercentage:
+          operationType === InvestmentOperationType.BUY
+            ? new Decimal(dto.cdb_cdi_percentage)
+            : null,
+        cdbCdiRate:
+          operationType === InvestmentOperationType.BUY
+            ? new Decimal(dto.cdb_cdi_rate)
+            : null,
+        transactionDate,
+        notes: dto.notes?.trim() || null,
+      };
     }
 
     const currency = this.resolveCurrency(market);
@@ -997,6 +1224,7 @@ export class InvestmentPortfolioService {
       return {
         walletId: dto.wallet_id,
         operationType,
+        assetType,
         symbol,
         market,
         currency: liveQuote.currency,
@@ -1005,6 +1233,8 @@ export class InvestmentPortfolioService {
         grossAmount,
         grossAmountBrl,
         fxRate,
+        cdbCdiPercentage: null,
+        cdbCdiRate: null,
         transactionDate,
         notes: dto.notes?.trim() || null,
       };
@@ -1024,6 +1254,7 @@ export class InvestmentPortfolioService {
     return {
       walletId: dto.wallet_id,
       operationType,
+      assetType,
       symbol,
       market,
       currency,
@@ -1032,9 +1263,150 @@ export class InvestmentPortfolioService {
       grossAmount,
       grossAmountBrl,
       fxRate,
+      cdbCdiPercentage: null,
+      cdbCdiRate: null,
       transactionDate,
       notes: dto.notes?.trim() || null,
     };
+  }
+
+  private calculateCdbPositionSummary(
+    operations: InvestmentOperationLike[],
+    symbol: string,
+  ): ManualValuationSummary {
+    const lots: CdbLot[] = [];
+
+    operations.forEach((operation) => {
+      if (operation.type === InvestmentOperationType.BUY) {
+        const cdiPercentage = operation.cdb_cdi_percentage ?? ZERO;
+        const cdiRate = operation.cdb_cdi_rate ?? ZERO;
+
+        if (cdiPercentage.lte(ZERO) || cdiRate.lte(ZERO)) {
+          return;
+        }
+
+        lots.push({
+          principal: operation.quantity ?? operation.gross_amount_brl,
+          cdiPercentage,
+          cdiRate,
+          transactionDate: operation.transaction_date,
+        });
+      }
+
+      if (operation.type === InvestmentOperationType.SELL) {
+        let principalToRedeem = operation.quantity ?? ZERO;
+
+        while (principalToRedeem.greaterThan(EPSILON) && lots.length > 0) {
+          const currentLot = lots[0];
+
+          if (currentLot.principal.plus(EPSILON).lessThan(principalToRedeem)) {
+            principalToRedeem = principalToRedeem.minus(currentLot.principal);
+            lots.shift();
+            continue;
+          }
+
+          currentLot.principal = currentLot.principal.minus(principalToRedeem);
+          principalToRedeem = ZERO;
+
+          if (!currentLot.principal.greaterThan(EPSILON)) {
+            lots.shift();
+          }
+        }
+      }
+    });
+
+    const currentValue = lots.reduce((sum, lot) => {
+      const factor = this.calculateCdbAccrualFactor(
+        lot.cdiPercentage,
+        lot.cdiRate,
+        lot.transactionDate,
+      );
+
+      return sum + Number(lot.principal.times(factor));
+    }, 0);
+
+    const totalPrincipal = lots.reduce((sum, lot) => sum + Number(lot.principal), 0);
+    const weightedCdiPercentage =
+      totalPrincipal > 0
+        ? lots.reduce(
+            (sum, lot) => sum + Number(lot.principal) * Number(lot.cdiPercentage),
+            0,
+          ) / totalPrincipal
+        : null;
+    const weightedCdiRate =
+      totalPrincipal > 0
+        ? lots.reduce(
+            (sum, lot) => sum + Number(lot.principal) * Number(lot.cdiRate),
+            0,
+          ) / totalPrincipal
+        : null;
+
+    return {
+      currentValue: this.roundMoney(currentValue),
+      currentPrice:
+        totalPrincipal > 0
+          ? this.roundMarketValue(currentValue / totalPrincipal)
+          : 0,
+      marketTime: new Date().toISOString(),
+      cdbCdiPercentage:
+        weightedCdiPercentage !== null
+          ? this.roundMarketValue(weightedCdiPercentage)
+          : null,
+      cdbCdiRate:
+        weightedCdiRate !== null ? this.roundMarketValue(weightedCdiRate) : null,
+      shortName: 'CDB pos-fixado',
+      longName:
+        weightedCdiPercentage !== null && weightedCdiRate !== null
+          ? `${this.roundMarketValue(weightedCdiPercentage)}% do CDI (CDI ${this.roundMarketValue(weightedCdiRate)}% a.a.)`
+          : `CDB ${symbol}`,
+    };
+  }
+
+  private calculateCdbAccrualFactor(
+    cdiPercentage: Decimal,
+    cdiRate: Decimal,
+    startDate: Date,
+  ): Decimal {
+    const elapsedBusinessDays = this.countBusinessDaysBetween(startDate, new Date());
+    const annualRate =
+      (Number(cdiPercentage) / 100) * (Number(cdiRate) / 100);
+
+    if (elapsedBusinessDays <= 0 || annualRate <= 0) {
+      return new Decimal(1);
+    }
+
+    return new Decimal(
+      (1 + annualRate) ** (elapsedBusinessDays / BUSINESS_DAYS_IN_YEAR),
+    );
+  }
+
+  private countBusinessDaysBetween(startDate: Date, endDate: Date): number {
+    const cursor = new Date(startDate);
+    const target = new Date(endDate);
+
+    cursor.setHours(0, 0, 0, 0);
+    target.setHours(0, 0, 0, 0);
+
+    if (cursor >= target) {
+      return 0;
+    }
+
+    let businessDays = 0;
+
+    while (cursor < target) {
+      cursor.setDate(cursor.getDate() + 1);
+
+      if (cursor > target) {
+        break;
+      }
+
+      const dayOfWeek = cursor.getDay();
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+        businessDays += 1;
+      }
+    }
+
+    return businessDays;
   }
 
   private async resolveOperationQuote(
@@ -1086,6 +1458,15 @@ export class InvestmentPortfolioService {
     symbol: string,
   ): string {
     return `${market}:${this.normalizeSymbol(symbol)}`;
+  }
+
+  private buildPositionKey(
+    walletId: number,
+    market: PrismaInvestmentMarket,
+    symbol: string,
+    assetType: string,
+  ): string {
+    return `${walletId}:${assetType}:${this.buildMarketKey(market, symbol)}`;
   }
 
   private normalizeSymbol(symbol: string): string {

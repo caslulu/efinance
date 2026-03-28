@@ -29,6 +29,12 @@ export interface InvestmentDualCurrencyValue {
   usd: number | null;
 }
 
+export interface InvestmentPriceHistoryPoint {
+  date: string;
+  close: number;
+  closeBrl: number | null;
+}
+
 export interface InvestmentMarketItem {
   symbol: string;
   marketSymbol: string;
@@ -47,6 +53,7 @@ export interface InvestmentMarketItem {
     previousClose: InvestmentDualCurrencyValue;
     latestDividend: InvestmentDualCurrencyValue | null;
   };
+  priceHistory: InvestmentPriceHistoryPoint[];
   priceRange: InvestmentMarketPriceRange;
 }
 

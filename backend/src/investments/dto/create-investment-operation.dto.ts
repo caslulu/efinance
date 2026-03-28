@@ -16,6 +16,10 @@ export class CreateInvestmentOperationDto {
   @IsEnum(['BUY', 'SELL', 'DIVIDEND', 'JCP'])
   operation_type: 'BUY' | 'SELL' | 'DIVIDEND' | 'JCP';
 
+  @IsOptional()
+  @IsEnum(['LISTED', 'CDB'])
+  asset_type?: 'LISTED' | 'CDB';
+
   @IsString()
   @IsNotEmpty()
   symbol: string;
@@ -44,4 +48,14 @@ export class CreateInvestmentOperationDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0.0001)
+  cdb_cdi_percentage?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0.0001)
+  cdb_cdi_rate?: number;
 }

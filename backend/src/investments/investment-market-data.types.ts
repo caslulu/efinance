@@ -23,6 +23,12 @@ export type InvestmentDualCurrencyValue = {
   usd: number | null;
 };
 
+export type InvestmentPriceHistoryPoint = {
+  date: string;
+  close: number;
+  closeBrl: number | null;
+};
+
 export type InvestmentMarketData = {
   symbol: string;
   marketSymbol: string;
@@ -41,6 +47,7 @@ export type InvestmentMarketData = {
     previousClose: InvestmentDualCurrencyValue;
     latestDividend: InvestmentDualCurrencyValue | null;
   };
+  priceHistory: InvestmentPriceHistoryPoint[];
   priceRange: {
     high52w: number;
     low52w: number;
