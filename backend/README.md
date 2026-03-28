@@ -1,98 +1,249 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Backend - Finance Pro
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+API principal do Finance Pro, construída com NestJS, Prisma e PostgreSQL.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Stack
 
-## Description
+- NestJS 11
+- Prisma
+- PostgreSQL
+- JWT
+- Passport
+- Google OAuth
+- Mailer
+- Throttler
+- Schedule
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Responsabilidades da API
 
-## Project setup
+- autenticação e sessão
+- cadastro e perfil de usuário
+- carteiras
+- cartões
+- transações
+- categorias
+- metas de gastos
+- assinaturas e recorrências
+- investimentos
+- dashboard consolidado
+- wishlist e alertas de preço
+- chat com IA
 
-```bash
-$ npm install
+## Estrutura principal
+
+```text
+backend/
+├── prisma/schema.prisma
+├── src/
+│   ├── auth/
+│   ├── budgets/
+│   ├── cards/
+│   ├── categories/
+│   ├── chat/
+│   ├── dashboard/
+│   ├── investments/
+│   ├── prisma/
+│   ├── subscriptions/
+│   ├── transactions/
+│   ├── users/
+│   ├── wallets/
+│   └── wishlist/
+└── test/
 ```
 
-## Compile and run the project
+## Pre-requisitos
+
+- Node.js 20+
+- npm
+- PostgreSQL 15+
+
+## Configuração local
+
+Instale as dependências:
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm install
 ```
 
-## Run tests
+Crie `backend/.env` com base no exemplo abaixo:
+
+```env
+DATABASE_URL=postgresql://financeuser:SUA_SENHA@localhost:5432/financepro?schema=public
+JWT_SECRET=uma_chave_forte
+FRONTEND_URL=http://localhost:5173
+BACKEND_URL=http://localhost:3000
+
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USER=seu_email
+MAIL_PASS=sua_senha_ou_app_password
+MAIL_FROM="Finance Pro <seu_email>"
+
+GOOGLE_CLIENT_ID=seu_google_client_id
+GOOGLE_CLIENT_SECRET=seu_google_client_secret
+GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/redirect
+FORCE_HTTPS=false
+```
+
+## Banco de dados
+
+Gere o client do Prisma:
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npx prisma generate
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Crie ou aplique migrations:
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npx prisma migrate dev
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Se quiser inspecionar o banco:
 
-## Resources
+```bash
+npx prisma studio
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+## Executando
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+### Desenvolvimento
 
-## Support
+```bash
+npm run start:dev
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+### Produção
 
-## Stay in touch
+```bash
+npm run build
+npm run start:prod
+```
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+A API sobe, por padrão, na porta `3000`.
 
-## License
+## Scripts disponíveis
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+```bash
+npm run build
+npm run format
+npm run start
+npm run start:dev
+npm run start:debug
+npm run start:prod
+npm run lint
+npm run test
+npm run test:watch
+npm run test:cov
+npm run test:debug
+npm run test:e2e
+```
+
+## Variáveis de ambiente
+
+### Obrigatórias para funcionamento local
+
+- `DATABASE_URL`
+- `JWT_SECRET`
+- `FRONTEND_URL`
+- `BACKEND_URL`
+
+### Email
+
+- `MAIL_HOST`
+- `MAIL_PORT`
+- `MAIL_USER`
+- `MAIL_PASS`
+- `MAIL_FROM`
+
+### OAuth Google
+
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `GOOGLE_CALLBACK_URL`
+
+### Runtime
+
+- `PORT`
+- `NODE_ENV`
+- `FORCE_HTTPS`
+
+## Segurança e comportamento da API
+
+- `Helmet` habilitado globalmente
+- `ValidationPipe` com `whitelist`, `forbidNonWhitelisted` e `transform`
+- `JwtAuthGuard` aplicado globalmente
+- `ThrottlerGuard` aplicado globalmente com limite de `100` requisições por minuto
+- CORS aceita origens configuradas em `FRONTEND_URL` e alguns hosts locais em desenvolvimento
+- arquivos enviados são servidos estaticamente em `/uploads`
+
+## Módulos carregados em `AppModule`
+
+- `PrismaModule`
+- `UsersModule`
+- `AuthModule`
+- `WalletsModule`
+- `TransactionsModule`
+- `CategoriesModule`
+- `SubscriptionsModule`
+- `InvestmentsModule`
+- `DashboardModule`
+- `BudgetsModule`
+- `WishlistModule`
+- `CardsModule`
+- `ChatModule`
+
+## Modelo de dados
+
+Entidades principais do `schema.prisma`:
+
+- `User`
+- `Wallet`
+- `Card`
+- `Transaction`
+- `TransactionCategory`
+- `Budget`
+- `Subscription`
+- `Investment`
+- `EconomicIndicator`
+- `TypeInvestment`
+- `Wishlist`
+- `WishlistProduct`
+- `WishlistProductHistory`
+- `WishlistPriceAlertNotification`
+- `ChatConversation`
+- `ChatMessage`
+- `ChatDailyUsage`
+
+Enums mapeados:
+
+- `Frequency`
+- `SubscriptionStatus`
+- `ChatRole`
+
+## Testes
+
+### Unitários
+
+```bash
+npm run test
+```
+
+### E2E
+
+```bash
+npm run test:e2e
+```
+
+Os testes E2E ficam em `backend/test`.
+
+## Docker
+
+O `Dockerfile` do backend:
+
+- usa `node:20-alpine`
+- gera o client do Prisma durante o build
+- compila a aplicação
+- executa `prisma migrate deploy` no startup via `entrypoint.sh`
+
+Ao subir pelo `docker compose`, o container espera o PostgreSQL ficar saudável antes de iniciar.

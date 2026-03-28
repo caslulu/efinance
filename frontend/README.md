@@ -1,81 +1,209 @@
-# React + TypeScript + Vite
+# Frontend - Finance Pro
 
-## API URL
+SPA do Finance Pro construída com React, Vite e TypeScript.
 
-Create a `.env` file in `frontend` (you can copy `.env.example`) and set:
+## Stack
+
+- React 19
+- Vite 7
+- TypeScript
+- React Router
+- TanStack Query
+- Axios
+- Tailwind CSS
+- Radix UI
+- Recharts
+- Vite PWA
+- Playwright
+
+## Funcionalidades refletidas na interface
+
+- login, cadastro e recuperação de senha
+- dashboard financeiro
+- carteiras
+- transações
+- categorias
+- metas de gastos
+- investimentos
+- assinaturas
+- wishlist
+- perfil e configurações
+- onboarding
+- assistente IA
+
+## Estrutura principal
+
+```text
+frontend/
+├── public/
+├── src/
+│   ├── api/
+│   ├── components/
+│   ├── context/
+│   ├── features/
+│   ├── hooks/
+│   ├── lib/
+│   └── types/
+├── tests/
+└── vite.config.ts
+```
+
+Dentro de `src/features/` existem módulos de tela para:
+
+- `auth`
+- `dashboard`
+- `wallets`
+- `transactions`
+- `categories`
+- `budgets`
+- `subscriptions`
+- `investments`
+- `wishlist`
+- `profile`
+- `settings`
+- `onboarding`
+- `chat`
+- `404`
+
+## Configuração local
+
+Instale as dependências:
 
 ```bash
+npm install
+```
+
+Crie o arquivo `.env` na pasta `frontend`:
+
+```bash
+cp .env.example .env
+```
+
+Defina a URL da API:
+
+```env
 VITE_API_URL=http://localhost:3000
 ```
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Se a aplicação estiver atrás de proxy reverso, `VITE_API_URL=/api` também funciona.
 
-Currently, two official plugins are available:
+## Executando
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### Desenvolvimento
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Aplicação padrão: `http://localhost:5173`
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Build de produção
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run build
 ```
+
+### Preview local do build
+
+```bash
+npm run preview
+```
+
+## Scripts disponíveis
+
+```bash
+npm run dev
+npm run build
+npm run lint
+npm run preview
+```
+
+## Integração com a API
+
+O cliente HTTP está centralizado em `src/api/api.ts`.
+
+Comportamentos importantes:
+
+- `baseURL` vem de `VITE_API_URL`
+- `withCredentials` está habilitado
+- token Bearer pode ser injetado em memória
+- respostas `401` fora de `/auth/profile` limpam a sessão local e redirecionam para `/login`
+
+## Roteamento da aplicação
+
+Rotas principais identificadas em `src/App.tsx`:
+
+- `/`
+- `/login`
+- `/register`
+- `/forgot-password`
+- `/reset-password`
+- `/wallets`
+- `/transactions`
+- `/budgets`
+- `/wishlists`
+- `/investments`
+- `/subscriptions`
+- `/categories`
+- `/chat`
+- `/profile`
+- `/settings`
+- `/onboarding`
+
+Rotas autenticadas passam por `ProtectedRoute`.
+
+## Estado e dados
+
+- autenticação via `AuthContext`
+- tema via `ThemeContext`
+- cache e sincronização de dados com TanStack Query
+- hooks dedicados para domínios como carteiras, transações, categorias, investimentos, recorrências e wishlist
+
+## PWA
+
+O projeto usa `vite-plugin-pwa` com:
+
+- `registerType: autoUpdate`
+- manifesto com nome `Finance Pro`
+- modo `standalone`
+
+Para a experiência PWA ficar completa em produção, garanta que os ícones referenciados no `vite.config.ts` existam no build final.
+
+## Testes E2E
+
+Os testes ficam em `frontend/tests`.
+
+Configuração atual do Playwright:
+
+- execução em `chromium`, `firefox` e `webkit`
+- `baseURL` padrão em `http://127.0.0.1:5173`
+- relatório HTML habilitado
+
+Execução manual:
+
+```bash
+npx playwright test
+```
+
+Abrir relatório:
+
+```bash
+npx playwright show-report
+```
+
+## Docker e deploy
+
+O `Dockerfile` do frontend:
+
+- compila a aplicação com `VITE_API_URL` em build time
+- entrega os arquivos estáticos via Nginx
+- expõe portas `80` e `443`
+
+O `nginx.conf` atual:
+
+- redireciona HTTP para HTTPS
+- atende a SPA com fallback para `index.html`
+- encaminha `/api` para o backend
+- encaminha `/uploads` para o backend
+
+Quando não existe certificado montado, o `docker-entrypoint.sh` gera um certificado self-signed para ambiente local ou de teste.
