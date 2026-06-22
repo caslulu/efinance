@@ -9,7 +9,12 @@ import { PrismaService } from '../prisma/prisma.service';
 import { WalletsService } from '../wallets/wallets.service';
 import { crypto } from '../utils/crypto-uuid';
 import { ConfirmStatementImportRowDto } from './dto/confirm-statement-import.dto';
-import { isImmediateDebit } from '../common/finance-constants';
+import {
+  isImmediateDebit,
+  PAYMENT_METHODS,
+  TRANSACTION_TYPES,
+  WALLET_TYPES,
+} from '../common/finance-constants';
 
 type ImportedStatementRow = {
   source_id: string;
@@ -82,8 +87,10 @@ export class TransactionsService {
   }): Promise<void> {
     if (!isImmediateDebit(params.paymentMethod, params.walletType)) return;
     const addsToWallet =
-      (params.mode === 'apply' && params.transactionType === 'INCOME') ||
-      (params.mode === 'revert' && params.transactionType === 'EXPENSE');
+      (params.mode === 'apply' &&
+        params.transactionType === TRANSACTION_TYPES.INCOME) ||
+      (params.mode === 'revert' &&
+        params.transactionType === TRANSACTION_TYPES.EXPENSE);
     if (addsToWallet) {
       await this.walletsService.addIncoming(
         params.walletId,
@@ -110,8 +117,8 @@ export class TransactionsService {
     const totalExp = await this.prisma.transaction.aggregate({
       where: {
         card_id: cardId,
-        transaction_type: 'EXPENSE',
-        payment_method: 'CREDIT',
+        transaction_type: TRANSACTION_TYPES.EXPENSE,
+        payment_method: PAYMENT_METHODS.CREDIT,
         ...(currentTransactionIdToExclude
           ? { id: { not: currentTransactionIdToExclude } }
           : {}),
@@ -122,8 +129,8 @@ export class TransactionsService {
     const totalInc = await this.prisma.transaction.aggregate({
       where: {
         card_id: cardId,
-        transaction_type: 'INCOME',
-        payment_method: 'CREDIT',
+        transaction_type: TRANSACTION_TYPES.INCOME,
+        payment_method: PAYMENT_METHODS.CREDIT,
         ...(currentTransactionIdToExclude
           ? { id: { not: currentTransactionIdToExclude } }
           : {}),
@@ -924,10 +931,10 @@ export class TransactionsService {
         : 1;
 
       if (
-        newType === 'EXPENSE' &&
-        newMethod === 'CREDIT' &&
+        newType === TRANSACTION_TYPES.EXPENSE &&
+        newMethod === PAYMENT_METHODS.CREDIT &&
         newCardId &&
-        newWalletType !== 'MEAL_VOUCHER'
+        newWalletType !== WALLET_TYPES.MEAL_VOUCHER
       ) {
         await this.validateCardLimit(newCardId, newValue * newMultiplier, id);
       }
@@ -997,10 +1004,10 @@ export class TransactionsService {
     } = createTransactionDto;
 
     if (
-      data.transaction_type === 'EXPENSE' &&
-      data.payment_method === 'CREDIT' &&
+      data.transaction_type === TRANSACTION_TYPES.EXPENSE &&
+      data.payment_method === PAYMENT_METHODS.CREDIT &&
       card_id &&
-      walletType !== 'MEAL_VOUCHER'
+      walletType !== WALLET_TYPES.MEAL_VOUCHER
     ) {
       const multiplier =
         installment_total && installment_total > 1

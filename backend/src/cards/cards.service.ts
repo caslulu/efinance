@@ -2,6 +2,11 @@ import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/commo
 import { CreateCardDto } from './dto/create-card.dto';
 import { UpdateCardDto } from './dto/update-card.dto';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  PAYMENT_METHODS,
+  TRANSACTION_TYPES,
+  WALLET_TYPES,
+} from '../common/finance-constants';
 
 @Injectable()
 export class CardsService {
@@ -96,7 +101,7 @@ export class CardsService {
    * as well as the used limit (total unpaid credit expenses).
    */
   private async enrichCardWithInvoice(card: any) {
-    if (card.wallet?.type === 'MEAL_VOUCHER') {
+    if (card.wallet?.type === WALLET_TYPES.MEAL_VOUCHER) {
       // Remove wallet relation if it was included
       const { wallet, ...cardData } = card;
       return {
@@ -134,8 +139,8 @@ export class CardsService {
         this.prisma.transaction.aggregate({
           where: {
             card_id: card.id,
-            transaction_type: 'EXPENSE',
-            payment_method: 'CREDIT',
+            transaction_type: TRANSACTION_TYPES.EXPENSE,
+            payment_method: PAYMENT_METHODS.CREDIT,
             transaction_date: { lte: closedCloseDate },
           },
           _sum: { value: true },
@@ -143,26 +148,34 @@ export class CardsService {
         this.prisma.transaction.aggregate({
           where: {
             card_id: card.id,
-            transaction_type: 'INCOME',
-            payment_method: 'CREDIT',
+            transaction_type: TRANSACTION_TYPES.INCOME,
+            payment_method: PAYMENT_METHODS.CREDIT,
           },
           _sum: { value: true },
         }),
         this.prisma.transaction.aggregate({
           where: {
             card_id: card.id,
-            transaction_type: 'EXPENSE',
-            payment_method: 'CREDIT',
+            transaction_type: TRANSACTION_TYPES.EXPENSE,
+            payment_method: PAYMENT_METHODS.CREDIT,
             transaction_date: { gte: openStartDate, lte: openCloseDate },
           },
           _sum: { value: true },
         }),
         this.prisma.transaction.aggregate({
-          where: { card_id: card.id, transaction_type: 'EXPENSE', payment_method: 'CREDIT' },
+          where: {
+            card_id: card.id,
+            transaction_type: TRANSACTION_TYPES.EXPENSE,
+            payment_method: PAYMENT_METHODS.CREDIT,
+          },
           _sum: { value: true },
         }),
         this.prisma.transaction.aggregate({
-          where: { card_id: card.id, transaction_type: 'INCOME', payment_method: 'CREDIT' },
+          where: {
+            card_id: card.id,
+            transaction_type: TRANSACTION_TYPES.INCOME,
+            payment_method: PAYMENT_METHODS.CREDIT,
+          },
           _sum: { value: true },
         }),
       ]);
