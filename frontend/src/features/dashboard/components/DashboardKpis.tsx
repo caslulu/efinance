@@ -1,5 +1,7 @@
-import { useState, useRef, useEffect, type ReactNode } from 'react';
+import { useState, useRef, useEffect, type ReactNode, type ComponentType } from 'react';
+import type { LucideProps } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
+import type { DashboardOverview } from '@/types/Dashboard';
 import {
   Wallet,
   ArrowUpCircle,
@@ -43,7 +45,7 @@ const accentMap: Record<string, { bg: string; text: string; border: string; icon
   activeSubscriptions:{ bg: 'bg-indigo-500/8 dark:bg-indigo-500/10', text: 'text-indigo-600 dark:text-indigo-400', border: 'border-indigo-500/20', iconBg: 'bg-indigo-500/10' },
 };
 
-export function DashboardKpis({ data }: { data: any }) {
+export function DashboardKpis({ data }: { data: DashboardOverview }) {
   const [activeKpiExplanation, setActiveKpiExplanation] = useState<string | null>(null);
   const kpiHoverTimeoutRef = useRef<number | null>(null);
 
@@ -82,7 +84,7 @@ export function DashboardKpis({ data }: { data: any }) {
     badge
   }: {
     kpiKey: string;
-    icon: any;
+    icon: ComponentType<LucideProps>;
     title: string;
     value: ReactNode;
     valueClass?: string;

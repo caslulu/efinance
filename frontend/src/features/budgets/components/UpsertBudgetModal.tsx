@@ -6,10 +6,12 @@ import { Button } from '@/components/ui/button';
 import { CurrencyInput } from '@/components/CurrencyInput';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { Category } from '@/types/Category';
+import type { BudgetStatusItem } from '@/types/Budget';
 
 interface UpsertBudgetModalProps {
   isOpen: boolean;
-  budget: any | null;
+  budget: BudgetStatusItem | null;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -17,7 +19,7 @@ interface UpsertBudgetModalProps {
 export const UpsertBudgetModal = ({ isOpen, budget, onClose, onSuccess }: UpsertBudgetModalProps) => {
   const [categoryId, setCategoryId] = useState('');
   const [limit, setLimit] = useState('');
-  const [categories, setCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {

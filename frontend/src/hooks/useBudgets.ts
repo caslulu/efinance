@@ -1,12 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/api';
 import { queryKeys } from '@/lib/queryClient';
+import type { BudgetStatusItem } from '@/types/Budget';
 
 export function useBudgetStatus() {
-  return useQuery({
+  return useQuery<BudgetStatusItem[]>({
     queryKey: queryKeys.budgetStatus,
     queryFn: async () => {
-      const res = await api.get('/budgets/status');
+      const res = await api.get<BudgetStatusItem[]>('/budgets/status');
       return Array.isArray(res.data) ? res.data : [];
     },
   });

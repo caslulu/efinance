@@ -1,13 +1,14 @@
 import { useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, TrendingUp } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
+import type { DashboardOverview, MonthFlowEntry } from '@/types/Dashboard';
 
-export function MonthFlowCarousel({ data }: { data: any }) {
+export function MonthFlowCarousel({ data }: { data: Pick<DashboardOverview, 'monthFlow'> }) {
   const carouselRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (data?.monthFlow && carouselRef.current) {
-      const currentMonthIndex = data.monthFlow.findIndex((m: any, i: number) =>
+      const currentMonthIndex = data.monthFlow.findIndex((m: MonthFlowEntry, i: number) =>
         !m.isProjected && (i === data.monthFlow.length - 1 || data.monthFlow[i + 1]?.isProjected)
       );
       if (currentMonthIndex === -1) return;
@@ -55,7 +56,7 @@ export function MonthFlowCarousel({ data }: { data: any }) {
       </div>
       <div className="px-5 pb-5">
         <div ref={carouselRef} className="flex gap-3 overflow-x-hidden py-1 px-0.5">
-          {data.monthFlow.map((month: any, i: number) => {
+          {data.monthFlow.map((month: MonthFlowEntry, i: number) => {
             const isCurrent = !month.isProjected && data.monthFlow[i + 1]?.isProjected;
             return (
               <div

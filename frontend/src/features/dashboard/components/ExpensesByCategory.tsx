@@ -1,11 +1,23 @@
 import { TrendingUp } from 'lucide-react';
 import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatCurrency } from '@/lib/utils';
+import type { DashboardOverview, ExpenseByCategory } from '@/types/Dashboard';
+
+interface PieClickEvent {
+  name?: string;
+  payload?: { name?: string };
+}
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
 
-export function ExpensesByCategory({ data, onCategoryClick }: { data: any, onCategoryClick: (categoryName: string) => void }) {
-  const onPieClick = (eventData: any) => {
+export function ExpensesByCategory({
+  data,
+  onCategoryClick,
+}: {
+  data: Pick<DashboardOverview, 'expensesByCategory'>;
+  onCategoryClick: (categoryName: string) => void;
+}) {
+  const onPieClick = (eventData: PieClickEvent) => {
     const categoryName = eventData.payload?.name || eventData.name;
     if (!categoryName) return;
     onCategoryClick(categoryName);
@@ -39,7 +51,7 @@ export function ExpensesByCategory({ data, onCategoryClick }: { data: any, onCat
                 stroke="none"
                 label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
               >
-                {data.expensesByCategory.map((_: any, index: number) => (
+                {data.expensesByCategory.map((_: ExpenseByCategory, index: number) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>

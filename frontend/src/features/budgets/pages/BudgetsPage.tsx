@@ -9,12 +9,13 @@ import { Plus, Target, Pencil, Trash2, TrendingDown, TrendingUp, AlertTriangle }
 import { UpsertBudgetModal } from '../components/UpsertBudgetModal';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { CategoryIcon } from '@/components/IconPicker';
+import type { BudgetStatusItem } from '@/types/Budget';
 
 export const BudgetsPage = () => {
   const { data: budgets = [], isLoading: loading, refetch: refetchBudgets } = useBudgetStatus();
   const deleteBudget = useDeleteBudget();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingBudget, setEditingBudget] = useState<any>(null);
+  const [editingBudget, setEditingBudget] = useState<BudgetStatusItem | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
   const handleDelete = async (id: number) => {

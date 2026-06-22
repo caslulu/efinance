@@ -140,7 +140,7 @@ export const DashboardPage = () => {
                     </div>
                   </TableCell></TableRow>
                 ) : drilldownTransactions.length > 0 ? (
-                  drilldownTransactions.map((tx: any) => (
+                  drilldownTransactions.map((tx) => (
                     <TableRow key={tx.id} className="border-b border-border/30 hover:bg-muted/30 transition-colors">
                       <TableCell className="text-xs">{formatDate(tx.transaction_date)}</TableCell>
                       <TableCell className="text-xs font-medium">{tx.description || drilldownCategory}</TableCell>

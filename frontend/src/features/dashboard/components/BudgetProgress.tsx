@@ -1,8 +1,9 @@
 import { Target } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { CategoryIcon } from '@/components/IconPicker';
+import type { BudgetSummaryItem, DashboardOverview } from '@/types/Dashboard';
 
-export function BudgetProgress({ data }: { data: any }) {
+export function BudgetProgress({ data }: { data: Pick<DashboardOverview, 'budgetSummary'> }) {
   if (!data.budgetSummary || data.budgetSummary.length === 0) return null;
 
   return (
@@ -14,7 +15,7 @@ export function BudgetProgress({ data }: { data: any }) {
         <h3 className="text-sm font-semibold text-foreground">Orçamento por Categoria</h3>
       </div>
       <div className="px-5 pb-5 space-y-5">
-        {data.budgetSummary.map((budget: any) => {
+        {data.budgetSummary.map((budget: BudgetSummaryItem) => {
           const overBudget = budget.percentage >= 100;
           const warning = budget.percentage >= 80 && !overBudget;
           return (

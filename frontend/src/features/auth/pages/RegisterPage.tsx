@@ -75,7 +75,14 @@ export const RegisterPage = () => {
     setError('');
 
     try {
-      const payload: any = { username, email, password, fullName, birthDate };
+      const payload: {
+        username: string;
+        email: string;
+        password: string;
+        fullName: string;
+        birthDate: string;
+        registerToken?: string;
+      } = { username, email, password, fullName, birthDate };
       if (registerToken) payload.registerToken = registerToken;
 
       const res = await api.post('/auth/register', payload);

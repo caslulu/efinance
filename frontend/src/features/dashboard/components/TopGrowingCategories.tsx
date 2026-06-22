@@ -1,8 +1,9 @@
 import { TrendingUp } from 'lucide-react';
 import { CategoryIcon } from '@/components/IconPicker';
 import { formatCurrency } from '@/lib/utils';
+import type { DashboardOverview, TopGrowingCategory } from '@/types/Dashboard';
 
-export function TopGrowingCategories({ data }: { data: any }) {
+export function TopGrowingCategories({ data }: { data: Pick<DashboardOverview, 'topGrowingCategories'> }) {
   return (
     <div className="dash-card overflow-hidden">
       <div className="px-5 pt-5 pb-4 flex items-center gap-2.5">
@@ -13,7 +14,7 @@ export function TopGrowingCategories({ data }: { data: any }) {
       </div>
       <div className="px-5 pb-5 space-y-2.5">
         {data.topGrowingCategories && data.topGrowingCategories.length > 0 ? (
-          data.topGrowingCategories.map((item: any) => (
+          data.topGrowingCategories.map((item: TopGrowingCategory) => (
             <div key={item.name} className="p-3.5 rounded-xl bg-violet-500/[0.04] border border-violet-500/10 hover:border-violet-500/20 transition-colors">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5 min-w-0">

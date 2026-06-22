@@ -1,8 +1,9 @@
 import { BarChart3 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { formatCurrency } from '@/lib/utils';
+import type { DashboardOverview, MonthFlowEntry } from '@/types/Dashboard';
 
-export function HistoryProjectionChart({ data }: { data: any }) {
+export function HistoryProjectionChart({ data }: { data: Pick<DashboardOverview, 'monthFlow'> }) {
   return (
     <div className="dash-card overflow-hidden">
       <div className="px-5 pt-5 pb-3">
@@ -38,7 +39,7 @@ export function HistoryProjectionChart({ data }: { data: any }) {
               }}
             />
             <Bar dataKey="value" radius={[6, 6, 0, 0]} fill="#3b82f6">
-              {data.monthFlow.map((entry: any, index: number) => (
+              {data.monthFlow.map((entry: MonthFlowEntry, index: number) => (
                 <Cell key={`cell-${index}`} fill={entry.isProjected ? '#93c5fd' : '#3b82f6'} />
               ))}
             </Bar>

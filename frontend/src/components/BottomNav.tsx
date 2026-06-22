@@ -21,8 +21,17 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import type { ComponentType } from 'react';
+import type { LucideProps } from 'lucide-react';
 
-const NavItem = ({ to, icon: Icon, label, onClick }: any) => {
+interface NavItemProps {
+  to: string;
+  icon: ComponentType<LucideProps>;
+  label: string;
+  onClick?: () => void;
+}
+
+const NavItem = ({ to, icon: Icon, label, onClick }: NavItemProps) => {
   const location = useLocation();
   const isActive = location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
 

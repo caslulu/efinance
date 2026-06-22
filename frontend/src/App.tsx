@@ -27,6 +27,7 @@ import { LoadingSpinner } from './components/LoadingSpinner';
 import { BottomNav } from './components/BottomNav';
 import { OnboardingWrapper } from './components/OnboardingWrapper';
 import { OnboardingPage } from './features/onboarding/pages/OnboardingPage';
+import type { ComponentType } from 'react';
 import {
   ChevronDown,
   LogOut,
@@ -43,7 +44,8 @@ import {
   Menu,
   X,
   Bell,
-  Sparkles
+  Sparkles,
+  type LucideProps
 } from 'lucide-react';
 
 const ProtectedRoute = ({ children }: { children: ReactElement }) => {
@@ -64,7 +66,7 @@ const NavLink = ({
   onClick
 }: {
   to: string;
-  icon: any;
+  icon: ComponentType<LucideProps>;
   label: string;
   isCollapsed: boolean;
   onClick?: () => void

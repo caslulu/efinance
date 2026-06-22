@@ -2,8 +2,15 @@ import { History, ArrowRight } from 'lucide-react';
 import { CategoryIcon } from '@/components/IconPicker';
 import { formatCurrency } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
+import type { DashboardOverview, DashboardTransaction } from '@/types/Dashboard';
 
-export function RecentActivity({ data, formatDate }: { data: any, formatDate: (dateStr: string) => string }) {
+export function RecentActivity({
+  data,
+  formatDate,
+}: {
+  data: Pick<DashboardOverview, 'recentTransactions'>;
+  formatDate: (dateStr: string) => string;
+}) {
   const navigate = useNavigate();
   return (
     <div className="dash-card overflow-hidden">
@@ -15,7 +22,7 @@ export function RecentActivity({ data, formatDate }: { data: any, formatDate: (d
       </div>
       <div className="px-5 pb-5 space-y-2.5">
         {data.recentTransactions && data.recentTransactions.length > 0 ? (
-          data.recentTransactions.map((tx: any) => (
+          data.recentTransactions.map((tx: DashboardTransaction) => (
             <div key={tx.id} className="flex items-center justify-between p-3 rounded-xl bg-card border border-border/30 hover:border-border/60 transition-all group">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center group-hover:scale-105 transition-transform">

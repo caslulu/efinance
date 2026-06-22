@@ -1,8 +1,15 @@
 import { Bell, Wallet as WalletIcon } from 'lucide-react';
 import { CategoryIcon } from '@/components/IconPicker';
 import { formatCurrency } from '@/lib/utils';
+import type { DashboardOverview, DashboardTransaction } from '@/types/Dashboard';
 
-export function UpcomingBills({ data, formatDate }: { data: any, formatDate: (dateStr: string) => string }) {
+export function UpcomingBills({
+  data,
+  formatDate,
+}: {
+  data: Pick<DashboardOverview, 'upcomingTransactions'>;
+  formatDate: (dateStr: string) => string;
+}) {
   return (
     <div className="dash-card overflow-hidden">
       <div className="px-5 pt-5 pb-4 flex items-center gap-2.5">
@@ -16,7 +23,7 @@ export function UpcomingBills({ data, formatDate }: { data: any, formatDate: (da
       </div>
       <div className="px-5 pb-5 space-y-2.5">
         {data.upcomingTransactions && data.upcomingTransactions.length > 0 ? (
-          data.upcomingTransactions.map((tx: any) => (
+          data.upcomingTransactions.map((tx: DashboardTransaction) => (
             <div key={tx.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border/30 hover:bg-muted/50 transition-colors group">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center group-hover:scale-105 transition-transform">

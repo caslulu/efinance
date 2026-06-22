@@ -76,7 +76,7 @@ export const OnboardingPage = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="type">Tipo</Label>
-                <Select value={type} onValueChange={(val: any) => setType(val)}>
+                <Select value={type} onValueChange={(val) => setType(val as typeof type)}>
                   <SelectTrigger id="type">
                     <SelectValue placeholder="Selecione o tipo" />
                   </SelectTrigger>

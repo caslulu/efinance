@@ -69,13 +69,15 @@ export const TransactionsPage = () => {
             transaction_date: currentDate.toISOString(),
             wallet_id: sub.wallet_id,
             description: sub.name,
-            transaction_type: sub.transaction_type as 'INCOME' | 'EXPENSE',
+            transaction_type: sub.transaction_type,
             is_recurring: true,
             value: Number(sub.value),
             category_id: sub.category_id,
             payment_method: 'Recorrente',
-            TransactionCategory: (sub as any).category ? { id: (sub as any).category.id, name: (sub as any).category.name } : undefined
-          } as any);
+            TransactionCategory: sub.category
+              ? { id: sub.category.id, name: sub.category.name, user_id: sub.category.user_id, icon: sub.category.icon }
+              : undefined,
+          });
         }
         let nextDate: Date;
         const originalDay = new Date(sub.next_billing_date).getDate();
@@ -269,7 +271,15 @@ export const TransactionsPage = () => {
   const isFiltered = searchTerm !== '' || filterCategory !== 'ALL' || filterWallet !== 'ALL' || filterType !== 'ALL' || filterStartDate !== '' || filterEndDate !== '';
   const activeFilterCount = [filterCategory !== 'ALL', filterWallet !== 'ALL', filterType !== 'ALL', filterStartDate !== '', filterEndDate !== ''].filter(Boolean).length;
 
-  const renderGroup = (group: any) => {
+  type TransactionGroup = {
+    label: string;
+    transactions: Transaction[];
+    totalExpense: number;
+    totalIncome: number;
+    orderKey: number;
+  };
+
+  const renderGroup = (group: TransactionGroup) => {
     const isExpanded = expandedMonths.includes(group.label);
     const isFuture = group.orderKey > (new Date().getFullYear() * 100 + new Date().getMonth());
     const isCurrent = group.orderKey === (new Date().getFullYear() * 100 + new Date().getMonth());
