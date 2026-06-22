@@ -63,6 +63,42 @@ export class TransactionsService {
     return result;
   }
 
+  /**
+   * Applies (or reverts) a transaction's impact on the wallet balance.
+   * No-op when the payment is deferred (regular credit-card purchase that
+   * settles at the bill date). Meal-voucher wallets always settle immediately.
+   *
+   * mode='apply':  EXPENSE → addExpense, INCOME → addIncoming
+   * mode='revert': EXPENSE → addIncoming, INCOME → addExpense (inverse)
+   */
+  private async applyBalanceImpact(params: {
+    walletId: number;
+    userId: number;
+    paymentMethod: string | null | undefined;
+    walletType: string | null | undefined;
+    transactionType: string;
+    value: number;
+    mode: 'apply' | 'revert';
+  }): Promise<void> {
+    if (!isImmediateDebit(params.paymentMethod, params.walletType)) return;
+    const addsToWallet =
+      (params.mode === 'apply' && params.transactionType === 'INCOME') ||
+      (params.mode === 'revert' && params.transactionType === 'EXPENSE');
+    if (addsToWallet) {
+      await this.walletsService.addIncoming(
+        params.walletId,
+        params.userId,
+        params.value,
+      );
+    } else {
+      await this.walletsService.addExpense(
+        params.walletId,
+        params.userId,
+        params.value,
+      );
+    }
+  }
+
   private async validateCardLimit(
     cardId: number,
     incomingExpenseValue: number,
@@ -665,11 +701,15 @@ export class TransactionsService {
     });
 
     if (!isFuture) {
-      if (row.transaction_type === 'EXPENSE') {
-        await this.walletsService.addExpense(wallet.id, userId, row.value);
-      } else {
-        await this.walletsService.addIncoming(wallet.id, userId, row.value);
-      }
+      await this.applyBalanceImpact({
+        walletId: wallet.id,
+        userId,
+        paymentMethod: null,
+        walletType: wallet.type,
+        transactionType: row.transaction_type,
+        value: row.value,
+        mode: 'apply',
+      });
     }
 
     return transaction;
@@ -842,24 +882,16 @@ export class TransactionsService {
         : 1;
 
       // Revert old transaction impact ONLY if it was processed (balance was applied)
-      if (
-        oldTransaction.is_processed &&
-        isImmediateDebit(oldTransaction.payment_method, oldWalletType)
-      ) {
-        const revertValue = Number(oldTransaction.value) * multiplier;
-        if (oldTransaction.transaction_type === 'EXPENSE') {
-          await this.walletsService.addIncoming(
-            oldTransaction.wallet_id,
-            userId,
-            revertValue,
-          );
-        } else {
-          await this.walletsService.addExpense(
-            oldTransaction.wallet_id,
-            userId,
-            revertValue,
-          );
-        }
+      if (oldTransaction.is_processed) {
+        await this.applyBalanceImpact({
+          walletId: oldTransaction.wallet_id,
+          userId,
+          paymentMethod: oldTransaction.payment_method,
+          walletType: oldWalletType,
+          transactionType: oldTransaction.transaction_type,
+          value: Number(oldTransaction.value) * multiplier,
+          mode: 'revert',
+        });
       }
 
       // Apply new transaction impact only if the new date is NOT in the future
@@ -891,8 +923,6 @@ export class TransactionsService {
           12
         : 1;
 
-      const newIsImmediate = isImmediateDebit(newMethod, newWalletType);
-
       if (
         newType === 'EXPENSE' &&
         newMethod === 'CREDIT' &&
@@ -902,13 +932,16 @@ export class TransactionsService {
         await this.validateCardLimit(newCardId, newValue * newMultiplier, id);
       }
 
-      if (!willBeFuture && newIsImmediate) {
-        const applyValue = newValue * newMultiplier;
-        if (newType === 'EXPENSE') {
-          await this.walletsService.addExpense(newWalletId, userId, applyValue);
-        } else {
-          await this.walletsService.addIncoming(newWalletId, userId, applyValue);
-        }
+      if (!willBeFuture) {
+        await this.applyBalanceImpact({
+          walletId: newWalletId,
+          userId,
+          paymentMethod: newMethod,
+          walletType: newWalletType,
+          transactionType: newType,
+          value: newValue * newMultiplier,
+          mode: 'apply',
+        });
       }
 
       // Update is_processed flag based on the new date
@@ -1015,12 +1048,16 @@ export class TransactionsService {
     });
 
     // Only update wallet balance if the transaction date is today or in the past
-    if (!isFuture && isImmediateDebit(data.payment_method, walletType)) {
-      if (data.transaction_type === 'EXPENSE') {
-        await this.walletsService.addExpense(data.wallet_id, userId, data.value);
-      } else {
-        await this.walletsService.addIncoming(data.wallet_id, userId, data.value);
-      }
+    if (!isFuture) {
+      await this.applyBalanceImpact({
+        walletId: data.wallet_id,
+        userId,
+        paymentMethod: data.payment_method,
+        walletType,
+        transactionType: data.transaction_type,
+        value: data.value,
+        mode: 'apply',
+      });
     }
 
     return transaction;
@@ -1071,13 +1108,16 @@ export class TransactionsService {
     });
 
     // Only apply balance for transactions that are not in the future
-    if (processedCount > 0 && isImmediateDebit(dto.payment_method, walletType)) {
-      const applyValue = monthlyValue * processedCount;
-      if (dto.transaction_type === 'EXPENSE') {
-        await this.walletsService.addExpense(dto.wallet_id, userId, applyValue);
-      } else {
-        await this.walletsService.addIncoming(dto.wallet_id, userId, applyValue);
-      }
+    if (processedCount > 0) {
+      await this.applyBalanceImpact({
+        walletId: dto.wallet_id,
+        userId,
+        paymentMethod: dto.payment_method,
+        walletType,
+        transactionType: dto.transaction_type,
+        value: monthlyValue * processedCount,
+        mode: 'apply',
+      });
     }
 
     return {
@@ -1132,20 +1172,16 @@ export class TransactionsService {
     });
 
     // Only apply balance for installments that are not in the future
-    if (processedValue > 0 && isImmediateDebit(dto.payment_method, walletType)) {
-      if (dto.transaction_type === 'EXPENSE') {
-        await this.walletsService.addExpense(
-          dto.wallet_id,
-          userId,
-          processedValue,
-        );
-      } else {
-        await this.walletsService.addIncoming(
-          dto.wallet_id,
-          userId,
-          processedValue,
-        );
-      }
+    if (processedValue > 0) {
+      await this.applyBalanceImpact({
+        walletId: dto.wallet_id,
+        userId,
+        paymentMethod: dto.payment_method,
+        walletType,
+        transactionType: dto.transaction_type,
+        value: processedValue,
+        mode: 'apply',
+      });
     }
 
     return {
@@ -1182,7 +1218,6 @@ export class TransactionsService {
     }
 
     const walletType = transaction.wallet?.type;
-    const immediate = isImmediateDebit(transaction.payment_method, walletType);
 
     // For installment/recurring series, revert only the processed (non-future) transactions
     if (transaction.installment_id) {
@@ -1190,26 +1225,20 @@ export class TransactionsService {
         where: { installment_id: transaction.installment_id },
       });
 
-      const processedInSeries = allInSeries.filter((t) => t.is_processed);
-      const processedTotal = processedInSeries.reduce(
-        (sum, t) => sum + Number(t.value),
-        0,
-      );
+      const processedTotal = allInSeries
+        .filter((t) => t.is_processed)
+        .reduce((sum, t) => sum + Number(t.value), 0);
 
-      if (processedTotal > 0 && immediate) {
-        if (transaction.transaction_type === 'EXPENSE') {
-          await this.walletsService.addIncoming(
-            transaction.wallet_id,
-            userId,
-            processedTotal,
-          );
-        } else {
-          await this.walletsService.addExpense(
-            transaction.wallet_id,
-            userId,
-            processedTotal,
-          );
-        }
+      if (processedTotal > 0) {
+        await this.applyBalanceImpact({
+          walletId: transaction.wallet_id,
+          userId,
+          paymentMethod: transaction.payment_method,
+          walletType,
+          transactionType: transaction.transaction_type,
+          value: processedTotal,
+          mode: 'revert',
+        });
       }
 
       return this.prisma.transaction.deleteMany({
@@ -1218,21 +1247,16 @@ export class TransactionsService {
     }
 
     // Single transaction: only revert if it was processed
-    if (transaction.is_processed && immediate) {
-      const revertValue = Number(transaction.value);
-      if (transaction.transaction_type === 'EXPENSE') {
-        await this.walletsService.addIncoming(
-          transaction.wallet_id,
-          userId,
-          revertValue,
-        );
-      } else {
-        await this.walletsService.addExpense(
-          transaction.wallet_id,
-          userId,
-          revertValue,
-        );
-      }
+    if (transaction.is_processed) {
+      await this.applyBalanceImpact({
+        walletId: transaction.wallet_id,
+        userId,
+        paymentMethod: transaction.payment_method,
+        walletType,
+        transactionType: transaction.transaction_type,
+        value: Number(transaction.value),
+        mode: 'revert',
+      });
     }
 
     return this.prisma.transaction.delete({
@@ -1259,18 +1283,16 @@ export class TransactionsService {
     let processedCount = 0;
 
     for (const tx of unprocessed) {
-      const userId = tx.wallet.user_id;
-      const immediate = isImmediateDebit(tx.payment_method, tx.wallet.type);
-
       try {
-        if (immediate) {
-          const applyValue = Number(tx.value);
-          if (tx.transaction_type === 'EXPENSE') {
-            await this.walletsService.addExpense(tx.wallet_id, userId, applyValue);
-          } else {
-            await this.walletsService.addIncoming(tx.wallet_id, userId, applyValue);
-          }
-        }
+        await this.applyBalanceImpact({
+          walletId: tx.wallet_id,
+          userId: tx.wallet.user_id,
+          paymentMethod: tx.payment_method,
+          walletType: tx.wallet.type,
+          transactionType: tx.transaction_type,
+          value: Number(tx.value),
+          mode: 'apply',
+        });
 
         await this.prisma.transaction.update({
           where: { id: tx.id },
