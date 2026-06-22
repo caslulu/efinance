@@ -356,10 +356,12 @@ describe('TransactionsService', () => {
     expect(salaryRow?.is_recurring).toBe(false);
   });
 
-  // TODO: pre-existing failure unrelated to security branch — `walletsService.addExpense`
-  // está sendo chamado 3x (uma por linha) mas o teste espera 2x. Investigar a regra real
-  // de débito de saldo durante import de extrato com mistura de recorrência + parcelado.
-  it.skip('should preserve recurring and installment metadata when confirming imports', async () => {
+  it('should preserve recurring and installment metadata when confirming imports', async () => {
+    // Trava o "hoje" para que a parcela 04/10 (2026-04-10) seja considerada futura
+    // e portanto não dispare addExpense. Sem isso, o teste depende da data real e
+    // quebra conforme o tempo passa.
+    jest.useFakeTimers().setSystemTime(new Date('2026-03-20T12:00:00.000Z'));
+
     const rows = [
       {
         transaction_date: '2026-03-05T12:00:00.000Z',
@@ -434,5 +436,7 @@ describe('TransactionsService', () => {
     expect(secondCall.installment_id).toBeTruthy();
     expect(thirdCall.installment_id).toBe(secondCall.installment_id);
     expect(walletsService.addExpense).toHaveBeenCalledTimes(2);
+
+    jest.useRealTimers();
   });
 });
