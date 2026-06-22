@@ -10,11 +10,11 @@ import { WalletsService } from '../wallets/wallets.service';
 import { crypto } from '../utils/crypto-uuid';
 import { ConfirmStatementImportRowDto } from './dto/confirm-statement-import.dto';
 import {
-  isImmediateDebit,
   PAYMENT_METHODS,
   TRANSACTION_TYPES,
   WALLET_TYPES,
 } from '../common/finance-constants';
+import { TransactionImpactService } from './transaction-impact.service';
 
 type ImportedStatementRow = {
   source_id: string;
@@ -41,111 +41,8 @@ export class TransactionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly walletsService: WalletsService,
+    private readonly impact: TransactionImpactService,
   ) {}
-
-  /**
-   * Returns true if the given date is in the future (after end of today).
-   */
-  private isFutureDate(date: Date): boolean {
-    const endOfToday = new Date();
-    endOfToday.setHours(23, 59, 59, 999);
-    return date > endOfToday;
-  }
-
-  /**
-   * Safely compute a date that is `monthsToAdd` months after `startDate`,
-   * preserving the original day and clamping to the last valid day of the target month.
-   * E.g. Jan 31 + 1 month → Feb 28 (not Mar 3).
-   */
-  private addMonthsSafe(startDate: Date, monthsToAdd: number): Date {
-    const result = new Date(startDate);
-    const originalDay = startDate.getDate();
-    result.setMonth(startDate.getMonth() + monthsToAdd);
-    // If the day shifted (month overflow), clamp to last valid day
-    if (result.getDate() !== originalDay) {
-      result.setDate(0); // last day of previous month
-    }
-    return result;
-  }
-
-  /**
-   * Applies (or reverts) a transaction's impact on the wallet balance.
-   * No-op when the payment is deferred (regular credit-card purchase that
-   * settles at the bill date). Meal-voucher wallets always settle immediately.
-   *
-   * mode='apply':  EXPENSE → addExpense, INCOME → addIncoming
-   * mode='revert': EXPENSE → addIncoming, INCOME → addExpense (inverse)
-   */
-  private async applyBalanceImpact(params: {
-    walletId: number;
-    userId: number;
-    paymentMethod: string | null | undefined;
-    walletType: string | null | undefined;
-    transactionType: string;
-    value: number;
-    mode: 'apply' | 'revert';
-  }): Promise<void> {
-    if (!isImmediateDebit(params.paymentMethod, params.walletType)) return;
-    const addsToWallet =
-      (params.mode === 'apply' &&
-        params.transactionType === TRANSACTION_TYPES.INCOME) ||
-      (params.mode === 'revert' &&
-        params.transactionType === TRANSACTION_TYPES.EXPENSE);
-    if (addsToWallet) {
-      await this.walletsService.addIncoming(
-        params.walletId,
-        params.userId,
-        params.value,
-      );
-    } else {
-      await this.walletsService.addExpense(
-        params.walletId,
-        params.userId,
-        params.value,
-      );
-    }
-  }
-
-  private async validateCardLimit(
-    cardId: number,
-    incomingExpenseValue: number,
-    currentTransactionIdToExclude?: number,
-  ) {
-    const card = await this.prisma.card.findUnique({ where: { id: cardId } });
-    if (!card) return;
-
-    const totalExp = await this.prisma.transaction.aggregate({
-      where: {
-        card_id: cardId,
-        transaction_type: TRANSACTION_TYPES.EXPENSE,
-        payment_method: PAYMENT_METHODS.CREDIT,
-        ...(currentTransactionIdToExclude
-          ? { id: { not: currentTransactionIdToExclude } }
-          : {}),
-      },
-      _sum: { value: true },
-    });
-
-    const totalInc = await this.prisma.transaction.aggregate({
-      where: {
-        card_id: cardId,
-        transaction_type: TRANSACTION_TYPES.INCOME,
-        payment_method: PAYMENT_METHODS.CREDIT,
-        ...(currentTransactionIdToExclude
-          ? { id: { not: currentTransactionIdToExclude } }
-          : {}),
-      },
-      _sum: { value: true },
-    });
-
-    const used =
-      Number(totalExp._sum.value || 0) - Number(totalInc._sum.value || 0);
-    if (used + incomingExpenseValue > Number(card.card_limit)) {
-      throw new BadRequestException(
-        `Limite do cartão excedido. Limite disponível: R$ ${(Number(card.card_limit) - used).toFixed(2)}`,
-      );
-    }
-  }
 
   private decodeStatementBuffer(file: Express.Multer.File): string {
     const utf8 = file.buffer.toString('utf8');
@@ -621,36 +518,6 @@ export class TransactionsService {
     return `${transactionDate}|${value.toFixed(2)}|${transactionType}`;
   }
 
-  private async resolveCategoryId(
-    userId: number,
-    categoryId?: number,
-  ): Promise<number> {
-    if (!categoryId) {
-      const defaultCategory = await this.prisma.transactionCategory.findFirst({
-        where: { user_id: userId, name: 'Outro' },
-      });
-
-      if (defaultCategory) {
-        return defaultCategory.id;
-      }
-
-      const newCategory = await this.prisma.transactionCategory.create({
-        data: { name: 'Outro', user_id: userId },
-      });
-
-      return newCategory.id;
-    }
-
-    const category = await this.prisma.transactionCategory.findUnique({
-      where: { id: categoryId },
-    });
-    if (!category || category.user_id !== userId) {
-      throw new NotFoundException('Category not found');
-    }
-
-    return categoryId;
-  }
-
   private buildImportedInstallmentGroupKey(
     row: ConfirmStatementImportRowDto,
   ): string {
@@ -676,9 +543,9 @@ export class TransactionsService {
     row: ConfirmStatementImportRowDto,
     installmentGroupIds: Map<string, string>,
   ) {
-    const categoryId = await this.resolveCategoryId(userId, row.category_id);
+    const categoryId = await this.impact.resolveCategoryId(userId, row.category_id);
     const transactionDate = new Date(row.transaction_date);
-    const isFuture = this.isFutureDate(transactionDate);
+    const isFuture = this.impact.isFutureDate(transactionDate);
     const installmentTotal =
       row.installment_total && row.installment_total > 1
         ? row.installment_total
@@ -708,7 +575,7 @@ export class TransactionsService {
     });
 
     if (!isFuture) {
-      await this.applyBalanceImpact({
+      await this.impact.applyBalanceImpact({
         walletId: wallet.id,
         userId,
         paymentMethod: null,
@@ -890,7 +757,7 @@ export class TransactionsService {
 
       // Revert old transaction impact ONLY if it was processed (balance was applied)
       if (oldTransaction.is_processed) {
-        await this.applyBalanceImpact({
+        await this.impact.applyBalanceImpact({
           walletId: oldTransaction.wallet_id,
           userId,
           paymentMethod: oldTransaction.payment_method,
@@ -922,7 +789,7 @@ export class TransactionsService {
       const newDate = updateTransactionDto.transaction_date
         ? new Date(updateTransactionDto.transaction_date)
         : oldTransaction.transaction_date;
-      const willBeFuture = this.isFutureDate(newDate);
+      const willBeFuture = this.impact.isFutureDate(newDate);
 
       const newMultiplier = oldTransaction.installment_id
         ? updateTransactionDto.installment_total ||
@@ -936,11 +803,11 @@ export class TransactionsService {
         newCardId &&
         newWalletType !== WALLET_TYPES.MEAL_VOUCHER
       ) {
-        await this.validateCardLimit(newCardId, newValue * newMultiplier, id);
+        await this.impact.validateCardLimit(newCardId, newValue * newMultiplier, id);
       }
 
       if (!willBeFuture) {
-        await this.applyBalanceImpact({
+        await this.impact.applyBalanceImpact({
           walletId: newWalletId,
           userId,
           paymentMethod: newMethod,
@@ -989,7 +856,7 @@ export class TransactionsService {
       throw new NotFoundException('Wallet not found');
     const walletType = wallet.type;
 
-    const categoryId = await this.resolveCategoryId(
+    const categoryId = await this.impact.resolveCategoryId(
       userId,
       createTransactionDto.category_id,
     );
@@ -1015,7 +882,7 @@ export class TransactionsService {
           : is_recurring && !subscription_id
             ? 12
             : 1;
-      await this.validateCardLimit(card_id, data.value * multiplier);
+      await this.impact.validateCardLimit(card_id, data.value * multiplier);
     }
 
     if (installment_total && installment_total > 1) {
@@ -1038,7 +905,7 @@ export class TransactionsService {
     }
 
     const transactionDate = new Date(data.transaction_date);
-    const isFuture = this.isFutureDate(transactionDate);
+    const isFuture = this.impact.isFutureDate(transactionDate);
 
     const transaction = await this.prisma.transaction.create({
       data: {
@@ -1056,7 +923,7 @@ export class TransactionsService {
 
     // Only update wallet balance if the transaction date is today or in the past
     if (!isFuture) {
-      await this.applyBalanceImpact({
+      await this.impact.applyBalanceImpact({
         walletId: data.wallet_id,
         userId,
         paymentMethod: data.payment_method,
@@ -1088,7 +955,7 @@ export class TransactionsService {
     let processedCount = 0;
 
     for (let i = 0; i < PREDICTION_MONTHS; i++) {
-      const transactionDate = this.addMonthsSafe(startDate, i);
+      const transactionDate = this.impact.addMonthsSafe(startDate, i);
 
       const isFuture = transactionDate > endOfToday;
       if (!isFuture) processedCount++;
@@ -1116,7 +983,7 @@ export class TransactionsService {
 
     // Only apply balance for transactions that are not in the future
     if (processedCount > 0) {
-      await this.applyBalanceImpact({
+      await this.impact.applyBalanceImpact({
         walletId: dto.wallet_id,
         userId,
         paymentMethod: dto.payment_method,
@@ -1152,7 +1019,7 @@ export class TransactionsService {
     let processedValue = 0;
 
     for (let i = 0; i < totalInstallments; i++) {
-      const transactionDate = this.addMonthsSafe(startDate, i);
+      const transactionDate = this.impact.addMonthsSafe(startDate, i);
 
       const isFuture = transactionDate > endOfToday;
       if (!isFuture) processedValue += installmentValue;
@@ -1180,7 +1047,7 @@ export class TransactionsService {
 
     // Only apply balance for installments that are not in the future
     if (processedValue > 0) {
-      await this.applyBalanceImpact({
+      await this.impact.applyBalanceImpact({
         walletId: dto.wallet_id,
         userId,
         paymentMethod: dto.payment_method,
@@ -1237,7 +1104,7 @@ export class TransactionsService {
         .reduce((sum, t) => sum + Number(t.value), 0);
 
       if (processedTotal > 0) {
-        await this.applyBalanceImpact({
+        await this.impact.applyBalanceImpact({
           walletId: transaction.wallet_id,
           userId,
           paymentMethod: transaction.payment_method,
@@ -1255,7 +1122,7 @@ export class TransactionsService {
 
     // Single transaction: only revert if it was processed
     if (transaction.is_processed) {
-      await this.applyBalanceImpact({
+      await this.impact.applyBalanceImpact({
         walletId: transaction.wallet_id,
         userId,
         paymentMethod: transaction.payment_method,
@@ -1291,7 +1158,7 @@ export class TransactionsService {
 
     for (const tx of unprocessed) {
       try {
-        await this.applyBalanceImpact({
+        await this.impact.applyBalanceImpact({
           walletId: tx.wallet_id,
           userId: tx.wallet.user_id,
           paymentMethod: tx.payment_method,

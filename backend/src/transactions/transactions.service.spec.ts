@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TransactionsService } from './transactions.service';
+import { TransactionImpactService } from './transaction-impact.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { WalletsService } from '../wallets/wallets.service';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
@@ -40,6 +41,7 @@ describe('TransactionsService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TransactionsService,
+        TransactionImpactService,
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: WalletsService, useValue: mockWalletsService },
       ],
