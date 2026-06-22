@@ -1,4 +1,6 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { CsrfMiddleware } from './common/csrf.middleware';
+import { CsrfController } from './common/csrf.controller';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -17,7 +19,8 @@ import { WishlistModule } from './wishlist/wishlist.module';
 import { CardsModule } from './cards/cards.module';
 import { ChatModule } from './chat/chat.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { SanitizeInterceptor } from './common/sanitize.interceptor';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { ScheduleModule } from '@nestjs/schedule';
 
@@ -61,7 +64,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     CardsModule,
     ChatModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, CsrfController],
   providers: [
     AppService,
     {
@@ -72,6 +75,14 @@ import { ScheduleModule } from '@nestjs/schedule';
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: SanitizeInterceptor,
+    },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(CsrfMiddleware).forRoutes('*');
+  }
+}

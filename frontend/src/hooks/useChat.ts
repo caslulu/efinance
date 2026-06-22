@@ -46,19 +46,34 @@ export async function sendMessageStream(
   onDone: () => void,
   onError: (error: string) => void,
 ) {
-  const token =
-    localStorage.getItem('session_token') ||
-    sessionStorage.getItem('session_token');
-
   const apiBaseUrl = (
     import.meta.env.VITE_API_URL || 'http://localhost:3000'
   ).replace(/\/+$/, '');
+
+  const readCookie = (name: string): string | null => {
+    if (typeof document === 'undefined') return null;
+    const m = document.cookie.match(
+      new RegExp('(?:^|;\\s*)' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '=([^;]*)'),
+    );
+    return m ? decodeURIComponent(m[1]) : null;
+  };
+
+  let csrfToken = readCookie('csrf_token');
+  if (!csrfToken) {
+    try {
+      const r = await fetch(`${apiBaseUrl}/csrf`, { credentials: 'include' });
+      const data = await r.json().catch(() => ({}));
+      csrfToken = data?.csrfToken || readCookie('csrf_token');
+    } catch {
+      csrfToken = null;
+    }
+  }
 
   const response = await fetch(`${apiBaseUrl}/chat/messages/stream`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
     },
     credentials: 'include',
     body: JSON.stringify({

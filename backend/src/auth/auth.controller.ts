@@ -86,6 +86,7 @@ export class AuthController {
 
     if (result?.access_token) {
       this.setAuthCookie(res, result.access_token, false);
+      delete result.access_token;
     }
 
     return result;
@@ -110,6 +111,7 @@ export class AuthController {
 
     if (result?.access_token) {
       this.setAuthCookie(res, result.access_token, !!loginDto.rememberMe);
+      delete result.access_token;
     }
 
     return result;
@@ -121,6 +123,7 @@ export class AuthController {
 
     if (result?.access_token) {
       this.setAuthCookie(res, result.access_token, !!dto.rememberMe);
+      delete result.access_token;
     }
 
     return result;

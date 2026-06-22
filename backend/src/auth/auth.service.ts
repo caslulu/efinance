@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { MailerService } from '@nestjs-modules/mailer';
@@ -9,6 +9,7 @@ import { randomBytes, randomInt } from 'crypto';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
@@ -54,7 +55,7 @@ export class AuthService {
     }
 
     if (user.isTwoFactorEnabled) {
-      this.sendTwoFactorToken(user).catch(err => console.error('Failed to send 2FA email asynchronously', err));
+      this.sendTwoFactorToken(user).catch(err => this.logger.error('Failed to send 2FA email asynchronously', err?.stack));
       return {
         requires2FA: true,
         username: user.username,
@@ -95,8 +96,8 @@ export class AuthService {
         if (payload.email === createUserDto.email && payload.isGoogleVerified) {
           isVerified = true;
         }
-      } catch (e) {
-        console.warn('Invalid registerToken provided');
+      } catch {
+        this.logger.warn('Invalid registerToken provided');
       }
     }
 
@@ -113,7 +114,7 @@ export class AuthService {
     if (isVerified) {
       await this.usersService.markEmailAsVerified(user.id);
     } else {
-      this.sendVerificationEmail(user).catch(err => console.error('Failed to send verification email asynchronously', err));
+      this.sendVerificationEmail(user).catch(err => this.logger.error('Failed to send verification email asynchronously', err?.stack));
     }
 
     return {
@@ -185,9 +186,9 @@ export class AuthService {
           `,
         });
       } catch (error) {
-        console.error('Failed to send email:', error);
+        this.logger.error('Failed to send password reset email', (error as Error)?.stack);
         if (process.env.NODE_ENV === 'development') {
-          console.log(`[DEV FALLBACK] Reset Link: ${resetLink}`);
+          this.logger.debug(`[DEV FALLBACK] Reset Link: ${resetLink}`);
         }
       }
     }
@@ -244,9 +245,9 @@ export class AuthService {
         `,
       });
     } catch (error) {
-      console.error('Failed to send 2FA email:', error);
+      this.logger.error('Failed to send 2FA email', (error as Error)?.stack);
       if (process.env.NODE_ENV === 'development') {
-        console.log(`[DEV FALLBACK] 2FA Token: ${token}`);
+        this.logger.debug(`[DEV FALLBACK] 2FA Token: ${token}`);
       }
     }
   }
@@ -284,9 +285,9 @@ export class AuthService {
         `,
       });
     } catch (error) {
-      console.error('Failed to send verification email:', error);
+      this.logger.error('Failed to send verification email', (error as Error)?.stack);
       if (process.env.NODE_ENV === 'development') {
-        console.log(`[DEV FALLBACK] Verification Token: ${token}`);
+        this.logger.debug(`[DEV FALLBACK] Verification Token: ${token}`);
       }
     }
   }
