@@ -9,6 +9,32 @@ em bumps de minor.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-06-22
+
+### Adicionado
+- **Integração Pluggy (Open Finance / MeuPluggy)**: sync automático de
+  transações do Nubank (conta e cartão) via SDK oficial `pluggy-sdk`.
+  - Novo módulo `backend/src/integrations/pluggy/` com `PluggyService`,
+    `PluggyScheduler` (cron diário às 09:00 UTC / 06:00 BRT) e
+    `PluggyController` (`POST /integrations/pluggy/sync`,
+    `GET /integrations/pluggy/status`).
+  - Campos novos em `Wallet`: `pluggy_item_id`, `pluggy_account_id` (unique),
+    `external_source`, `pluggy_last_sync_at`.
+  - Campos novos em `Transaction`: `external_id` (unique, dedup key) e
+    `external_source` (index).
+  - Mapeamento Pluggy → Transaction: detecta INCOME/EXPENSE pelo sinal do
+    `amount` (com semântica invertida para contas CREDIT), preserva info de
+    parcelas via `creditCardMetadata`, auto-cria categorias por nome.
+  - Wallets para Nubank são criadas automaticamente no primeiro sync (uma
+    por conta Pluggy — conta corrente vira `BANK`, cartão vira `CREDIT_CARD`).
+  - Script de smoke test em `backend/scripts/pluggy-smoke-test.ts`.
+  - Documentação em `docs/pluggy-integration.md`.
+
+### Configuração
+- Novas variáveis de ambiente (opcionais — integração desabilita se faltar
+  qualquer uma): `PLUGGY_CLIENT_ID`, `PLUGGY_CLIENT_SECRET`,
+  `PLUGGY_NUBANK_ITEM_ID`, `PLUGGY_USER_ID`.
+
 ## [0.1.0] - 2026-06-22
 
 ### Adicionado

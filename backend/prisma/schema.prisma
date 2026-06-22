@@ -39,59 +39,63 @@ enum InvestmentOperationType {
 }
 
 model User {
-  id                    Int                   @id @default(autoincrement())
-  username              String
-  email                 String                @unique
-  password              String?
-  fullName              String?
-  avatarUrl             String?
-  birthDate             DateTime?
-  resetToken            String?
-  resetTokenExpiry      DateTime?
-  twoFactorToken        String?
-  twoFactorTokenExpiry  DateTime?
-  isTwoFactorEnabled    Boolean               @default(false)
-  isEmailVerified       Boolean               @default(false)
-  emailVerificationToken String?
+  id                           Int                              @id @default(autoincrement())
+  username                     String
+  email                        String                           @unique
+  password                     String?
+  fullName                     String?
+  avatarUrl                    String?
+  birthDate                    DateTime?
+  resetToken                   String?
+  resetTokenExpiry             DateTime?
+  twoFactorToken               String?
+  twoFactorTokenExpiry         DateTime?
+  isTwoFactorEnabled           Boolean                          @default(false)
+  isEmailVerified              Boolean                          @default(false)
+  emailVerificationToken       String?
   emailVerificationTokenExpiry DateTime?
-  wallets               Wallet[]
-  wishlists             Wishlist[]
-  transactionCategories TransactionCategory[]
-  subscriptions         Subscription[]
-  budgets               Budget[]
-  priceAlertNotifications WishlistPriceAlertNotification[]
-  chatConversations     ChatConversation[]
-  chatDailyUsages       ChatDailyUsage[]
+  wallets                      Wallet[]
+  wishlists                    Wishlist[]
+  transactionCategories        TransactionCategory[]
+  subscriptions                Subscription[]
+  budgets                      Budget[]
+  priceAlertNotifications      WishlistPriceAlertNotification[]
+  chatConversations            ChatConversation[]
+  chatDailyUsages              ChatDailyUsage[]
 }
 
 model Wallet {
-  id               Int                   @id @default(autoincrement())
-  user_id          Int
-  user             User                  @relation(fields: [user_id], references: [id])
-  actual_cash      Decimal               @db.Decimal(10, 2)
-  name             String
-  type             String
-  order            Int                   @default(0)
-  is_transfer_only Boolean   @default(false)
-  transactions     Transaction[]
-  investments      Investment[]
-  subscriptions    Subscription[]
-  cards            Card[]
+  id                   Int                   @id @default(autoincrement())
+  user_id              Int
+  user                 User                  @relation(fields: [user_id], references: [id])
+  actual_cash          Decimal               @db.Decimal(10, 2)
+  name                 String
+  type                 String
+  order                Int                   @default(0)
+  is_transfer_only     Boolean               @default(false)
+  pluggy_item_id       String?
+  pluggy_account_id    String?               @unique
+  external_source      String?
+  pluggy_last_sync_at  DateTime?
+  transactions         Transaction[]
+  investments          Investment[]
+  subscriptions        Subscription[]
+  cards                Card[]
   investmentPositions  InvestmentPosition[]
   investmentOperations InvestmentOperation[]
 }
 
 model Card {
-  id           Int           @id @default(autoincrement())
-  wallet_id    Int
-  wallet       Wallet        @relation(fields: [wallet_id], references: [id], onDelete: Cascade)
-  name         String
-  flag         String
-  closing_day  Int
-  due_day      Int
-  card_limit   Decimal       @db.Decimal(10, 2)
-  transactions    Transaction[]
-  subscriptions   Subscription[]
+  id            Int            @id @default(autoincrement())
+  wallet_id     Int
+  wallet        Wallet         @relation(fields: [wallet_id], references: [id], onDelete: Cascade)
+  name          String
+  flag          String
+  closing_day   Int
+  due_day       Int
+  card_limit    Decimal        @db.Decimal(10, 2)
+  transactions  Transaction[]
+  subscriptions Subscription[]
 }
 
 model Transaction {
@@ -114,17 +118,21 @@ model Transaction {
   TransactionCategory TransactionCategory @relation(fields: [category_id], references: [id])
   subscription_id     Int?
   subscription        Subscription?       @relation("SubscriptionTransactions", fields: [subscription_id], references: [id])
+  external_id         String?             @unique
+  external_source     String?
+
+  @@index([external_source])
 }
 
 model Subscription {
-  id                Int                @id @default(autoincrement())
-  user_id           Int
-  user              User               @relation(fields: [user_id], references: [id])
-  wallet_id         Int
-  wallet            Wallet             @relation(fields: [wallet_id], references: [id])
-  category_id       Int
-  category          TransactionCategory @relation(fields: [category_id], references: [id])
-  
+  id          Int                 @id @default(autoincrement())
+  user_id     Int
+  user        User                @relation(fields: [user_id], references: [id])
+  wallet_id   Int
+  wallet      Wallet              @relation(fields: [wallet_id], references: [id])
+  category_id Int
+  category    TransactionCategory @relation(fields: [category_id], references: [id])
+
   name              String
   description       String?
   value             Decimal            @db.Decimal(10, 2)
@@ -137,19 +145,19 @@ model Subscription {
   icon              String?
   card_id           Int?
   card              Card?              @relation(fields: [card_id], references: [id], onDelete: SetNull)
-  
-  transactions      Transaction[]      @relation("SubscriptionTransactions")
+
+  transactions Transaction[] @relation("SubscriptionTransactions")
 }
 
 model TransactionCategory {
-  id           Int           @id @default(autoincrement())
-  user         User          @relation(fields: [user_id], references: [id])
-  user_id      Int
-  name         String
-  icon         String?
-  transactions Transaction[]
+  id            Int            @id @default(autoincrement())
+  user          User           @relation(fields: [user_id], references: [id])
+  user_id       Int
+  name          String
+  icon          String?
+  transactions  Transaction[]
   subscriptions Subscription[]
-  budgets      Budget[]
+  budgets       Budget[]
 }
 
 model Budget {
@@ -159,7 +167,7 @@ model Budget {
   category_id Int
   category    TransactionCategory @relation(fields: [category_id], references: [id])
   limit       Decimal             @db.Decimal(10, 2)
-  
+
   @@unique([user_id, category_id])
 }
 
@@ -195,29 +203,29 @@ model TypeInvestment {
 }
 
 model InvestmentPosition {
-  id                   Int               @id @default(autoincrement())
-  wallet_id            Int
-  wallet               Wallet            @relation(fields: [wallet_id], references: [id], onDelete: Cascade)
-  symbol               String
-  market               InvestmentMarket
-  asset_type           String            @default("LISTED")
-  currency             String
-  quantity             Decimal           @db.Decimal(18, 6)
-  average_cost         Decimal           @db.Decimal(18, 6)
-  invested_amount      Decimal           @db.Decimal(18, 6)
-  invested_amount_brl  Decimal           @db.Decimal(18, 6)
-  realized_pnl         Decimal           @db.Decimal(18, 6) @default(0)
-  realized_pnl_brl     Decimal           @db.Decimal(18, 6) @default(0)
-  dividends_received   Decimal           @db.Decimal(18, 6) @default(0)
-  dividends_received_brl Decimal         @db.Decimal(18, 6) @default(0)
-  jcp_received         Decimal           @db.Decimal(18, 6) @default(0)
-  jcp_received_brl     Decimal           @db.Decimal(18, 6) @default(0)
-  last_market_price    Decimal?          @db.Decimal(18, 6)
-  last_market_price_brl Decimal?         @db.Decimal(18, 6)
-  last_market_at       DateTime?
-  created_at           DateTime          @default(now())
-  updated_at           DateTime          @updatedAt
-  operations           InvestmentOperation[]
+  id                     Int                   @id @default(autoincrement())
+  wallet_id              Int
+  wallet                 Wallet                @relation(fields: [wallet_id], references: [id], onDelete: Cascade)
+  symbol                 String
+  market                 InvestmentMarket
+  asset_type             String                @default("LISTED")
+  currency               String
+  quantity               Decimal               @db.Decimal(18, 6)
+  average_cost           Decimal               @db.Decimal(18, 6)
+  invested_amount        Decimal               @db.Decimal(18, 6)
+  invested_amount_brl    Decimal               @db.Decimal(18, 6)
+  realized_pnl           Decimal               @default(0) @db.Decimal(18, 6)
+  realized_pnl_brl       Decimal               @default(0) @db.Decimal(18, 6)
+  dividends_received     Decimal               @default(0) @db.Decimal(18, 6)
+  dividends_received_brl Decimal               @default(0) @db.Decimal(18, 6)
+  jcp_received           Decimal               @default(0) @db.Decimal(18, 6)
+  jcp_received_brl       Decimal               @default(0) @db.Decimal(18, 6)
+  last_market_price      Decimal?              @db.Decimal(18, 6)
+  last_market_price_brl  Decimal?              @db.Decimal(18, 6)
+  last_market_at         DateTime?
+  created_at             DateTime              @default(now())
+  updated_at             DateTime              @updatedAt
+  operations             InvestmentOperation[]
 
   @@unique([wallet_id, symbol, market, asset_type])
   @@index([wallet_id, market, asset_type])
@@ -225,27 +233,27 @@ model InvestmentPosition {
 }
 
 model InvestmentOperation {
-  id                Int                     @id @default(autoincrement())
-  wallet_id         Int
-  wallet            Wallet                  @relation(fields: [wallet_id], references: [id], onDelete: Cascade)
-  position_id       Int?
-  position          InvestmentPosition?     @relation(fields: [position_id], references: [id], onDelete: SetNull)
-  type              InvestmentOperationType
-  symbol            String
-  market            InvestmentMarket
-  asset_type        String                  @default("LISTED")
-  currency          String
-  quantity          Decimal?                @db.Decimal(18, 6)
-  unit_price        Decimal?                @db.Decimal(18, 6)
-  gross_amount      Decimal                 @db.Decimal(18, 6)
-  gross_amount_brl  Decimal                 @db.Decimal(18, 6)
-  fx_rate           Decimal?                @db.Decimal(18, 6)
-  cdb_cdi_percentage Decimal?              @db.Decimal(10, 4)
-  cdb_cdi_rate      Decimal?                @db.Decimal(10, 4)
-  transaction_date  DateTime
-  source_event_key  String?                 @unique
-  notes             String?
-  created_at        DateTime                @default(now())
+  id                 Int                     @id @default(autoincrement())
+  wallet_id          Int
+  wallet             Wallet                  @relation(fields: [wallet_id], references: [id], onDelete: Cascade)
+  position_id        Int?
+  position           InvestmentPosition?     @relation(fields: [position_id], references: [id], onDelete: SetNull)
+  type               InvestmentOperationType
+  symbol             String
+  market             InvestmentMarket
+  asset_type         String                  @default("LISTED")
+  currency           String
+  quantity           Decimal?                @db.Decimal(18, 6)
+  unit_price         Decimal?                @db.Decimal(18, 6)
+  gross_amount       Decimal                 @db.Decimal(18, 6)
+  gross_amount_brl   Decimal                 @db.Decimal(18, 6)
+  fx_rate            Decimal?                @db.Decimal(18, 6)
+  cdb_cdi_percentage Decimal?                @db.Decimal(10, 4)
+  cdb_cdi_rate       Decimal?                @db.Decimal(10, 4)
+  transaction_date   DateTime
+  source_event_key   String?                 @unique
+  notes              String?
+  created_at         DateTime                @default(now())
 
   @@index([wallet_id, symbol, market, transaction_date])
   @@index([position_id, transaction_date])
@@ -260,16 +268,16 @@ model Wishlist {
 }
 
 model WishlistProduct {
-  id           Int      @id @default(autoincrement())
-  id_wishlist  Int
-  wishlist     Wishlist @relation(fields: [id_wishlist], references: [id])
-  name_product String
-  price        Decimal  @db.Decimal(10, 2)
-  url          String?
-  send_price_alerts Boolean @default(false)
-  last_checked_price Decimal? @db.Decimal(10, 2)
+  id                      Int                              @id @default(autoincrement())
+  id_wishlist             Int
+  wishlist                Wishlist                         @relation(fields: [id_wishlist], references: [id])
+  name_product            String
+  price                   Decimal                          @db.Decimal(10, 2)
+  url                     String?
+  send_price_alerts       Boolean                          @default(false)
+  last_checked_price      Decimal?                         @db.Decimal(10, 2)
   priceAlertNotifications WishlistPriceAlertNotification[]
-  history      WishlistProductHistory[]
+  history                 WishlistProductHistory[]
 }
 
 model WishlistProductHistory {

@@ -18,6 +18,7 @@ import { BudgetsModule } from './budgets/budgets.module';
 import { WishlistModule } from './wishlist/wishlist.module';
 import { CardsModule } from './cards/cards.module';
 import { ChatModule } from './chat/chat.module';
+import { PluggyModule } from './integrations/pluggy/pluggy.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { SanitizeInterceptor } from './common/sanitize.interceptor';
@@ -63,6 +64,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     WishlistModule,
     CardsModule,
     ChatModule,
+    PluggyModule,
   ],
   controllers: [AppController, CsrfController],
   providers: [
