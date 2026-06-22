@@ -14,6 +14,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
+import { StatementImportService } from './statement-import.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { AuthGuard } from '@nestjs/passport';
@@ -24,7 +25,10 @@ import { ConfirmStatementImportDto } from './dto/confirm-statement-import.dto';
 @Controller('transactions')
 @UseGuards(AuthGuard('jwt'))
 export class TransactionsController {
-  constructor(private readonly transactionsService: TransactionsService) {}
+  constructor(
+    private readonly transactionsService: TransactionsService,
+    private readonly statementImportService: StatementImportService,
+  ) {}
 
   @Post()
   create(@Request() req, @Body() createTransactionDto: CreateTransactionDto) {
@@ -52,7 +56,7 @@ export class TransactionsController {
       throw new BadRequestException('Arquivo não enviado.');
     }
 
-    return this.transactionsService.previewStatementImport(
+    return this.statementImportService.previewStatementImport(
       req.user.userId,
       walletId,
       file,
@@ -65,7 +69,7 @@ export class TransactionsController {
     @Param('walletId', ParseIntPipe) walletId: number,
     @Body() body: ConfirmStatementImportDto,
   ) {
-    return this.transactionsService.confirmStatementImport(
+    return this.statementImportService.confirmStatementImport(
       req.user.userId,
       walletId,
       body.rows,
