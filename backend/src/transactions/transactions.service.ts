@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { WalletsService } from '../wallets/wallets.service';
 import { crypto } from '../utils/crypto-uuid';
 import { ConfirmStatementImportRowDto } from './dto/confirm-statement-import.dto';
+import { isImmediateDebit } from '../common/finance-constants';
 
 type ImportedStatementRow = {
   source_id: string;
@@ -808,8 +809,8 @@ export class TransactionsService {
       throw new NotFoundException('Transaction not found');
     }
 
-    let isOldMealVoucher = oldTransaction.wallet?.type === 'MEAL_VOUCHER';
-    let isNewMealVoucher = isOldMealVoucher;
+    const oldWalletType = oldTransaction.wallet?.type;
+    let newWalletType = oldWalletType;
 
     if (updateTransactionDto.wallet_id) {
       const wallet = await this.prisma.wallet.findUnique({
@@ -817,7 +818,7 @@ export class TransactionsService {
       });
       if (!wallet || wallet.user_id !== userId)
         throw new NotFoundException('Wallet not found');
-      isNewMealVoucher = wallet.type === 'MEAL_VOUCHER';
+      newWalletType = wallet.type;
     }
 
     if (updateTransactionDto.category_id) {
@@ -841,24 +842,23 @@ export class TransactionsService {
         : 1;
 
       // Revert old transaction impact ONLY if it was processed (balance was applied)
-      if (oldTransaction.is_processed) {
+      if (
+        oldTransaction.is_processed &&
+        isImmediateDebit(oldTransaction.payment_method, oldWalletType)
+      ) {
+        const revertValue = Number(oldTransaction.value) * multiplier;
         if (oldTransaction.transaction_type === 'EXPENSE') {
-          if (oldTransaction.payment_method !== 'CREDIT' || isOldMealVoucher) {
-            await this.walletsService.addIncoming(
-              oldTransaction.wallet_id,
-              userId,
-              Number(oldTransaction.value) * multiplier,
-            );
-          }
+          await this.walletsService.addIncoming(
+            oldTransaction.wallet_id,
+            userId,
+            revertValue,
+          );
         } else {
-          // INCOME
-          if (oldTransaction.payment_method !== 'CREDIT' || isOldMealVoucher) {
-            await this.walletsService.addExpense(
-              oldTransaction.wallet_id,
-              userId,
-              Number(oldTransaction.value) * multiplier,
-            );
-          }
+          await this.walletsService.addExpense(
+            oldTransaction.wallet_id,
+            userId,
+            revertValue,
+          );
         }
       }
 
@@ -891,33 +891,23 @@ export class TransactionsService {
           12
         : 1;
 
+      const newIsImmediate = isImmediateDebit(newMethod, newWalletType);
+
       if (
         newType === 'EXPENSE' &&
         newMethod === 'CREDIT' &&
         newCardId &&
-        !isNewMealVoucher
+        newWalletType !== 'MEAL_VOUCHER'
       ) {
         await this.validateCardLimit(newCardId, newValue * newMultiplier, id);
       }
 
-      if (!willBeFuture) {
+      if (!willBeFuture && newIsImmediate) {
+        const applyValue = newValue * newMultiplier;
         if (newType === 'EXPENSE') {
-          if (newMethod !== 'CREDIT' || isNewMealVoucher) {
-            await this.walletsService.addExpense(
-              newWalletId,
-              userId,
-              newValue * newMultiplier,
-            );
-          }
+          await this.walletsService.addExpense(newWalletId, userId, applyValue);
         } else {
-          // INCOME
-          if (newMethod !== 'CREDIT' || isNewMealVoucher) {
-            await this.walletsService.addIncoming(
-              newWalletId,
-              userId,
-              newValue * newMultiplier,
-            );
-          }
+          await this.walletsService.addIncoming(newWalletId, userId, applyValue);
         }
       }
 
@@ -957,7 +947,7 @@ export class TransactionsService {
     });
     if (!wallet || wallet.user_id !== userId)
       throw new NotFoundException('Wallet not found');
-    const isMealVoucher = wallet.type === 'MEAL_VOUCHER';
+    const walletType = wallet.type;
 
     const categoryId = await this.resolveCategoryId(
       userId,
@@ -977,7 +967,7 @@ export class TransactionsService {
       data.transaction_type === 'EXPENSE' &&
       data.payment_method === 'CREDIT' &&
       card_id &&
-      !isMealVoucher
+      walletType !== 'MEAL_VOUCHER'
     ) {
       const multiplier =
         installment_total && installment_total > 1
@@ -993,7 +983,7 @@ export class TransactionsService {
         userId,
         createTransactionDto,
         categoryId!,
-        isMealVoucher,
+        walletType,
       );
     }
 
@@ -1003,7 +993,7 @@ export class TransactionsService {
         userId,
         createTransactionDto,
         categoryId!,
-        isMealVoucher,
+        walletType,
       );
     }
 
@@ -1025,23 +1015,11 @@ export class TransactionsService {
     });
 
     // Only update wallet balance if the transaction date is today or in the past
-    if (!isFuture) {
+    if (!isFuture && isImmediateDebit(data.payment_method, walletType)) {
       if (data.transaction_type === 'EXPENSE') {
-        if (data.payment_method !== 'CREDIT' || isMealVoucher) {
-          await this.walletsService.addExpense(
-            data.wallet_id,
-            userId,
-            data.value,
-          );
-        }
+        await this.walletsService.addExpense(data.wallet_id, userId, data.value);
       } else {
-        if (data.payment_method !== 'CREDIT' || isMealVoucher) {
-          await this.walletsService.addIncoming(
-            data.wallet_id,
-            userId,
-            data.value,
-          );
-        }
+        await this.walletsService.addIncoming(data.wallet_id, userId, data.value);
       }
     }
 
@@ -1052,7 +1030,7 @@ export class TransactionsService {
     userId: number,
     dto: CreateTransactionDto,
     categoryId: number,
-    isMealVoucher: boolean = false,
+    walletType?: string,
   ) {
     const PREDICTION_MONTHS = 12;
     const monthlyValue = dto.value;
@@ -1093,23 +1071,12 @@ export class TransactionsService {
     });
 
     // Only apply balance for transactions that are not in the future
-    if (processedCount > 0) {
+    if (processedCount > 0 && isImmediateDebit(dto.payment_method, walletType)) {
+      const applyValue = monthlyValue * processedCount;
       if (dto.transaction_type === 'EXPENSE') {
-        if (dto.payment_method !== 'CREDIT' || isMealVoucher) {
-          await this.walletsService.addExpense(
-            dto.wallet_id,
-            userId,
-            monthlyValue * processedCount,
-          );
-        }
+        await this.walletsService.addExpense(dto.wallet_id, userId, applyValue);
       } else {
-        if (dto.payment_method !== 'CREDIT' || isMealVoucher) {
-          await this.walletsService.addIncoming(
-            dto.wallet_id,
-            userId,
-            monthlyValue * processedCount,
-          );
-        }
+        await this.walletsService.addIncoming(dto.wallet_id, userId, applyValue);
       }
     }
 
@@ -1124,7 +1091,7 @@ export class TransactionsService {
     userId: number,
     dto: CreateTransactionDto,
     categoryId: number,
-    isMealVoucher: boolean = false,
+    walletType?: string,
   ) {
     const totalInstallments = dto.installment_total || 1;
     const installmentValue = Number((dto.value / totalInstallments).toFixed(2));
@@ -1165,23 +1132,19 @@ export class TransactionsService {
     });
 
     // Only apply balance for installments that are not in the future
-    if (processedValue > 0) {
+    if (processedValue > 0 && isImmediateDebit(dto.payment_method, walletType)) {
       if (dto.transaction_type === 'EXPENSE') {
-        if (dto.payment_method !== 'CREDIT' || isMealVoucher) {
-          await this.walletsService.addExpense(
-            dto.wallet_id,
-            userId,
-            processedValue,
-          );
-        }
+        await this.walletsService.addExpense(
+          dto.wallet_id,
+          userId,
+          processedValue,
+        );
       } else {
-        if (dto.payment_method !== 'CREDIT' || isMealVoucher) {
-          await this.walletsService.addIncoming(
-            dto.wallet_id,
-            userId,
-            processedValue,
-          );
-        }
+        await this.walletsService.addIncoming(
+          dto.wallet_id,
+          userId,
+          processedValue,
+        );
       }
     }
 
@@ -1218,7 +1181,8 @@ export class TransactionsService {
       throw new NotFoundException('Transaction not found');
     }
 
-    const isMealVoucher = transaction.wallet?.type === 'MEAL_VOUCHER';
+    const walletType = transaction.wallet?.type;
+    const immediate = isImmediateDebit(transaction.payment_method, walletType);
 
     // For installment/recurring series, revert only the processed (non-future) transactions
     if (transaction.installment_id) {
@@ -1232,23 +1196,19 @@ export class TransactionsService {
         0,
       );
 
-      if (processedTotal > 0) {
+      if (processedTotal > 0 && immediate) {
         if (transaction.transaction_type === 'EXPENSE') {
-          if (transaction.payment_method !== 'CREDIT' || isMealVoucher) {
-            await this.walletsService.addIncoming(
-              transaction.wallet_id,
-              userId,
-              processedTotal,
-            );
-          }
+          await this.walletsService.addIncoming(
+            transaction.wallet_id,
+            userId,
+            processedTotal,
+          );
         } else {
-          if (transaction.payment_method !== 'CREDIT' || isMealVoucher) {
-            await this.walletsService.addExpense(
-              transaction.wallet_id,
-              userId,
-              processedTotal,
-            );
-          }
+          await this.walletsService.addExpense(
+            transaction.wallet_id,
+            userId,
+            processedTotal,
+          );
         }
       }
 
@@ -1258,23 +1218,20 @@ export class TransactionsService {
     }
 
     // Single transaction: only revert if it was processed
-    if (transaction.is_processed) {
+    if (transaction.is_processed && immediate) {
+      const revertValue = Number(transaction.value);
       if (transaction.transaction_type === 'EXPENSE') {
-        if (transaction.payment_method !== 'CREDIT' || isMealVoucher) {
-          await this.walletsService.addIncoming(
-            transaction.wallet_id,
-            userId,
-            Number(transaction.value),
-          );
-        }
+        await this.walletsService.addIncoming(
+          transaction.wallet_id,
+          userId,
+          revertValue,
+        );
       } else {
-        if (transaction.payment_method !== 'CREDIT' || isMealVoucher) {
-          await this.walletsService.addExpense(
-            transaction.wallet_id,
-            userId,
-            Number(transaction.value),
-          );
-        }
+        await this.walletsService.addExpense(
+          transaction.wallet_id,
+          userId,
+          revertValue,
+        );
       }
     }
 
@@ -1303,24 +1260,15 @@ export class TransactionsService {
 
     for (const tx of unprocessed) {
       const userId = tx.wallet.user_id;
-      const isMealVoucher = tx.wallet.type === 'MEAL_VOUCHER';
+      const immediate = isImmediateDebit(tx.payment_method, tx.wallet.type);
 
       try {
-        if (tx.transaction_type === 'EXPENSE') {
-          if (tx.payment_method !== 'CREDIT' || isMealVoucher) {
-            await this.walletsService.addExpense(
-              tx.wallet_id,
-              userId,
-              Number(tx.value),
-            );
-          }
-        } else {
-          if (tx.payment_method !== 'CREDIT' || isMealVoucher) {
-            await this.walletsService.addIncoming(
-              tx.wallet_id,
-              userId,
-              Number(tx.value),
-            );
+        if (immediate) {
+          const applyValue = Number(tx.value);
+          if (tx.transaction_type === 'EXPENSE') {
+            await this.walletsService.addExpense(tx.wallet_id, userId, applyValue);
+          } else {
+            await this.walletsService.addIncoming(tx.wallet_id, userId, applyValue);
           }
         }
 
