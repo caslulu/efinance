@@ -83,63 +83,77 @@ export class SubscriptionsService {
     return sub;
   }
 
+  /**
+   * Returns the next billing date according to the subscription frequency.
+   */
+  private advanceBillingDate(from: Date, frequency: Frequency): Date {
+    switch (frequency) {
+      case Frequency.WEEKLY: {
+        const next = new Date(from);
+        next.setDate(next.getDate() + 7);
+        return next;
+      }
+      case Frequency.MONTHLY:
+        return this.addMonthsSafe(from, 1);
+      case Frequency.QUARTERLY:
+        return this.addMonthsSafe(from, 3);
+      case Frequency.YEARLY: {
+        const next = new Date(from);
+        next.setFullYear(next.getFullYear() + 1);
+        return next;
+      }
+      default:
+        return new Date(from);
+    }
+  }
+
   async triggerCheck() {
     const today = new Date();
+    today.setHours(23, 59, 59, 999);
 
     const dueSubscriptions = await this.prisma.subscription.findMany({
       where: {
         status: SubscriptionStatus.ACTIVE,
-        next_billing_date: {
-          lte: today,
-        },
+        next_billing_date: { lte: today },
       },
     });
 
-    const results: string[] = [];
+    const details: string[] = [];
+    let processedCycles = 0;
 
     for (const sub of dueSubscriptions as SubscriptionBillingRecord[]) {
-      await this.transactionsService.create(sub.user_id, {
-        transaction_date: sub.next_billing_date.toISOString(),
-        wallet_id: sub.wallet_id,
-        category_id: sub.category_id,
-        value: Number(sub.value),
-        description: sub.description || sub.name,
-        transaction_type: sub.transaction_type,
-        is_recurring: true,
-        subscription_id: sub.id,
-        payment_method: sub.payment_method || undefined,
-        card_id: sub.card_id || undefined,
-      });
+      let currentDate = new Date(sub.next_billing_date);
 
-      let nextDate: Date;
-      switch (sub.frequency) {
-        case Frequency.WEEKLY:
-          nextDate = new Date(sub.next_billing_date);
-          nextDate.setDate(nextDate.getDate() + 7);
-          break;
-        case Frequency.MONTHLY:
-          nextDate = this.addMonthsSafe(sub.next_billing_date, 1);
-          break;
-        case Frequency.QUARTERLY:
-          nextDate = this.addMonthsSafe(sub.next_billing_date, 3);
-          break;
-        case Frequency.YEARLY:
-          nextDate = new Date(sub.next_billing_date);
-          nextDate.setFullYear(nextDate.getFullYear() + 1);
-          break;
-        default:
-          nextDate = new Date(sub.next_billing_date);
+      // Generate one transaction per overdue cycle, each one dated on the
+      // cycle it represents (NOT on the day the cron runs). Loop stops when
+      // the next scheduled date is past today.
+      while (currentDate <= today) {
+        await this.transactionsService.create(sub.user_id, {
+          transaction_date: currentDate.toISOString(),
+          wallet_id: sub.wallet_id,
+          category_id: sub.category_id,
+          value: Number(sub.value),
+          description: sub.description || sub.name,
+          transaction_type: sub.transaction_type,
+          is_recurring: true,
+          subscription_id: sub.id,
+          payment_method: sub.payment_method || undefined,
+          card_id: sub.card_id || undefined,
+        });
+        processedCycles++;
+        details.push(
+          `Generated "${sub.name}" for ${currentDate.toISOString().slice(0, 10)}`,
+        );
+        currentDate = this.advanceBillingDate(currentDate, sub.frequency);
       }
 
       await this.prisma.subscription.update({
         where: { id: sub.id },
-        data: { next_billing_date: nextDate },
+        data: { next_billing_date: currentDate },
       });
-
-      results.push(`Processed ${sub.name}: New date ${nextDate.toISOString()}`);
     }
 
-    return { processed: dueSubscriptions.length, details: results };
+    return { processed: processedCycles, details };
   }
 
   findAll(userId: number) {
@@ -168,13 +182,36 @@ export class SubscriptionsService {
     });
   }
 
+  async pause(id: number, userId: number) {
+    await this.findOne(id, userId);
+    return this.prisma.subscription.update({
+      where: { id },
+      data: { status: SubscriptionStatus.PAUSED },
+    });
+  }
+
+  async resume(id: number, userId: number) {
+    await this.findOne(id, userId);
+    return this.prisma.subscription.update({
+      where: { id },
+      data: { status: SubscriptionStatus.ACTIVE },
+    });
+  }
+
   async remove(id: number, userId: number) {
     await this.findOne(id, userId);
 
-    // Delete all associated transactions first
-    await this.prisma.transaction.deleteMany({
+    // Each linked transaction must be deleted through TransactionsService.remove
+    // so the wallet balance is reverted. A raw deleteMany would leave the
+    // wallet's actual_cash out of sync with the deleted transactions.
+    const linkedTransactions = await this.prisma.transaction.findMany({
       where: { subscription_id: id },
+      select: { id: true },
     });
+
+    for (const tx of linkedTransactions) {
+      await this.transactionsService.remove(tx.id, userId);
+    }
 
     return this.prisma.subscription.delete({ where: { id } });
   }
