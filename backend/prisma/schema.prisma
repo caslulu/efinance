@@ -54,6 +54,7 @@ model User {
   isEmailVerified              Boolean                          @default(false)
   emailVerificationToken       String?
   emailVerificationTokenExpiry DateTime?
+  pluggy_enabled               Boolean                          @default(false)
   wallets                      Wallet[]
   wishlists                    Wishlist[]
   transactionCategories        TransactionCategory[]

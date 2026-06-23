@@ -9,6 +9,49 @@ em bumps de minor.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-06-23
+
+### Adicionado
+- **Pluggy: opt-in por usuário (gambiarra single-user)**:
+  - Campo `pluggy_enabled` (Boolean, default false) na model `User`.
+  - Endpoints `POST /integrations/pluggy/enable` e `/disable` para o
+    usuário logado decidir se quer vincular suas wallets ao item do
+    Pluggy configurado no servidor.
+  - `GET /integrations/pluggy/status` agora retorna
+    `{ configured, enabledForUser }`.
+  - `syncAll()` e o scheduler diário só rodam se houver pelo menos um
+    usuário com `pluggy_enabled = true`.
+
+### Alterado
+- Variável de ambiente `PLUGGY_USER_ID` removida. O `user_id` usado pelo
+  Pluggy passa a vir do banco (o usuário com `pluggy_enabled = true`).
+  Antes, deletar+recriar a conta quebrava a integração até atualizar o
+  `.env`; agora basta o novo usuário chamar o endpoint `/enable`.
+
+### Subscriptions — correções de bugs (vindo da branch fix/subscriptions-bugs)
+- **Bug 1**: `triggerCheck` não tinha scheduler — agora há um cron diário
+  às 06h BRT (`SubscriptionsScheduler`).
+- **Bug 2**: ciclos atrasados eram processados um por chamada; agora cada
+  subscription gera todas as transações dos ciclos passados de uma vez,
+  cada uma com a data correta do ciclo.
+- **Bug 3**: `remove()` apagava as transações sem reverter o impacto no
+  saldo; agora chama `transactionsService.remove()` por transação para
+  manter `wallet.actual_cash` consistente.
+- Endpoints `PATCH /subscriptions/:id/pause` e `/resume` para suspender
+  uma assinatura sem perder a configuração.
+
+### Refatorações (vindo da branch refactor/transactions-payment-model)
+- `transactions.service.ts` saiu de 1344 → 492 linhas (-63%).
+- Novos serviços: `TransactionImpactService` (helpers de saldo, datas,
+  categoria) e `StatementImportService` (OFX/CSV preview + confirm).
+- Magic strings substituídas por constantes em
+  `common/finance-constants.ts` (`WALLET_TYPES`, `PAYMENT_METHODS`,
+  `TRANSACTION_TYPES`).
+- Helper `isImmediateDebit(paymentMethod, walletType)` centraliza a
+  regra do vale-refeição (Flash etc.) em um único ponto.
+- Documentação: `docs/meal-voucher-setup.md` explica como usar
+  `Subscription` para automatizar a recarga mensal do Flash.
+
 ## [0.2.0] - 2026-06-22
 
 ### Adicionado

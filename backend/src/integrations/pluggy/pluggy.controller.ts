@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Post,
+  Request,
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
@@ -14,14 +15,35 @@ export class PluggyController {
   constructor(private readonly pluggy: PluggyService) {}
 
   @Get('status')
-  status() {
-    return { enabled: this.pluggy.isEnabled() };
+  async status(@Request() req) {
+    const enabledForUser = await this.pluggy.isEnabledForUser(req.user.userId);
+    return {
+      configured: this.pluggy.isConfigured(),
+      enabledForUser,
+    };
+  }
+
+  @Post('enable')
+  enable(@Request() req) {
+    if (!this.pluggy.isConfigured()) {
+      throw new BadRequestException(
+        'Pluggy credentials not configured on the server',
+      );
+    }
+    return this.pluggy.enableForUser(req.user.userId);
+  }
+
+  @Post('disable')
+  disable(@Request() req) {
+    return this.pluggy.disableForUser(req.user.userId);
   }
 
   @Post('sync')
   async sync() {
-    if (!this.pluggy.isEnabled()) {
-      throw new BadRequestException('Pluggy integration is not configured');
+    if (!this.pluggy.isConfigured()) {
+      throw new BadRequestException(
+        'Pluggy credentials not configured on the server',
+      );
     }
     return this.pluggy.syncAll();
   }

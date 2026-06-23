@@ -11,8 +11,8 @@ export class PluggyScheduler {
   // Daily at 06:00 BRT (09:00 UTC). MeuPluggy refreshes data once per day.
   @Cron('0 9 * * *', { timeZone: 'UTC' })
   async dailySync() {
-    if (!this.pluggy.isEnabled()) {
-      this.logger.debug('Pluggy not configured — skipping daily sync');
+    if (!this.pluggy.isConfigured()) {
+      this.logger.debug('Pluggy credentials missing — skipping daily sync');
       return;
     }
     try {
