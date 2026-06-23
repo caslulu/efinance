@@ -5,7 +5,11 @@ import {
   NestInterceptor,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
-import sanitizeHtml, { IOptions } from 'sanitize-html';
+import type { IOptions } from 'sanitize-html';
+// sanitize-html is CommonJS; default-import breaks in compiled output
+// (esModuleInterop is off in this project). Use require to grab the callable.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const sanitizeHtml: (input: string, opts?: IOptions) => string = require('sanitize-html');
 
 const STRICT: IOptions = {
   allowedTags: [],
