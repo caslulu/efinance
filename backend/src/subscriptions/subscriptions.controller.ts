@@ -34,6 +34,16 @@ export class SubscriptionsController {
     return this.subscriptionsService.update(id, req.user.userId, updateSubscriptionDto);
   }
 
+  @Patch(':id/pause')
+  pause(@Request() req, @Param('id', ParseIntPipe) id: number) {
+    return this.subscriptionsService.pause(id, req.user.userId);
+  }
+
+  @Patch(':id/resume')
+  resume(@Request() req, @Param('id', ParseIntPipe) id: number) {
+    return this.subscriptionsService.resume(id, req.user.userId);
+  }
+
   @Delete(':id')
   remove(@Request() req, @Param('id', ParseIntPipe) id: number) {
     return this.subscriptionsService.remove(id, req.user.userId);
