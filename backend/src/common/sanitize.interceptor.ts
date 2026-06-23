@@ -57,8 +57,14 @@ export class SanitizeInterceptor implements NestInterceptor {
     if (req?.body && typeof req.body === 'object') {
       req.body = sanitizeValue(req.body);
     }
+    // Express 5 makes req.query a read-only getter, so we mutate in place
+    // instead of reassigning. Same effect for downstream handlers.
     if (req?.query && typeof req.query === 'object') {
-      req.query = sanitizeValue(req.query);
+      const sanitized = sanitizeValue(req.query) as Record<string, unknown>;
+      for (const key of Object.keys(req.query)) {
+        delete req.query[key];
+      }
+      Object.assign(req.query, sanitized);
     }
     return next.handle();
   }
