@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { GeminiService } from './gemini.service';
+import { LlmService } from './llm.service';
 import { ChatContextService } from './chat-context.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 
@@ -40,7 +40,7 @@ const DAILY_QUESTION_LIMIT = 15;
 export class ChatService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly geminiService: GeminiService,
+    private readonly llmService: LlmService,
     private readonly chatContextService: ChatContextService,
   ) {}
 
@@ -82,7 +82,7 @@ export class ChatService {
     }));
 
     // Generate AI response
-    const aiResponse = await this.geminiService.generateResponse(
+    const aiResponse = await this.llmService.generateResponse(
       systemPrompt,
       history,
       dto.message,
@@ -156,7 +156,7 @@ export class ChatService {
 
     // Stream AI response
     let fullResponse = '';
-    for await (const chunk of this.geminiService.generateResponseStream(
+    for await (const chunk of this.llmService.generateResponseStream(
       systemPrompt,
       history,
       dto.message,
@@ -230,7 +230,7 @@ export class ChatService {
   }
 
   private async generateAndSaveTitle(conversationId: number, userMessage: string, aiResponse: string) {
-    const title = await this.geminiService.generateTitle(userMessage, aiResponse);
+    const title = await this.llmService.generateTitle(userMessage, aiResponse);
     await this.prisma.chatConversation.update({
       where: { id: conversationId },
       data: { title },

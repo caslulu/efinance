@@ -9,6 +9,23 @@ em bumps de minor.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-06-23
+
+### Alterado
+- **Chat migrado do Gemini para Ollama Cloud**: `GeminiService` removido,
+  substituído por `LlmService` que conversa com a API nativa do Ollama
+  (`POST /api/chat`) com suporte a stream (NDJSON). Mesma interface
+  pública, sem mudanças no `ChatService`.
+- Variáveis de ambiente atualizadas: `GEMINI_API_KEY` → `OLLAMA_API_KEY`,
+  `OLLAMA_BASE_URL` (default `https://ollama.com`), `OLLAMA_MODEL`
+  (default `gpt-oss:20b`).
+- `docker-compose.yml` passa essas três novas vars para o backend; se
+  `OLLAMA_BASE_URL` apontar para `localhost`, a chave não é obrigatória
+  (suporta self-hosted Ollama).
+
+### Removido
+- Dependência `@google/generative-ai` do `backend/package.json`.
+
 ## [0.3.0] - 2026-06-23
 
 ### Adicionado

@@ -29,7 +29,9 @@ services:
     environment:
       - DATABASE_URL=postgresql://${DB_USER:-financeuser}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-financepro}?schema=public
       - NODE_ENV=production
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - OLLAMA_API_KEY=${OLLAMA_API_KEY}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-https://ollama.com}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-gpt-oss:20b}
       - FRONTEND_URL=${FRONTEND_URL:-https://efinancepro.me,https://www.efinancepro.me,https://frontend.financeapp.orb.local,https://localhost,http://localhost:5173}
       - BACKEND_URL=${BACKEND_URL:-https://efinancepro.me/api}
     volumes:
