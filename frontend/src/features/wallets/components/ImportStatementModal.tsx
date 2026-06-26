@@ -4,6 +4,7 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   FileSpreadsheet,
+  Files,
   Loader2,
   Plus,
   UploadCloud,
@@ -43,6 +44,7 @@ import {
 type EditableImportRow = StatementImportPreviewRow & {
   category_id: string;
   selected: boolean;
+  batchDuplicate: boolean;
   value_input: string;
   description_input: string;
   date_input: string;
@@ -62,13 +64,13 @@ export function ImportStatementModal({
   const previewImport = usePreviewStatementImport();
   const confirmImport = useConfirmStatementImport();
   const { data: categories = [] } = useCategories();
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<StatementImportPreview | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<StatementImportPreview[]>([]);
   const [rows, setRows] = useState<EditableImportRow[]>([]);
 
   const resetState = () => {
-    setSelectedFile(null);
-    setPreview(null);
+    setSelectedFiles([]);
+    setPreviews([]);
     setRows([]);
   };
 
@@ -82,13 +84,17 @@ export function ImportStatementModal({
     [rows],
   );
   const duplicateRows = useMemo(
-    () => rows.filter((row) => row.duplicateMatches.length > 0),
+    () =>
+      rows.filter(
+        (row) => row.duplicateMatches.length > 0 || row.batchDuplicate,
+      ),
     [rows],
   );
   const selectedDuplicates = useMemo(
     () => duplicateRows.filter((row) => row.selected).length,
     [duplicateRows],
   );
+  const walletGuidance = getWalletImportGuidance(wallet);
 
   const updateRow = (
     sourceId: string,
@@ -100,30 +106,28 @@ export function ImportStatementModal({
   };
 
   const handlePreview = async () => {
-    if (!wallet || !selectedFile) {
-      toast.warning("Selecione um arquivo OFX ou CSV.");
+    if (!wallet || selectedFiles.length === 0) {
+      toast.warning("Selecione um ou mais arquivos OFX ou CSV.");
       return;
     }
 
     try {
-      const result = await previewImport.mutateAsync({
-        walletId: wallet.id,
-        file: selectedFile,
-      });
+      const results: StatementImportPreview[] = [];
 
-      setPreview(result);
-      setRows(
-        result.rows.map((row) => ({
-          ...row,
-          category_id: "",
-          selected: row.duplicateMatches.length === 0,
-          value_input: row.value.toFixed(2),
-          description_input: row.description || "",
-          date_input: row.transaction_date,
-        })),
-      );
+      for (const file of selectedFiles) {
+        const result = await previewImport.mutateAsync({
+          walletId: wallet.id,
+          file,
+        });
+        results.push(result);
+      }
+
+      const batchRows = buildEditableBatchRows(results);
+
+      setPreviews(results);
+      setRows(batchRows);
     } catch (error) {
-      toast.error(getErrorMessage(error, "Falha ao ler o extrato."));
+      toast.error(getErrorMessage(error, "Falha ao ler um dos extratos."));
     }
   };
 
@@ -198,69 +202,73 @@ export function ImportStatementModal({
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-300">
               <FileSpreadsheet className="h-5 w-5" />
             </span>
-            Importar extrato em {wallet?.name || "carteira"}
+            Importar extrato para {wallet?.name || "carteira"}
           </DialogTitle>
           <DialogDescription className="text-slate-300">
-            CSV e OFX agora caem em uma mesa de revisão editável. Ajuste nome,
-            valor, data e categoria antes de trazer cada linha para a carteira.
+            {walletGuidance.description}
           </DialogDescription>
         </DialogHeader>
 
-        {!preview ? (
+        {previews.length === 0 ? (
           <div className="grid gap-5 py-5">
             <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-[linear-gradient(135deg,rgba(6,95,70,0.08),rgba(15,23,42,0.94))] p-6">
               <div className="absolute right-0 top-0 h-36 w-36 rounded-full bg-emerald-400/10 blur-3xl" />
               <div className="relative grid gap-4 md:grid-cols-[1.15fr_0.85fr] md:items-end">
                 <div className="space-y-3">
                   <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-300/70">
-                    Mapping Table
+                    Importação revisada
                   </p>
                   <h3 className="text-3xl font-semibold leading-tight text-white">
-                    Cada transação do arquivo vira uma linha editável antes de
-                    entrar na carteira.
+                    {walletGuidance.title}
                   </h3>
                   <p className="max-w-2xl text-sm leading-6 text-slate-300">
-                    Para CSV, isso resolve o principal problema: você enxerga o
-                    mapeamento real em tabela e decide linha por linha o que
-                    entra, com um botão de adição na direita.
+                    {walletGuidance.helper}
                   </p>
                 </div>
 
                 <div className="rounded-2xl border border-white/10 bg-black/20 p-4 backdrop-blur">
                   <label className="mb-3 block text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
-                    Arquivo
+                    Arquivos
                   </label>
                   <div className="flex items-center gap-3 rounded-2xl border border-dashed border-emerald-400/30 bg-emerald-400/5 p-3">
                     <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-400/10 text-emerald-300">
-                      <UploadCloud className="h-5 w-5" />
+                      {selectedFiles.length > 1 ? (
+                        <Files className="h-5 w-5" />
+                      ) : (
+                        <UploadCloud className="h-5 w-5" />
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <Input
                         type="file"
                         accept=".ofx,.csv"
+                        multiple
                         className="border-white/10 bg-transparent text-slate-100 file:mr-3 file:rounded-full file:border-0 file:bg-emerald-500/20 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-emerald-100 hover:file:bg-emerald-500/30"
                         onChange={(event) => {
-                          setSelectedFile(event.target.files?.[0] || null);
+                          setSelectedFiles(
+                            Array.from(event.target.files || []),
+                          );
                         }}
                       />
                       <p className="mt-2 truncate text-xs text-slate-400">
-                        {selectedFile?.name ||
-                          "Selecione um arquivo OFX ou CSV."}
+                        {selectedFiles.length > 0
+                          ? formatSelectedFiles(selectedFiles)
+                          : walletGuidance.filePrompt}
                       </p>
                     </div>
                   </div>
                   <Button
                     className="mt-4 w-full bg-emerald-400 text-emerald-950 hover:bg-emerald-300"
-                    disabled={!selectedFile || previewImport.isPending}
+                    disabled={selectedFiles.length === 0 || previewImport.isPending}
                     onClick={handlePreview}
                   >
                     {previewImport.isPending ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Lendo arquivo
+                        Lendo arquivos
                       </>
                     ) : (
-                      "Abrir tabela"
+                      "Abrir tabela única"
                     )}
                   </Button>
                 </div>
@@ -269,9 +277,9 @@ export function ImportStatementModal({
 
             <div className="grid gap-3 md:grid-cols-3">
               <MetricCard
-                label="Entrada"
-                value="OFX + CSV"
-                helper="CSV vai para edição direta em tabela"
+                label="Principal"
+                value={walletGuidance.primary}
+                helper={walletGuidance.primaryHelper}
               />
               <MetricCard
                 label="Edição"
@@ -279,9 +287,9 @@ export function ImportStatementModal({
                 helper="todos ajustáveis antes da confirmação"
               />
               <MetricCard
-                label="Ação"
-                value="+ na direita"
-                helper="linha selecionada entra na importação"
+                label="Controle"
+                value="confirmação explícita"
+                helper="nada entra sem passar pela tabela"
               />
             </div>
           </div>
@@ -289,14 +297,14 @@ export function ImportStatementModal({
           <div className="grid gap-5 py-5">
             <div className="grid gap-3 md:grid-cols-4">
               <MetricCard
-                label="Arquivo"
-                value={preview.fileName}
-                helper={preview.format}
+                label="Arquivos"
+                value={String(previews.length)}
+                helper={summarizePreviewFormats(previews)}
               />
               <MetricCard
                 label="Linhas"
-                value={String(preview.summary.totalRows)}
-                helper="lidas do arquivo"
+                value={String(rows.length)}
+                helper="lidas dos arquivos"
               />
               <MetricCard
                 label="Duplicadas"
@@ -315,23 +323,23 @@ export function ImportStatementModal({
               <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
                 <div>
                   <p className="text-sm font-medium text-white">
-                    Tabela de mapeamento
+                    Revisão antes de importar
                   </p>
                   <p className="text-xs text-slate-400">
                     Linhas com possível duplicidade já começam fora da
-                    importação. Se quiser trazê-las mesmo assim, clique no `+`
-                    da coluna final.
+                    importação. Se quiser trazê-las mesmo assim, use o botão da
+                    coluna final.
                   </p>
                 </div>
                 <Button
                   variant="outline"
                   className="border-white/10 bg-transparent text-slate-200 hover:bg-white/10"
                   onClick={() => {
-                    setPreview(null);
+                    setPreviews([]);
                     setRows([]);
                   }}
                 >
-                  Trocar arquivo
+                  Trocar arquivos
                 </Button>
               </div>
 
@@ -341,6 +349,9 @@ export function ImportStatementModal({
                     <TableRow className="border-white/10 hover:bg-white/5">
                       <TableHead className="w-[110px] text-slate-300">
                         Tipo
+                      </TableHead>
+                      <TableHead className="w-[180px] text-slate-300">
+                        Arquivo
                       </TableHead>
                       <TableHead className="w-[140px] text-slate-300">
                         Data
@@ -389,6 +400,11 @@ export function ImportStatementModal({
                               )}
                               {isExpense ? "Despesa" : "Receita"}
                             </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <span className="block max-w-[170px] truncate text-xs text-slate-400">
+                              {row.source_file || "arquivo"}
+                            </span>
                           </TableCell>
                           <TableCell>
                             <Input
@@ -452,27 +468,31 @@ export function ImportStatementModal({
                             />
                           </TableCell>
                           <TableCell>
-                            {row.duplicateMatches.length > 0 ? (
+                            {row.duplicateMatches.length > 0 || row.batchDuplicate ? (
                               <div className="space-y-2">
                                 <Badge
                                   variant="outline"
                                   className="border-amber-300/25 bg-amber-300/10 text-amber-100"
                                 >
-                                  possível duplicado
+                                  {row.batchDuplicate
+                                    ? "duplicado no lote"
+                                    : "possível duplicado"}
                                 </Badge>
-                                <div className="space-y-1 text-xs text-slate-400">
-                                  {row.duplicateMatches.map((match) => (
-                                    <p key={match.id}>
-                                      #{match.id} ·{" "}
-                                      {match.description ||
-                                        "Transação existente"}{" "}
-                                      ·{" "}
-                                      {new Date(
-                                        `${match.transaction_date}T12:00:00`,
-                                      ).toLocaleDateString("pt-BR")}
-                                    </p>
-                                  ))}
-                                </div>
+                                {row.duplicateMatches.length > 0 && (
+                                  <div className="space-y-1 text-xs text-slate-400">
+                                    {row.duplicateMatches.map((match) => (
+                                      <p key={match.id}>
+                                        #{match.id} ·{" "}
+                                        {match.description ||
+                                          "Transação existente"}{" "}
+                                        ·{" "}
+                                        {new Date(
+                                          `${match.transaction_date}T12:00:00`,
+                                        ).toLocaleDateString("pt-BR")}
+                                      </p>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             ) : (
                               <span className="text-xs text-slate-500">
@@ -540,6 +560,77 @@ export function ImportStatementModal({
       </DialogContent>
     </Dialog>
   );
+}
+
+function getWalletImportGuidance(wallet: Wallet | null) {
+  const walletName = wallet?.name?.toLowerCase() || "";
+  const isMealVoucher = wallet?.type === "MEAL_VOUCHER";
+  const isNubank = walletName.includes("nubank") || walletName.includes("nu ");
+
+  if (isMealVoucher) {
+    return {
+      title: "Flash fica sob seu controle, sem sincronização automática.",
+      description:
+        "Use esta carteira para Flash/vale alimentação. Quando houver CSV, revise as linhas aqui; quando não houver, lance as compras manualmente.",
+      helper:
+        "Vale alimentação costuma se comportar como saldo pré-pago: cada despesa reduz o saldo na hora. Por isso o app mantém o Flash separado do Nubank.",
+      filePrompt: "Selecione um CSV do Flash, se disponível.",
+      primary: "Flash",
+      primaryHelper: "CSV ou lançamento manual",
+    };
+  }
+
+  return {
+    title: isNubank
+      ? "Nubank entra por OFX, sempre com revisão antes de salvar."
+      : "Importe OFX/CSV e revise cada linha antes de salvar.",
+    description:
+      "Pluggy está fora do fluxo principal. O arquivo vira uma tabela editável para você decidir exatamente quais entradas e saídas entram.",
+    helper:
+      "Para o Nubank, exporte o OFX e importe aqui. Duplicidades começam desmarcadas, e categorias podem ser ajustadas antes da confirmação.",
+    filePrompt: "Selecione o OFX do Nubank ou um CSV.",
+    primary: "Nubank OFX",
+    primaryHelper: "fluxo principal recomendado",
+  };
+}
+
+function buildEditableBatchRows(previews: StatementImportPreview[]) {
+  const seen = new Map<string, number>();
+
+  return previews.flatMap((preview) =>
+    preview.rows.map((row) => {
+      const duplicateKey = buildBatchDuplicateKey(row);
+      const seenCount = seen.get(duplicateKey) || 0;
+      const batchDuplicate = seenCount > 0;
+      seen.set(duplicateKey, seenCount + 1);
+
+      return {
+        ...row,
+        source_id: `${preview.fileName}::${row.source_id}`,
+        source_file: preview.fileName,
+        category_id: "",
+        selected: row.duplicateMatches.length === 0 && !batchDuplicate,
+        batchDuplicate,
+        value_input: row.value.toFixed(2),
+        description_input: row.description || "",
+        date_input: row.transaction_date,
+      };
+    }),
+  );
+}
+
+function buildBatchDuplicateKey(row: StatementImportPreviewRow) {
+  return `${row.transaction_date}|${Number(row.value).toFixed(2)}|${row.transaction_type}`;
+}
+
+function formatSelectedFiles(files: File[]) {
+  if (files.length === 1) return files[0].name;
+  return `${files.length} arquivos selecionados`;
+}
+
+function summarizePreviewFormats(previews: StatementImportPreview[]) {
+  const formats = Array.from(new Set(previews.map((preview) => preview.format)));
+  return formats.join(" + ");
 }
 
 function CategorySelect({

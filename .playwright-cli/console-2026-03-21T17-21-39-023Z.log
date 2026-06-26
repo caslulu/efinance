@@ -1,0 +1,2 @@
+[     815ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://developers.inter.co/docs/introducao/oauth-2.0:0
+[    2051ms] [WARNING] react-i18next:: It seems you are still using the old wait option, you may migrate to the new useSuspense behaviour. @ https://developers.inter.co/assets/js/main.5f93ec58.js:1

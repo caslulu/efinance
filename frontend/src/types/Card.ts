@@ -10,4 +10,8 @@ export interface Card {
   due_invoice?: number;
   total_invoice?: number;
   available_limit?: number;
+  external_id?: string | null;
+  external_source?: string | null;
+  pluggy_account_id?: string | null;
+  pluggy_card_number?: string | null;
 }

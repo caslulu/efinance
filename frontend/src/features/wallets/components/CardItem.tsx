@@ -25,8 +25,10 @@ interface CardItemProps {
 
 export const CardItem = ({ card, onEdit, onAddExpense, onPayInvoice }: CardItemProps) => {
   const hasInvoice = Number(card.due_invoice) > 0 || Number(card.current_invoice) > 0;
+  const isPluggyCard = card.external_source === 'pluggy:credit';
+  const totalInvoice = Number(card.total_invoice || 0);
   const limitUsedPercent = card.card_limit > 0
-    ? Math.min(100, ((Number(card.total_invoice || 0)) / Number(card.card_limit)) * 100)
+    ? Math.min(100, (totalInvoice / Number(card.card_limit)) * 100)
     : 0;
 
   const config = FLAG_CONFIG[card.flag] || FLAG_CONFIG.OTHER;
@@ -81,7 +83,7 @@ export const CardItem = ({ card, onEdit, onAddExpense, onPayInvoice }: CardItemP
         <div className="space-y-1.5">
           <div className="flex justify-between items-center">
             <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/60">
-              Limite
+              {isPluggyCard ? 'Uso deste final' : 'Limite'}
             </span>
             <span
               className={clsx(
@@ -110,8 +112,17 @@ export const CardItem = ({ card, onEdit, onAddExpense, onPayInvoice }: CardItemP
             />
           </div>
           <div className="flex justify-between text-[9px] font-medium text-muted-foreground/50">
-            <span>Disp: {formatCurrency(Number(card.available_limit || 0))}</span>
-            <span>Total: {formatCurrency(Number(card.card_limit))}</span>
+            {isPluggyCard ? (
+              <>
+                <span>Disponível: {formatCurrency(Number(card.available_limit || 0))}</span>
+                <span>Usado: {formatCurrency(Math.max(0, totalInvoice))}</span>
+              </>
+            ) : (
+              <>
+                <span>Disp: {formatCurrency(Number(card.available_limit || 0))}</span>
+                <span>Total: {formatCurrency(Number(card.card_limit))}</span>
+              </>
+            )}
           </div>
         </div>
 

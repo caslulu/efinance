@@ -9,6 +9,22 @@ em bumps de minor.
 
 ## [Unreleased]
 
+### Alterado
+- **Pluggy pausado no runtime**: o app não carrega mais `PluggyModule`, então
+  endpoints e agendador de sincronização automática ficam fora do fluxo ativo.
+- **Fluxo OFX-first**: importação revisada passa a ser o caminho recomendado
+  para Nubank, com copy da interface reforçando que nada entra sem passar pela
+  tabela de revisão.
+- **Flash como vale alimentação**: criação/importação de carteira agora orienta
+  o uso de `MEAL_VOUCHER` para Flash, mantendo lançamentos sob controle manual
+  ou CSV quando disponível.
+- **Limpeza de dados Pluggy**: script `backend/scripts/cleanup-pluggy-data.ts`
+  permite pré-visualizar e remover dados já importados pelo Pluggy sem recriar
+  a conta.
+- **Importação múltipla de extratos**: o modal de importação agora aceita
+  vários arquivos OFX/CSV para a mesma carteira, junta tudo em uma tabela única
+  de revisão e desmarca duplicados encontrados dentro do próprio lote.
+
 ## [0.4.0] - 2026-06-23
 
 ### Alterado

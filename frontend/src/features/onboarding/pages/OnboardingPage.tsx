@@ -70,7 +70,7 @@ export const OnboardingPage = () => {
                   id="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Ex: Nubank, Itaú, Carteira Física..."
+                  placeholder="Ex: Nubank"
                   autoFocus
                 />
               </div>

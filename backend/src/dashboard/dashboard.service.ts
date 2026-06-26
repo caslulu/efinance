@@ -16,6 +16,10 @@ export class DashboardService {
       NOT: [
         { payment_method: 'TRANSFER' as const },
         { payment_method: 'INVESTMENT' as const },
+        { description: { contains: 'Aplicação RDB', mode: 'insensitive' as const } },
+        { description: { contains: 'Resgate RDB', mode: 'insensitive' as const } },
+        { description: { contains: 'Pagamento de fatura', mode: 'insensitive' as const } },
+        { description: { contains: 'Pagamento recebido', mode: 'insensitive' as const } },
       ],
     };
   }
@@ -90,6 +94,7 @@ export class DashboardService {
       where: {
         wallet: { user_id: userId },
         transaction_type: 'EXPENSE',
+        payment_method: { not: 'CREDIT' },
         ...this.excludeInternalCashflowFilter(),
         transaction_date: {
           gte: twelveMonthsAgo,
@@ -168,7 +173,7 @@ export class DashboardService {
     // 6. Totals, Savings Rate & Net Worth
     const [totalWallets, totalInvestments, portfolioSummary, totalExpensesMonth, totalIncomesMonth] = await Promise.all([
       this.prisma.wallet.aggregate({
-        where: { user_id: userId },
+        where: { user_id: userId, type: { not: 'CREDIT_CARD' } },
         _sum: { actual_cash: true },
       }),
       this.prisma.investment.aggregate({

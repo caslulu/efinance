@@ -189,7 +189,11 @@ export class CardsService {
     const currentInvoiceValue = Math.max(0, currExp - remainingIncomes);
 
     const totalInvoice = Number(totalExp._sum.value || 0) - Number(totalInc._sum.value || 0);
-    const availableLimit = Number(card.card_limit) - Math.max(0, totalInvoice);
+    const cardAvailableLimit = Number(card.card_limit) - Math.max(0, totalInvoice);
+    const availableLimit =
+      card.external_source === 'pluggy:credit' && card.wallet
+        ? Math.min(cardAvailableLimit, Number(card.wallet.actual_cash || 0))
+        : cardAvailableLimit;
 
     // Remove wallet relation if it was included
     const { wallet, ...cardData } = card;

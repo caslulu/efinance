@@ -1,0 +1,73 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - generic [ref=e12]:
+          - textbox [disabled] [ref=e13]
+          - searchbox [ref=e14]
+        - generic [ref=e17]:
+          - listbox "Conta" [ref=e19] [cursor=pointer]
+          - link "0" [ref=e22] [cursor=pointer]:
+            - /url: https://br.shein.com/cart
+            - generic [ref=e24]: "0"
+          - link "0" [ref=e26] [cursor=pointer]:
+            - /url: javascript:;
+            - code [ref=e28]: "0"
+      - generic [ref=e30]:
+        - generic [ref=e31]: Categorias
+        - generic [ref=e34]:
+          - link "Só para você" [ref=e35] [cursor=pointer]:
+            - /url: javascript:;
+          - link "Novo em" [ref=e36] [cursor=pointer]:
+            - /url: javascript:;
+          - link "Envio nacional" [ref=e37] [cursor=pointer]:
+            - /url: javascript:;
+          - link "Promoção" [ref=e38] [cursor=pointer]:
+            - /url: javascript:;
+          - link "Roupas femininas" [ref=e39] [cursor=pointer]:
+            - /url: javascript:;
+          - link "Moda praia" [ref=e40] [cursor=pointer]:
+            - /url: javascript:;
+          - link "Sapatos" [ref=e41] [cursor=pointer]:
+            - /url: javascript:;
+          - link "Infantil" [ref=e42] [cursor=pointer]:
+            - /url: javascript:;
+          - link "Roupas masculinas" [ref=e43] [cursor=pointer]:
+            - /url: javascript:;
+          - link "Casa & Decoração" [ref=e44] [cursor=pointer]:
+            - /url: javascript:;
+          - link "Tamanhos Grandes" [ref=e45] [cursor=pointer]:
+            - /url: javascript:;
+          - link "Joias e acessórios" [ref=e46] [cursor=pointer]:
+            - /url: javascript:;
+          - link "Pijamas e roupas íntimas" [ref=e47] [cursor=pointer]:
+            - /url: javascript:;
+          - link "Beleza e saúde" [ref=e48] [cursor=pointer]:
+            - /url: javascript:;
+          - link "Bolsas e malas" [ref=e49] [cursor=pointer]:
+            - /url: javascript:;
+          - link "Esportivo" [ref=e50] [cursor=pointer]:
+            - /url: javascript:;
+          - link "Bebê e maternidade" [ref=e51] [cursor=pointer]:
+            - /url: javascript:;
+          - link "Casa e Decoração" [ref=e52] [cursor=pointer]:
+            - /url: javascript:;
+          - link "Celulares e acessórios" [ref=e53] [cursor=pointer]:
+            - /url: javascript:;
+          - link "Eletrônicos" [ref=e54] [cursor=pointer]:
+            - /url: javascript:;
+          - link "Jogos e brinquedos" [ref=e55] [cursor=pointer]:
+            - /url: javascript:;
+          - link "Ferramentas e utilidades" [ref=e56] [cursor=pointer]:
+            - /url: javascript:;
+          - link "Itens de casa" [ref=e57] [cursor=pointer]:
+            - /url: javascript:;
+          - link "Materiais de escritório e escola" [ref=e58] [cursor=pointer]:
+            - /url: javascript:;
+          - link "Pets" [ref=e59] [cursor=pointer]:
+            - /url: javascript:;
+          - link "Acessórios automotivos" [ref=e60] [cursor=pointer]:
+            - /url: javascript:;
+          - link "Alimentos e Bebidas" [ref=e61] [cursor=pointer]:
+            - /url: javascript:;
+  - contentinfo [ref=e63]

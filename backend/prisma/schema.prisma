@@ -87,16 +87,22 @@ model Wallet {
 }
 
 model Card {
-  id            Int            @id @default(autoincrement())
-  wallet_id     Int
-  wallet        Wallet         @relation(fields: [wallet_id], references: [id], onDelete: Cascade)
-  name          String
-  flag          String
-  closing_day   Int
-  due_day       Int
-  card_limit    Decimal        @db.Decimal(10, 2)
-  transactions  Transaction[]
-  subscriptions Subscription[]
+  id                 Int            @id @default(autoincrement())
+  wallet_id          Int
+  wallet             Wallet         @relation(fields: [wallet_id], references: [id], onDelete: Cascade)
+  name               String
+  flag               String
+  closing_day        Int
+  due_day            Int
+  card_limit         Decimal        @db.Decimal(10, 2)
+  external_id        String?        @unique
+  external_source    String?
+  pluggy_account_id  String?
+  pluggy_card_number String?
+  transactions       Transaction[]
+  subscriptions      Subscription[]
+
+  @@index([pluggy_account_id])
 }
 
 model Transaction {

@@ -20,6 +20,7 @@ import {
   Landmark,
   Banknote,
   UtensilsCrossed,
+  CreditCard,
 } from 'lucide-react';
 import { api } from '@/api/api';
 import { toast } from 'sonner';
@@ -48,6 +49,7 @@ const TYPE_ICONS: Record<string, typeof WalletIcon> = {
   PHYSICAL: Banknote,
   MEAL_VOUCHER: UtensilsCrossed,
   INVESTMENT: TrendingUp,
+  CREDIT_CARD: CreditCard,
   OTHER: WalletIcon,
 };
 
@@ -56,7 +58,27 @@ const TYPE_LABELS: Record<string, string> = {
   PHYSICAL: 'Dinheiro',
   MEAL_VOUCHER: 'Vale Refeição',
   INVESTMENT: 'Investimentos',
+  CREDIT_CARD: 'Cartões de crédito',
   OTHER: 'Outros',
+};
+
+const getWalletNetWorthValue = (wallet: Wallet) => {
+  if (wallet.type === 'CREDIT_CARD') return 0;
+  if (wallet.type === 'INVESTMENT') {
+    return Number(wallet.displayValue ?? 0) + Number(wallet.availableCash ?? wallet.actual_cash);
+  }
+  return Number(wallet.actual_cash);
+};
+
+const getWalletTypeDisplayValue = (wallet: Wallet) => {
+  if (wallet.type === 'INVESTMENT') {
+    return Number(wallet.displayValue ?? 0) + Number(wallet.availableCash ?? wallet.actual_cash);
+  }
+  return Number(wallet.actual_cash);
+};
+
+const getWalletGroupType = (wallet: Wallet) => {
+  return wallet.type;
 };
 
 function useColumnCount() {
@@ -102,25 +124,48 @@ export const WalletsPage = () => {
   }>({ isOpen: false, type: null, walletId: null });
 
   const totalBalance = useMemo(
-    () =>
-      wallets.reduce((sum, wallet) => {
-        if (wallet.type === 'INVESTMENT') {
-          return sum + Number(wallet.displayValue ?? 0) + Number(wallet.availableCash ?? wallet.actual_cash);
-        }
-
-        return sum + Number(wallet.actual_cash);
-      }, 0),
+    () => wallets.reduce((sum, wallet) => sum + getWalletNetWorthValue(wallet), 0),
     [wallets],
   );
+
+  const totalAvailableCredit = useMemo(
+    () =>
+      wallets.reduce(
+        (sum, wallet) =>
+          wallet.type === 'CREDIT_CARD' ? sum + Number(wallet.actual_cash) : sum,
+        0,
+      ),
+    [wallets],
+  );
+
+  const visibleWallets = useMemo(
+    () => wallets.filter((wallet) => wallet.type !== 'CREDIT_CARD'),
+    [wallets],
+  );
+
+  const getLinkedCreditWallet = (wallet: Wallet) => {
+    if (wallet.type !== 'BANK') return undefined;
+    const pluggyMatch = wallets.find(
+      (candidate) =>
+        candidate.type === 'CREDIT_CARD' &&
+        candidate.pluggy_item_id &&
+        candidate.pluggy_item_id === wallet.pluggy_item_id,
+    );
+    if (pluggyMatch) return pluggyMatch;
+
+    const creditWallets = wallets.filter((candidate) => candidate.type === 'CREDIT_CARD');
+    const bankWallets = wallets.filter((candidate) => candidate.type === 'BANK');
+    return creditWallets.length === 1 && bankWallets.length === 1 ? creditWallets[0] : undefined;
+  };
 
   const walletsByType = useMemo(() => {
     const grouped: Record<string, { count: number; total: number }> = {};
     wallets.forEach((w) => {
-      if (!grouped[w.type]) grouped[w.type] = { count: 0, total: 0 };
-      grouped[w.type].count++;
-      grouped[w.type].total += w.type === 'INVESTMENT'
-        ? Number(w.displayValue ?? 0) + Number(w.availableCash ?? w.actual_cash)
-        : Number(w.actual_cash);
+      if (w.type === 'CREDIT_CARD') return;
+      const type = getWalletGroupType(w);
+      if (!grouped[type]) grouped[type] = { count: 0, total: 0 };
+      grouped[type].count++;
+      grouped[type].total += getWalletTypeDisplayValue(w);
     });
     return grouped;
   }, [wallets]);
@@ -248,6 +293,17 @@ export const WalletsPage = () => {
                   </div>
                 );
               })}
+              {totalAvailableCredit > 0 && (
+                <div className="flex items-center gap-2.5 rounded-full bg-sky-500/[0.12] backdrop-blur-sm border border-sky-300/[0.12] px-4 py-2">
+                  <CreditCard className="h-3.5 w-3.5 text-sky-300/90" />
+                  <span className="text-xs font-medium text-sky-100/80">
+                    Limite disponível
+                  </span>
+                  <span className="text-xs font-bold text-white">
+                    {formatCurrency(totalAvailableCredit)}
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -257,11 +313,11 @@ export const WalletsPage = () => {
       <div className="px-6 sm:px-8 -mt-6 pb-12">
         <div className="max-w-7xl mx-auto">
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={wallets.map((w) => w.id)} strategy={rectSortingStrategy}>
+            <SortableContext items={visibleWallets.map((w) => w.id)} strategy={rectSortingStrategy}>
               <div className="flex gap-5">
                 {Array.from({ length: columnCount }, (_, colIndex) => (
                   <div key={colIndex} className="flex-1 flex flex-col gap-5">
-                    {wallets
+                    {visibleWallets
                       .filter((_, i) => i % columnCount === colIndex)
                       .map((wallet, i) => (
                         <div
@@ -271,6 +327,7 @@ export const WalletsPage = () => {
                         >
                           <SortableWalletCard
                             wallet={wallet}
+                            linkedCreditWallet={getLinkedCreditWallet(wallet)}
                             onAddFunds={() => openTransaction(wallet.id, 'INCOME', wallet.type)}
                             onAddExpense={() => openTransaction(wallet.id, 'EXPENSE', wallet.type)}
                             onEdit={() => setEditWallet(wallet)}
@@ -288,7 +345,7 @@ export const WalletsPage = () => {
             </SortableContext>
           </DndContext>
 
-          {wallets.length === 0 && (
+          {visibleWallets.length === 0 && (
             <div className="mt-16 flex flex-col items-center justify-center text-center">
               <div className="w-20 h-20 rounded-2xl bg-emerald-500/10 flex items-center justify-center mb-5">
                 <WalletIcon className="h-10 w-10 text-emerald-500/50" />

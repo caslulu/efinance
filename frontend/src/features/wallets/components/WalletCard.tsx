@@ -22,6 +22,7 @@ import { CardItem } from './CardItem';
 
 interface WalletCardProps {
   wallet: Wallet;
+  linkedCreditWallet?: Wallet;
   cards: CardType[];
   onAddFunds: (id: number) => void;
   onAddExpense: (id: number) => void;
@@ -81,6 +82,15 @@ const TYPE_CONFIG: Record<
     label: 'Investimento',
     glow: 'hover:shadow-violet-500/8',
   },
+  CREDIT_CARD: {
+    accentBar: 'from-sky-500 to-cyan-400',
+    gradient: 'from-sky-500/15 to-cyan-500/5',
+    accent: 'text-sky-600 dark:text-sky-400',
+    accentMuted: 'bg-sky-500/10 text-sky-700 dark:text-sky-300',
+    icon: CreditCard,
+    label: 'Cartão de crédito',
+    glow: 'hover:shadow-sky-500/8',
+  },
   OTHER: {
     accentBar: 'from-slate-500 to-zinc-400',
     gradient: 'from-slate-500/15 to-zinc-500/5',
@@ -94,6 +104,7 @@ const TYPE_CONFIG: Record<
 
 export const WalletCard = ({
   wallet,
+  linkedCreditWallet,
   cards,
   onAddFunds,
   onAddExpense,
@@ -108,10 +119,13 @@ export const WalletCard = ({
   const config = TYPE_CONFIG[wallet.type] || TYPE_CONFIG.OTHER;
   const TypeIcon = config.icon;
   const isInvestmentWallet = wallet.type === 'INVESTMENT';
+  const isCreditCardWallet = wallet.type === 'CREDIT_CARD';
+  const hasLinkedCreditWallet = !!linkedCreditWallet;
   const headlineValue = isInvestmentWallet
     ? Number(wallet.displayValue ?? 0)
     : Number(wallet.actual_cash);
   const availableCash = Number(wallet.availableCash ?? wallet.actual_cash);
+  const linkedCreditLimit = Number(linkedCreditWallet?.actual_cash ?? 0);
 
   return (
     <div
@@ -169,7 +183,11 @@ export const WalletCard = ({
         <div>
           <div className="flex items-center justify-between mb-1">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-              {isInvestmentWallet ? 'Valor Investido' : 'Saldo Disponível'}
+              {isInvestmentWallet
+                ? 'Valor Investido'
+                : isCreditCardWallet
+                  ? 'Limite disponível'
+                  : 'Saldo Disponível'}
             </p>
             {wallet.is_transfer_only && (
               <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
@@ -190,10 +208,22 @@ export const WalletCard = ({
               </p>
             </div>
           )}
+          {hasLinkedCreditWallet && (
+            <div className="mt-2 rounded-lg border border-sky-500/15 bg-sky-500/10 px-3 py-2">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-sky-600 dark:text-sky-300">
+                  Limite disponível
+                </span>
+                <span className="text-sm font-bold text-foreground">
+                  {formatCurrency(linkedCreditLimit)}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Action Buttons */}
-        {!wallet.is_transfer_only && (
+        {!wallet.is_transfer_only && !isCreditCardWallet && (
           <div className="flex gap-2">
             <button
               className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs font-semibold py-2.5 transition-colors"
@@ -225,7 +255,7 @@ export const WalletCard = ({
               >
                 <CreditCard className="h-3.5 w-3.5 text-muted-foreground/60" />
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
-                  Cartões
+                  {hasLinkedCreditWallet ? 'Cartão de crédito' : 'Cartões'}
                 </span>
                 {cards.length > 0 && (
                   <span className="text-[10px] font-bold text-muted-foreground/40 bg-muted/50 rounded-full px-1.5 py-0.5">

@@ -1,0 +1,317 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - region "Pular para o conteúdo principal":
+      - link "Pular para o conteúdo principal" [ref=e3] [cursor=pointer]:
+        - /url: "#docusaurus_skipToContent_fallback"
+    - navigation "Main" [ref=e5]:
+      - generic [ref=e7]:
+        - generic [ref=e8]:
+          - link "inter logo" [ref=e9] [cursor=pointer]:
+            - /url: /
+            - img "inter logo" [ref=e11]
+          - button "Documentação" [ref=e13] [cursor=pointer]
+          - link "Sandbox" [ref=e14] [cursor=pointer]:
+            - /url: /sandbox
+          - link "SDK" [ref=e15] [cursor=pointer]:
+            - /url: /docs/sdks/sdk-intro
+          - button "Arquivo CNAB" [ref=e17] [cursor=pointer]
+          - link "Comunidade" [ref=e18] [cursor=pointer]:
+            - /url: https://comunidade.inter.co/developers
+          - button "Ajuda" [ref=e20] [cursor=pointer]
+        - generic [ref=e25]:
+          - combobox "search input" [ref=e27]
+          - button [ref=e29] [cursor=pointer]
+    - generic [ref=e33]:
+      - complementary [ref=e34]:
+        - navigation "Docs sidebar" [ref=e37]:
+          - list [ref=e38]:
+            - listitem [ref=e39]:
+              - generic [ref=e40]:
+                - link "Introdução" [expanded] [ref=e41] [cursor=pointer]:
+                  - /url: /docs/category/introdução
+                - button "Toggle the collapsible sidebar category 'Introdução'" [ref=e42] [cursor=pointer]
+              - list [ref=e43]:
+                - listitem [ref=e44]:
+                  - link "Sobre este portal" [ref=e45] [cursor=pointer]:
+                    - /url: /docs/introducao/sobre-este-portal
+                - listitem [ref=e46]:
+                  - link "Nossas APIs" [ref=e47] [cursor=pointer]:
+                    - /url: /docs/introducao/nossas-apis
+                - listitem [ref=e48]:
+                  - link "Autenticação mTLS" [ref=e49] [cursor=pointer]:
+                    - /url: /docs/introducao/autenticacao-mtls
+                - listitem [ref=e50]:
+                  - link "Autorização OAuth 2.0" [ref=e51] [cursor=pointer]:
+                    - /url: /docs/introducao/oauth-2.0
+                - listitem [ref=e52]:
+                  - link "Como criar uma integração?" [ref=e53] [cursor=pointer]:
+                    - /url: /docs/introducao/como-criar-uma-aplicacao
+                - listitem [ref=e54]:
+                  - link "Como renovar uma integração?" [ref=e55] [cursor=pointer]:
+                    - /url: /docs/introducao/como-renovar-uma-integracao
+                - listitem [ref=e56]:
+                  - link "Diagrama de funcionamento" [ref=e57] [cursor=pointer]:
+                    - /url: /docs/introducao/diagrama-de-funcionamento
+            - listitem [ref=e58]:
+              - generic [ref=e59]:
+                - link "Configurando postman para testes" [ref=e60] [cursor=pointer]:
+                  - /url: /docs/category/configurando-postman-para-testes
+                - button "Toggle the collapsible sidebar category 'Configurando postman para testes'" [ref=e61] [cursor=pointer]
+            - listitem [ref=e62]:
+              - generic [ref=e63]:
+                - link "Webhooks" [ref=e64] [cursor=pointer]:
+                  - /url: /docs/category/webhooks
+                - button "Toggle the collapsible sidebar category 'Webhooks'" [ref=e65] [cursor=pointer]
+            - listitem [ref=e66]:
+              - link "SDKs" [ref=e68] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e69]:
+              - link "Arquivos CNAB" [ref=e71] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e72]:
+              - generic [ref=e73]:
+                - link "Sandbox" [ref=e74] [cursor=pointer]:
+                  - /url: /docs/sandbox
+                - button "Toggle the collapsible sidebar category 'Sandbox'" [ref=e75] [cursor=pointer]
+      - main [ref=e76]:
+        - generic [ref=e78]:
+          - generic [ref=e80]:
+            - article [ref=e81]:
+              - navigation "Breadcrumbs" [ref=e82]:
+                - list [ref=e83]:
+                  - listitem [ref=e84]:
+                    - link "Home page" [ref=e85] [cursor=pointer]:
+                      - /url: /
+                      - img [ref=e86]
+                  - listitem [ref=e88]:
+                    - link "Introdução" [ref=e89] [cursor=pointer]:
+                      - /url: /docs/category/introdução
+                  - listitem [ref=e90]:
+                    - generic [ref=e91]: Autorização OAuth 2.0
+              - generic [ref=e92]:
+                - heading "Autorização OAuth 2.0" [level=1] [ref=e94]
+                - heading "Um pouco sobre o OAuth 2.0Link direto para Um pouco sobre o OAuth 2.0" [level=2] [ref=e95]:
+                  - text: Um pouco sobre o OAuth 2.0
+                  - link "Link direto para Um pouco sobre o OAuth 2.0" [ref=e96] [cursor=pointer]:
+                    - /url: "#um-pouco-sobre-o-oauth-20"
+                    - text: "#"
+                - paragraph [ref=e97]: OAuth 2.0 é o protocolo padrão do setor para autorização. OAuth 2.0 se concentra na simplicidade do desenvolvedor do cliente, ao mesmo tempo em que fornece fluxos de autorização específicos para aplicativos da Web, aplicativos de desktop, telefones celulares e dispositivos de sala de estar. Esta especificação e suas extensões estão sendo desenvolvidas dentro do IETF OAuth Working Group.
+                - heading "Como usamos nas APIs do InterLink direto para Como usamos nas APIs do Inter" [level=2] [ref=e98]:
+                  - text: Como usamos nas APIs do Inter
+                  - link "Link direto para Como usamos nas APIs do Inter" [ref=e99] [cursor=pointer]:
+                    - /url: "#como-usamos-nas-apis-do-inter"
+                    - text: "#"
+                - paragraph [ref=e100]: Para segurança dos nossos serviços, implementamos o protocolo OAuth2 para autorização das chamadas. Este protocolo utiliza as client credentials (clientId e clientSecret), obtidas no momento em que se cria uma integração, após baixar o certificado e a chave. No detalhe da integração você verá o valor das credenciais.
+                - paragraph [ref=e101]:
+                  - img "oauth-image" [ref=e102]
+            - navigation "Navigação das páginas de documentação" [ref=e103]:
+              - link "Anterior « Autenticação mTLS" [ref=e104] [cursor=pointer]:
+                - /url: /docs/introducao/autenticacao-mtls
+                - generic [ref=e105]: Anterior
+                - generic [ref=e106]: « Autenticação mTLS
+              - link "Próxima Como criar uma integração? »" [ref=e107] [cursor=pointer]:
+                - /url: /docs/introducao/como-criar-uma-aplicacao
+                - generic [ref=e108]: Próxima
+                - generic [ref=e109]: Como criar uma integração? »
+          - list [ref=e112]:
+            - listitem [ref=e113]:
+              - link "Um pouco sobre o OAuth 2.0" [ref=e114] [cursor=pointer]:
+                - /url: "#um-pouco-sobre-o-oauth-20"
+            - listitem [ref=e115]:
+              - link "Como usamos nas APIs do Inter" [ref=e116] [cursor=pointer]:
+                - /url: "#como-usamos-nas-apis-do-inter"
+    - contentinfo [ref=e118]:
+      - generic [ref=e120]:
+        - generic [ref=e121]:
+          - generic [ref=e122]:
+            - generic [ref=e126]:
+              - img "Um globo" [ref=e127]
+              - generic [ref=e128]:
+                - generic [ref=e129]: INTR|Nasdaq
+                - text: Listed
+            - generic [ref=e130]:
+              - generic [ref=e131]: Certificação de privacidade
+              - img [ref=e134]
+            - generic [ref=e138]:
+              - generic [ref=e139]: Baixe o Super App
+              - generic [ref=e140]:
+                - link "App Store" [ref=e142] [cursor=pointer]:
+                  - /url: https://itunes.apple.com/br/app/banco-inter/id839711154
+                  - img [ref=e143]
+                - link "Google Play" [ref=e148] [cursor=pointer]:
+                  - /url: https://play.google.com/store/apps/details?id=br.com.intermedium
+                  - img [ref=e149]
+            - generic [ref=e153]:
+              - generic [ref=e154]: Siga o Inter
+              - list [ref=e156]:
+                - listitem [ref=e157]:
+                  - link "Instagram" [ref=e158] [cursor=pointer]:
+                    - /url: https://www.instagram.com/Interbr
+                    - generic [ref=e159]: Instagram
+                    - img [ref=e160]
+                - listitem [ref=e162]:
+                  - link "Linkedin" [ref=e163] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/company/inter/
+                    - generic [ref=e164]: Linkedin
+                    - img [ref=e165]
+                - listitem [ref=e167]:
+                  - link "Facebook" [ref=e168] [cursor=pointer]:
+                    - /url: https://www.facebook.com/interbrasil
+                    - generic [ref=e169]: Facebook
+                    - img [ref=e170]
+                - listitem [ref=e172]:
+                  - link "Twitter" [ref=e173] [cursor=pointer]:
+                    - /url: https://twitter.com/Interbr
+                    - generic [ref=e174]: Twitter
+                    - img [ref=e175]
+                - listitem [ref=e177]:
+                  - link "Youtube" [ref=e178] [cursor=pointer]:
+                    - /url: https://youtube.com/@interbr
+                    - generic [ref=e179]: Youtube
+                    - img [ref=e180]
+                - listitem [ref=e182]:
+                  - link "TikTok" [ref=e183] [cursor=pointer]:
+                    - /url: https://www.tiktok.com/@interbr
+                    - generic [ref=e184]: TikTok
+                    - img [ref=e185]
+          - generic [ref=e187]:
+            - generic [ref=e188]: Pra você
+            - generic [ref=e189]:
+              - list [ref=e190]:
+                - listitem [ref=e191]:
+                  - link "Conta Digital Pessoa Física" [ref=e192] [cursor=pointer]:
+                    - /url: https://www.bancointer.com.br/pra-voce/conta-digital/pessoa-fisica/
+                - listitem [ref=e193]:
+                  - link "Cartão de Crédito" [ref=e194] [cursor=pointer]:
+                    - /url: https://www.bancointer.com.br/pra-voce/cartoes/
+                - listitem [ref=e195]:
+                  - link "Conta Digital PJ" [ref=e196] [cursor=pointer]:
+                    - /url: https://www.bancointer.com.br/empresas/conta-digital/pessoa-juridica/
+                - listitem [ref=e197]:
+                  - link "Conta Digital MEI" [ref=e198] [cursor=pointer]:
+                    - /url: https://www.bancointer.com.br/empresas/conta-digital/mei/
+                - listitem [ref=e199]:
+                  - link "Empréstimos e Crédito Imobiliário" [ref=e200] [cursor=pointer]:
+                    - /url: https://www.bancointer.com.br/credito-pessoal-e-credito-imobiliario/
+              - list [ref=e201]:
+                - listitem [ref=e202]:
+                  - link "Inter Invest" [ref=e203] [cursor=pointer]:
+                    - /url: https://www.bancointer.com.br/pra-voce/investimentos/
+                - listitem [ref=e204]:
+                  - link "Inter Shop" [ref=e205] [cursor=pointer]:
+                    - /url: https://intershop.bancointer.com.br
+                - listitem [ref=e206]:
+                  - link "Seguros" [ref=e207] [cursor=pointer]:
+                    - /url: https://www.bancointer.com.br/pra-voce/seguros/
+                - listitem [ref=e208]:
+                  - link "Super App" [ref=e209] [cursor=pointer]:
+                    - /url: https://www.bancointer.com.br/super-app-inter/
+          - generic [ref=e210]:
+            - generic [ref=e211]: Precisa de ajuda?
+            - generic [ref=e212]:
+              - list [ref=e213]:
+                - listitem [ref=e214]:
+                  - link "Central de ajuda" [ref=e215] [cursor=pointer]:
+                    - /url: https://ajuda.inter.co/
+                - listitem [ref=e216]:
+                  - link "Canais de atendimento" [ref=e217] [cursor=pointer]:
+                    - /url: https://www.bancointer.com.br/canais-de-atendimento/
+                - listitem [ref=e218]:
+                  - link "Ouvidoria" [ref=e219] [cursor=pointer]:
+                    - /url: https://www.bancointer.com.br/ouvidoria/
+              - list [ref=e220]:
+                - listitem [ref=e221]:
+                  - link "2ª via do boleto" [ref=e222] [cursor=pointer]:
+                    - /url: https://www.bancointer.com.br/segunda-via-boleto/
+                - listitem [ref=e223]:
+                  - link "Saldo devedor" [ref=e224] [cursor=pointer]:
+                    - /url: https://www.bancointer.com.br/saldo-devedor/
+                - listitem [ref=e225]:
+                  - link "Negocie sua dívida" [ref=e226] [cursor=pointer]:
+                    - /url: https://www.bancointer.com.br/negocie/
+                - listitem [ref=e227]:
+                  - link "Blog" [ref=e228] [cursor=pointer]:
+                    - /url: https://blog.bancointer.com.br/
+          - generic [ref=e229]:
+            - generic [ref=e230]: Nossos números
+            - generic [ref=e231]:
+              - list [ref=e232]:
+                - listitem [ref=e233]:
+                  - generic [ref=e234]: Capitais e regiões metropolitanas
+                  - link "3003 4070" [ref=e235] [cursor=pointer]:
+                    - /url: tel:30034070
+                - listitem [ref=e236]:
+                  - generic [ref=e237]: Demais localidades
+                  - link "0800 940 0007" [ref=e238] [cursor=pointer]:
+                    - /url: tel:08009400007
+                - listitem [ref=e239]:
+                  - generic [ref=e240]: SAC
+                  - link "0800 940 9999" [ref=e241] [cursor=pointer]:
+                    - /url: tel:08009409999
+              - list [ref=e242]:
+                - listitem [ref=e243]:
+                  - generic [ref=e244]: Pessoa Com Deficiência de fala e audição
+                  - link "0800 979 7099" [ref=e245] [cursor=pointer]:
+                    - /url: tel:08009797099
+                - listitem [ref=e246]:
+                  - generic [ref=e247]: Ouvidoria
+                  - link "0800 940 7772" [ref=e248] [cursor=pointer]:
+                    - /url: tel:08009407772
+                - listitem [ref=e249]:
+                  - strong [ref=e250]: Não ligamos pra você por esses telefones
+                  - text: . Também não solicitamos dados pessoais, senha da conta, código de transação por telefone. Estes números são apenas para você fazer ligações para o Inter.
+        - generic [ref=e252]:
+          - list [ref=e253]:
+            - listitem [ref=e254]:
+              - link "Confira Nossas Vagas" [ref=e255] [cursor=pointer]:
+                - /url: https://carreiras.bancointer.com.br
+            - listitem [ref=e256]:
+              - link "Cotação do Dólar" [ref=e257] [cursor=pointer]:
+                - /url: https://www.bancointer.com.br/pra-voce/cartoes/cotacao-dolar/
+            - listitem [ref=e258]:
+              - link "Tarifas" [ref=e259] [cursor=pointer]:
+                - /url: https://www.bancointer.com.br/tarifas/
+            - listitem [ref=e260]:
+              - link "Segurança" [ref=e261] [cursor=pointer]:
+                - /url: https://www.bancointer.com.br/seguranca/
+            - listitem [ref=e262]:
+              - link "Privacidade de Dados" [ref=e263] [cursor=pointer]:
+                - /url: https://www.bancointer.com.br/privacidade-de-dados/
+            - listitem [ref=e264]:
+              - link "Política de Privacidade" [ref=e265] [cursor=pointer]:
+                - /url: https://www.bancointer.com.br/politica-de-privacidade/
+            - listitem [ref=e266]:
+              - link "Canal de Ética" [ref=e267] [cursor=pointer]:
+                - /url: https://www.canaldeetica.com.br/bancointer/
+            - listitem [ref=e268]:
+              - link "Política de Segurança da Informação" [ref=e269] [cursor=pointer]:
+                - /url: https://www.bancointer.com.br/politica-de-seguranca/
+            - listitem [ref=e270]:
+              - link "Política de Segurança da Informação para Fornecedores" [ref=e271] [cursor=pointer]:
+                - /url: https://www.bancointer.com.br/politica-de-seguranca-para-fornecedores/
+          - generic [ref=e272]:
+            - generic [ref=e273]:
+              - text: ©
+              - generic [ref=e274]: "2023 Banco Inter S.A. CNPJ: 00.416.968/0001-01"
+            - generic [ref=e275]:
+              - 'link "Belo Horizonte | MG - Av. Barbacena, 1219 - Santo Agostinho. CEP: 30190-924" [ref=e277] [cursor=pointer]':
+                - /url: https://goo.gl/maps/6ELbHe2AsaN6VzsE7
+                - img [ref=e278]
+                - generic [ref=e281]: "Belo Horizonte | MG - Av. Barbacena, 1219 - Santo Agostinho. CEP: 30190-924"
+              - 'link "São Paulo | SP - Avenida Presidente Juscelino Kubitschek, 1.400, 8º andar, CJ 81 - Vila Nova Conceição. CEP: 04543-000" [ref=e283] [cursor=pointer]':
+                - /url: https://goo.gl/maps/dhFZGQQuaAsU8fuy9
+                - img [ref=e284]
+                - generic [ref=e287]: "São Paulo | SP - Avenida Presidente Juscelino Kubitschek, 1.400, 8º andar, CJ 81 - Vila Nova Conceição. CEP: 04543-000"
+  - iframe [ref=e290]:
+    - generic [ref=f1e2]:
+      - generic [ref=f1e5]:
+        - link "Privacy" [ref=f1e6] [cursor=pointer]:
+          - /url: https://www.google.com/intl/en/policies/privacy/
+        - text: "-"
+        - link "Terms" [ref=f1e7] [cursor=pointer]:
+          - /url: https://www.google.com/intl/en/policies/terms/
+      - generic [ref=f1e8]:
+        - generic [ref=f1e9]:
+          - text: protected by
+          - strong [ref=f1e10]: reCAPTCHA
+        - generic [ref=f1e11]: "-"

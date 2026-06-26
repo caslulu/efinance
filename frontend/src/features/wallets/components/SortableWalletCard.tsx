@@ -8,6 +8,7 @@ import type { Card } from '../../../types/Card';
 
 interface SortableWalletCardProps {
     wallet: Wallet;
+    linkedCreditWallet?: Wallet;
     onAddFunds: () => void;
     onAddExpense: () => void;
     onEdit: () => void;
@@ -20,6 +21,7 @@ interface SortableWalletCardProps {
 
 export const SortableWalletCard: React.FC<SortableWalletCardProps> = ({
     wallet,
+    linkedCreditWallet,
     onAddFunds,
     onAddExpense,
     onEdit,
@@ -30,6 +32,10 @@ export const SortableWalletCard: React.FC<SortableWalletCardProps> = ({
     onImportStatement,
 }) => {
     const { data: cards = [] } = useCardsByWallet(wallet.id);
+    const { data: linkedCreditCards = [] } = useCardsByWallet(linkedCreditWallet?.id ?? null);
+    const visibleCards = linkedCreditWallet
+        ? [...linkedCreditCards, ...cards]
+        : cards;
 
     const {
         attributes,
@@ -52,7 +58,8 @@ export const SortableWalletCard: React.FC<SortableWalletCardProps> = ({
         <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
             <WalletCard
                 wallet={wallet}
-                cards={cards}
+                linkedCreditWallet={linkedCreditWallet}
+                cards={visibleCards}
                 onAddFunds={onAddFunds}
                 onAddExpense={onAddExpense}
                 onEdit={onEdit}

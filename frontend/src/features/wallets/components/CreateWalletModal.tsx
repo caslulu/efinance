@@ -49,6 +49,12 @@ export const CreateWalletModal = ({
   const [balance, setBalance] = useState('');
   const [isTransferOnly, setIsTransferOnly] = useState(false);
   const [loading, setLoading] = useState(false);
+  const namePlaceholder =
+    type === 'BANK'
+      ? 'Nubank'
+      : type === 'MEAL_VOUCHER'
+        ? 'Flash'
+        : 'Nome da carteira';
 
   useEffect(() => {
     if (isOpen) {
@@ -103,6 +109,7 @@ export const CreateWalletModal = ({
               id="name"
               value={name}
               onChange={e => setName(e.target.value)}
+              placeholder={namePlaceholder}
               required
             />
           </div>

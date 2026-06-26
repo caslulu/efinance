@@ -11,6 +11,8 @@ services:
       POSTGRES_DB: ${DB_NAME:-financepro}
     volumes:
       - pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-financeuser} -d ${DB_NAME:-financepro}"]
       interval: 10s
@@ -35,9 +37,6 @@ services:
       - FRONTEND_URL=${FRONTEND_URL:-https://efinancepro.me,https://www.efinancepro.me,https://frontend.financeapp.orb.local,https://localhost,http://localhost:5173}
       - BACKEND_URL=${BACKEND_URL:-https://efinancepro.me/api}
       - FORCE_HTTPS=${FORCE_HTTPS:-true}
-      - PLUGGY_CLIENT_ID=${PLUGGY_CLIENT_ID:-}
-      - PLUGGY_CLIENT_SECRET=${PLUGGY_CLIENT_SECRET:-}
-      - PLUGGY_NUBANK_ITEM_ID=${PLUGGY_NUBANK_ITEM_ID:-}
     volumes:
       - uploads:/app/uploads
     expose:

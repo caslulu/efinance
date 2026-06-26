@@ -32,6 +32,7 @@ export interface StatementImportDuplicateMatch {
 
 export interface StatementImportPreviewRow {
   source_id: string;
+  source_file?: string;
   transaction_date: string;
   value: number;
   transaction_type: "INCOME" | "EXPENSE";
