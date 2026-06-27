@@ -13,11 +13,15 @@ jest.mock('bcrypt', () => ({
 
 const mockUsersService = {
   findByUsername: jest.fn(),
+  findByEmail: jest.fn(),
   create: jest.fn(),
+  updatePendingRegistration: jest.fn(),
+  setEmailVerificationToken: jest.fn(),
 };
 
 const mockJwtService = {
   sign: jest.fn(() => 'mockToken'),
+  verify: jest.fn(),
 };
 
 const mockConfigService = {
@@ -32,6 +36,8 @@ describe('AuthService', () => {
   let service: AuthService;
 
   beforeEach(async () => {
+    jest.clearAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
@@ -87,6 +93,56 @@ describe('AuthService', () => {
     it('should return an access token', async () => {
       const result = await service.login({ username: 'test', id: 1, isEmailVerified: true });
       expect(result).toEqual({ access_token: 'mockToken' });
+    });
+
+    it('should include verification recovery data when email is not verified', async () => {
+      await expect(
+        service.login({ username: 'test', email: 'test@example.com', id: 1, isEmailVerified: false }),
+      ).rejects.toMatchObject({
+        response: {
+          code: 'EMAIL_NOT_VERIFIED',
+          requiresEmailVerification: true,
+          userId: 1,
+          email: 'test@example.com',
+        },
+      });
+    });
+  });
+
+  describe('register', () => {
+    it('should reuse an unverified account and return email verification data', async () => {
+      const existingUser = {
+        id: 1,
+        username: 'test',
+        email: 'test@example.com',
+        isEmailVerified: false,
+      };
+      const updatedUser = { ...existingUser, username: 'newtest' };
+
+      (bcrypt.hash as jest.Mock).mockResolvedValue('hashedPassword');
+      mockUsersService.findByEmail.mockResolvedValue(existingUser);
+      mockUsersService.updatePendingRegistration.mockResolvedValue(updatedUser);
+      mockUsersService.setEmailVerificationToken.mockResolvedValue(updatedUser);
+      mockMailerService.sendMail.mockResolvedValue(undefined);
+
+      const result = await service.register({
+        username: 'newtest',
+        email: 'test@example.com',
+        password: 'Password1',
+      });
+
+      expect(mockUsersService.create).not.toHaveBeenCalled();
+      expect(mockUsersService.updatePendingRegistration).toHaveBeenCalledWith(1, expect.objectContaining({
+        username: 'newtest',
+        email: 'test@example.com',
+        password: 'hashedPassword',
+      }));
+      expect(result).toEqual({
+        message: 'Cadastro pendente encontrado. Enviamos um novo código de verificação.',
+        requiresEmailVerification: true,
+        userId: 1,
+        email: 'test@example.com',
+      });
     });
   });
 });

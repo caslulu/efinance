@@ -50,6 +50,11 @@ export class ConfirmStatementImportRowDto {
 }
 
 export class ConfirmStatementImportDto {
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  cardId?: number;
+
   @IsArray()
   @ArrayMaxSize(5000)
   @ValidateNested({ each: true })

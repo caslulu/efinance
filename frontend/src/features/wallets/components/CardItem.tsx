@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 import { formatCurrency } from '@/lib/utils';
 import type { Card } from '../../../types/Card';
-import { Pencil, ReceiptText, CreditCard } from 'lucide-react';
+import { FileUp, Pencil, ReceiptText, CreditCard } from 'lucide-react';
 import { FaCcVisa, FaCcMastercard, FaCcAmex } from 'react-icons/fa';
 
 const FLAG_CONFIG: Record<
@@ -21,14 +21,16 @@ interface CardItemProps {
   onEdit: () => void;
   onAddExpense: () => void;
   onPayInvoice: () => void;
+  onImportStatement: () => void;
 }
 
-export const CardItem = ({ card, onEdit, onAddExpense, onPayInvoice }: CardItemProps) => {
+export const CardItem = ({ card, onEdit, onAddExpense, onPayInvoice, onImportStatement }: CardItemProps) => {
   const hasInvoice = Number(card.due_invoice) > 0 || Number(card.current_invoice) > 0;
-  const isPluggyCard = card.external_source === 'pluggy:credit';
   const totalInvoice = Number(card.total_invoice || 0);
-  const limitUsedPercent = card.card_limit > 0
-    ? Math.min(100, (totalInvoice / Number(card.card_limit)) * 100)
+  const activeLimit = Number(card.usable_limit ?? card.card_limit);
+  const approvedLimit = Number(card.card_limit);
+  const limitUsedPercent = activeLimit > 0
+    ? Math.min(100, (totalInvoice / activeLimit) * 100)
     : 0;
 
   const config = FLAG_CONFIG[card.flag] || FLAG_CONFIG.OTHER;
@@ -44,12 +46,24 @@ export const CardItem = ({ card, onEdit, onAddExpense, onPayInvoice }: CardItemP
             <FlagIcon className="h-6 w-6 text-white/80" />
             <span className="text-sm font-bold tracking-wide">{card.name}</span>
           </div>
-          <button
-            className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors opacity-0 group-hover/card:opacity-100"
-            onClick={onEdit}
-          >
-            <Pencil className="h-3 w-3" />
-          </button>
+          <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover/card:opacity-100">
+            <button
+              className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+              onClick={onImportStatement}
+              title="Importar fatura"
+              aria-label={`Importar fatura de ${card.name}`}
+            >
+              <FileUp className="h-3 w-3" />
+            </button>
+            <button
+              className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+              onClick={onEdit}
+              title="Editar cartão"
+              aria-label={`Editar ${card.name}`}
+            >
+              <Pencil className="h-3 w-3" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -83,7 +97,7 @@ export const CardItem = ({ card, onEdit, onAddExpense, onPayInvoice }: CardItemP
         <div className="space-y-1.5">
           <div className="flex justify-between items-center">
             <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/60">
-              {isPluggyCard ? 'Uso deste final' : 'Limite'}
+              Limite
             </span>
             <span
               className={clsx(
@@ -112,18 +126,14 @@ export const CardItem = ({ card, onEdit, onAddExpense, onPayInvoice }: CardItemP
             />
           </div>
           <div className="flex justify-between text-[9px] font-medium text-muted-foreground/50">
-            {isPluggyCard ? (
-              <>
-                <span>Disponível: {formatCurrency(Number(card.available_limit || 0))}</span>
-                <span>Usado: {formatCurrency(Math.max(0, totalInvoice))}</span>
-              </>
-            ) : (
-              <>
-                <span>Disp: {formatCurrency(Number(card.available_limit || 0))}</span>
-                <span>Total: {formatCurrency(Number(card.card_limit))}</span>
-              </>
-            )}
+            <span>Disp: {formatCurrency(Number(card.available_limit || 0))}</span>
+            <span>Ativo: {formatCurrency(activeLimit)}</span>
           </div>
+          {activeLimit < approvedLimit && (
+            <p className="text-[9px] font-medium text-muted-foreground/45">
+              Aprovado: {formatCurrency(approvedLimit)}
+            </p>
+          )}
         </div>
 
         {/* Actions */}

@@ -1,63 +1,82 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:15
-    container_name: finance_db
-    restart: always
+    container_name: finance_db_local
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${DB_USER:-financeuser}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-financepass}
       POSTGRES_DB: ${DB_NAME:-financepro}
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata_local:/var/lib/postgresql/data
     ports:
       - "127.0.0.1:5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-financeuser} -d ${DB_NAME:-financepro}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DB_USER:-financeuser} -d ${DB_NAME:-financepro}",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
 
   backend:
-    build: ./backend
-    container_name: finance_backend
-    restart: always
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: finance_backend_local
+    restart: unless-stopped
+    working_dir: /app
     depends_on:
       postgres:
         condition: service_healthy
     env_file:
-      - ./backend/.env.prod
+      - ./backend/.env
     environment:
-      - DATABASE_URL=postgresql://${DB_USER:-financeuser}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-financepro}?schema=public
-      - NODE_ENV=production
-      - OLLAMA_API_KEY=${OLLAMA_API_KEY}
-      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-https://ollama.com}
-      - OLLAMA_MODEL=${OLLAMA_MODEL:-gpt-oss:20b}
-      - FRONTEND_URL=${FRONTEND_URL:-https://efinancepro.me,https://www.efinancepro.me,https://frontend.financeapp.orb.local,https://localhost,http://localhost:5173}
-      - BACKEND_URL=${BACKEND_URL:-https://efinancepro.me/api}
-      - FORCE_HTTPS=${FORCE_HTTPS:-true}
+      DATABASE_URL: postgresql://${DB_USER:-financeuser}:${DB_PASSWORD:-financepass}@postgres:5432/${DB_NAME:-financepro}?schema=public
+      NODE_ENV: development
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      BACKEND_URL: ${BACKEND_URL:-http://localhost:3000}
+      FORCE_HTTPS: "false"
+      CHOKIDAR_USEPOLLING: "true"
+      OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-https://ollama.com}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-gpt-oss:20b}
     volumes:
-      - uploads:/app/uploads
-    expose:
-      - "3000"
+      - ./backend:/app
+      - backend_node_modules_local:/app/node_modules
+      - uploads_local:/app/uploads
+    ports:
+      - "3000:3000"
+    command: >
+      sh -c "if [ ! -d node_modules/.bin ]; then npm ci; fi &&
+      npx prisma generate &&
+      npx prisma db push &&
+      npm run start:dev"
 
   frontend:
-    build:
-      context: ./frontend
-      args:
-        VITE_API_URL: ${VITE_API_URL:-/api}
-    container_name: finance_frontend
-    restart: always
+    image: node:20-alpine
+    container_name: finance_frontend_local
+    restart: unless-stopped
+    working_dir: /app
     depends_on:
       - backend
-    ports:
-      - "80:80"
-      - "443:443"
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-/api}
+      VITE_PROXY_TARGET: ${VITE_PROXY_TARGET:-http://backend:3000}
+      CHOKIDAR_USEPOLLING: "true"
     volumes:
-      - ${LETSENCRYPT_PATH:-./frontend/certs}:/etc/letsencrypt
-      - ${CERTBOT_WWW_PATH:-./frontend/certbot}:/var/www/certbot
+      - ./frontend:/app
+      - frontend_node_modules_local:/app/node_modules
+    ports:
+      - "5173:5173"
+    command: >
+      sh -c "if [ ! -d node_modules/.bin ]; then npm ci; fi &&
+      npm run dev -- --host 0.0.0.0"
 
 volumes:
-  pgdata:
-  uploads:
+  pgdata_local:
+  backend_node_modules_local:
+  frontend_node_modules_local:
+  uploads_local:

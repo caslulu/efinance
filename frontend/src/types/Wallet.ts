@@ -12,10 +12,6 @@ export interface Wallet {
     | 'OTHER';
   user_id: number;
   actual_cash: number;
-  pluggy_item_id?: string | null;
-  pluggy_account_id?: string | null;
-  external_source?: string | null;
-  pluggy_last_sync_at?: string | null;
   portfolioValue?: number;
   availableCash?: number;
   positionsCount?: number;

@@ -21,6 +21,7 @@ import type {
   StatementImportPreview,
   StatementImportPreviewRow,
 } from "@/types/Transaction";
+import type { Card } from "@/types/Card";
 import type { Wallet } from "@/types/Wallet";
 import {
   Dialog,
@@ -52,12 +53,14 @@ type EditableImportRow = StatementImportPreviewRow & {
 
 interface ImportStatementModalProps {
   wallet: Wallet | null;
+  card?: Card | null;
   open: boolean;
   onClose: () => void;
 }
 
 export function ImportStatementModal({
   wallet,
+  card,
   open,
   onClose,
 }: ImportStatementModalProps) {
@@ -94,7 +97,8 @@ export function ImportStatementModal({
     () => duplicateRows.filter((row) => row.selected).length,
     [duplicateRows],
   );
-  const walletGuidance = getWalletImportGuidance(wallet);
+  const walletGuidance = getWalletImportGuidance(wallet, card);
+  const importTargetName = card?.name || wallet?.name || "carteira";
 
   const updateRow = (
     sourceId: string,
@@ -117,6 +121,7 @@ export function ImportStatementModal({
       for (const file of selectedFiles) {
         const result = await previewImport.mutateAsync({
           walletId: wallet.id,
+          cardId: card?.id,
           file,
         });
         results.push(result);
@@ -172,6 +177,7 @@ export function ImportStatementModal({
     try {
       const result = await confirmImport.mutateAsync({
         walletId: wallet.id,
+        cardId: card?.id,
         rows: parsedRows,
       });
 
@@ -202,7 +208,7 @@ export function ImportStatementModal({
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-300">
               <FileSpreadsheet className="h-5 w-5" />
             </span>
-            Importar extrato para {wallet?.name || "carteira"}
+            Importar extrato para {importTargetName}
           </DialogTitle>
           <DialogDescription className="text-slate-300">
             {walletGuidance.description}
@@ -562,7 +568,20 @@ export function ImportStatementModal({
   );
 }
 
-function getWalletImportGuidance(wallet: Wallet | null) {
+function getWalletImportGuidance(wallet: Wallet | null, card?: Card | null) {
+  if (card) {
+    return {
+      title: "Importe a fatura do cartão e revise antes de salvar.",
+      description:
+        "As linhas importadas serão vinculadas ao cartão e entrarão na fatura, sem baixar o saldo da conta imediatamente.",
+      helper:
+        "Use OFX ou CSV da fatura. Compras, estornos e pagamentos entram como lançamentos de crédito associados ao cartão selecionado.",
+      filePrompt: "Selecione o OFX ou CSV da fatura do cartão.",
+      primary: "Fatura",
+      primaryHelper: "vinculada ao cartão",
+    };
+  }
+
   const walletName = wallet?.name?.toLowerCase() || "";
   const isMealVoucher = wallet?.type === "MEAL_VOUCHER";
   const isNubank = walletName.includes("nubank") || walletName.includes("nu ");
@@ -585,7 +604,7 @@ function getWalletImportGuidance(wallet: Wallet | null) {
       ? "Nubank entra por OFX, sempre com revisão antes de salvar."
       : "Importe OFX/CSV e revise cada linha antes de salvar.",
     description:
-      "Pluggy está fora do fluxo principal. O arquivo vira uma tabela editável para você decidir exatamente quais entradas e saídas entram.",
+      "O arquivo vira uma tabela editável para você decidir exatamente quais entradas e saídas entram.",
     helper:
       "Para o Nubank, exporte o OFX e importe aqui. Duplicidades começam desmarcadas, e categorias podem ser ajustadas antes da confirmação.",
     filePrompt: "Selecione o OFX do Nubank ou um CSV.",
@@ -597,7 +616,7 @@ function getWalletImportGuidance(wallet: Wallet | null) {
 function buildEditableBatchRows(previews: StatementImportPreview[]) {
   const seen = new Map<string, number>();
 
-  return previews.flatMap((preview) =>
+  const editableRows = previews.flatMap((preview) =>
     preview.rows.map((row) => {
       const duplicateKey = buildBatchDuplicateKey(row);
       const seenCount = seen.get(duplicateKey) || 0;
@@ -617,6 +636,51 @@ function buildEditableBatchRows(previews: StatementImportPreview[]) {
       };
     }),
   );
+
+  return groupRowsByDuplicateKey(editableRows);
+}
+
+function groupRowsByDuplicateKey(rows: EditableImportRow[]) {
+  const groups = new Map<
+    string,
+    {
+      firstIndex: number;
+      rows: EditableImportRow[];
+      hasConflict: boolean;
+    }
+  >();
+
+  rows.forEach((row, index) => {
+    const duplicateKey = buildBatchDuplicateKey(row);
+    const currentGroup = groups.get(duplicateKey);
+    const hasConflict =
+      row.batchDuplicate || row.duplicateMatches.length > 0;
+
+    if (currentGroup) {
+      currentGroup.rows.push(row);
+      currentGroup.hasConflict = currentGroup.hasConflict || hasConflict;
+      return;
+    }
+
+    groups.set(duplicateKey, {
+      firstIndex: index,
+      rows: [row],
+      hasConflict,
+    });
+  });
+
+  return Array.from(groups.values())
+    .sort((left, right) => {
+      const leftHasConflict = left.hasConflict || left.rows.length > 1;
+      const rightHasConflict = right.hasConflict || right.rows.length > 1;
+
+      if (leftHasConflict !== rightHasConflict) {
+        return leftHasConflict ? -1 : 1;
+      }
+
+      return left.firstIndex - right.firstIndex;
+    })
+    .flatMap((group) => group.rows);
 }
 
 function buildBatchDuplicateKey(row: StatementImportPreviewRow) {

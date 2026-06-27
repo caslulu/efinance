@@ -212,4 +212,59 @@ describe('StatementImportService', () => {
 
     jest.useRealTimers();
   });
+
+  it('should import card statement rows as credit card transactions', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-03-20T12:00:00.000Z'));
+
+    mockPrismaService.wallet.findUnique.mockResolvedValueOnce({
+      id: 1,
+      user_id: 1,
+      type: 'BANK',
+    });
+    mockPrismaService.card.findUnique
+      .mockResolvedValueOnce({
+        id: 10,
+        wallet_id: 1,
+        wallet: { user_id: 1 },
+      })
+      .mockResolvedValueOnce({
+        id: 10,
+        card_limit: 1000,
+      });
+    mockPrismaService.transaction.aggregate
+      .mockResolvedValueOnce({ _sum: { value: 0 } })
+      .mockResolvedValueOnce({ _sum: { value: 0 } });
+    mockPrismaService.transaction.create.mockResolvedValueOnce({ id: 201 });
+
+    const result = await service.confirmStatementImport(
+      1,
+      1,
+      [
+        {
+          transaction_date: '2026-03-10T12:00:00.000Z',
+          transaction_type: 'EXPENSE',
+          value: 45.9,
+          description: 'IFOOD',
+          category_id: 1,
+        },
+      ],
+      10,
+    );
+
+    expect(result).toEqual({
+      importedCount: 1,
+      failedCount: 0,
+      failures: [],
+    });
+    expect(mockPrismaService.transaction.create.mock.calls[0][0].data).toMatchObject({
+      card_id: 10,
+      payment_method: 'CREDIT',
+      wallet_id: 1,
+      transaction_type: 'EXPENSE',
+      value: 45.9,
+    });
+    expect(walletsService.addExpense).not.toHaveBeenCalled();
+
+    jest.useRealTimers();
+  });
 });

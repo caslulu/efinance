@@ -1,6 +1,5 @@
 generator client {
-  provider      = "prisma-client-js"
-  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "linux-musl-arm64-openssl-3.0.x"]
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -54,7 +53,6 @@ model User {
   isEmailVerified              Boolean                          @default(false)
   emailVerificationToken       String?
   emailVerificationTokenExpiry DateTime?
-  pluggy_enabled               Boolean                          @default(false)
   wallets                      Wallet[]
   wishlists                    Wishlist[]
   transactionCategories        TransactionCategory[]
@@ -74,10 +72,6 @@ model Wallet {
   type                 String
   order                Int                   @default(0)
   is_transfer_only     Boolean               @default(false)
-  pluggy_item_id       String?
-  pluggy_account_id    String?               @unique
-  external_source      String?
-  pluggy_last_sync_at  DateTime?
   transactions         Transaction[]
   investments          Investment[]
   subscriptions        Subscription[]
@@ -95,14 +89,9 @@ model Card {
   closing_day        Int
   due_day            Int
   card_limit         Decimal        @db.Decimal(10, 2)
-  external_id        String?        @unique
-  external_source    String?
-  pluggy_account_id  String?
-  pluggy_card_number String?
+  usable_limit       Decimal        @db.Decimal(10, 2)
   transactions       Transaction[]
   subscriptions      Subscription[]
-
-  @@index([pluggy_account_id])
 }
 
 model Transaction {
@@ -125,10 +114,6 @@ model Transaction {
   TransactionCategory TransactionCategory @relation(fields: [category_id], references: [id])
   subscription_id     Int?
   subscription        Subscription?       @relation("SubscriptionTransactions", fields: [subscription_id], references: [id])
-  external_id         String?             @unique
-  external_source     String?
-
-  @@index([external_source])
 }
 
 model Subscription {

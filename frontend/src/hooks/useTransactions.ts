@@ -81,18 +81,22 @@ export function usePreviewStatementImport() {
   return useMutation({
     mutationFn: async ({
       walletId,
+      cardId,
       file,
     }: {
       walletId: number;
+      cardId?: number;
       file: File;
     }) => {
       const formData = new FormData();
       formData.append("file", file);
+      const params = cardId ? { cardId } : undefined;
 
       const res = await api.post<StatementImportPreview>(
         `/transactions/import/${walletId}/preview`,
         formData,
         {
+          params,
           headers: {
             "Content-Type": "multipart/form-data",
           },
@@ -110,9 +114,11 @@ export function useConfirmStatementImport() {
   return useMutation({
     mutationFn: async ({
       walletId,
+      cardId,
       rows,
     }: {
       walletId: number;
+      cardId?: number;
       rows: Array<
         Pick<
           StatementImportPreviewRow,
@@ -128,7 +134,7 @@ export function useConfirmStatementImport() {
     }) => {
       const res = await api.post<StatementImportConfirmResponse>(
         `/transactions/import/${walletId}/confirm`,
-        { rows },
+        { cardId, rows },
       );
       return res.data;
     },

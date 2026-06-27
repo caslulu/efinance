@@ -113,7 +113,10 @@ export const WalletsPage = () => {
   const [createCardWalletId, setCreateCardWalletId] = useState<number | null>(null);
   const [editCard, setEditCard] = useState<Card | null>(null);
   const [payInvoiceCard, setPayInvoiceCard] = useState<Card | null>(null);
-  const [importWallet, setImportWallet] = useState<Wallet | null>(null);
+  const [importTarget, setImportTarget] = useState<{
+    wallet: Wallet;
+    card?: Card;
+  } | null>(null);
 
   const [transactionModal, setTransactionModal] = useState<{
     isOpen: boolean;
@@ -145,14 +148,6 @@ export const WalletsPage = () => {
 
   const getLinkedCreditWallet = (wallet: Wallet) => {
     if (wallet.type !== 'BANK') return undefined;
-    const pluggyMatch = wallets.find(
-      (candidate) =>
-        candidate.type === 'CREDIT_CARD' &&
-        candidate.pluggy_item_id &&
-        candidate.pluggy_item_id === wallet.pluggy_item_id,
-    );
-    if (pluggyMatch) return pluggyMatch;
-
     const creditWallets = wallets.filter((candidate) => candidate.type === 'CREDIT_CARD');
     const bankWallets = wallets.filter((candidate) => candidate.type === 'BANK');
     return creditWallets.length === 1 && bankWallets.length === 1 ? creditWallets[0] : undefined;
@@ -191,6 +186,11 @@ export const WalletsPage = () => {
       walletType,
       cardId: card.id,
     });
+  };
+
+  const openCardStatementImport = (card: Card, fallbackWallet: Wallet) => {
+    const cardWallet = wallets.find((wallet) => wallet.id === card.wallet_id) || fallbackWallet;
+    setImportTarget({ wallet: cardWallet, card });
   };
 
   useEffect(() => {
@@ -335,7 +335,8 @@ export const WalletsPage = () => {
                             onEditCard={(card) => setEditCard(card)}
                             onAddCardExpense={(card) => openCardExpense(card, wallet.type)}
                             onPayCardInvoice={(card) => setPayInvoiceCard(card)}
-                            onImportStatement={() => setImportWallet(wallet)}
+                            onImportCardStatement={(card) => openCardStatementImport(card, wallet)}
+                            onImportStatement={() => setImportTarget({ wallet })}
                           />
                         </div>
                       ))}
@@ -375,7 +376,12 @@ export const WalletsPage = () => {
       <CreateCardModal isOpen={!!createCardWalletId} walletId={createCardWalletId} onClose={() => setCreateCardWalletId(null)} onSuccess={refetchData} />
       <EditCardModal isOpen={!!editCard} card={editCard} onClose={() => setEditCard(null)} onSuccess={refetchData} onDelete={handleDeleteCard} />
       <PayInvoiceModal isOpen={!!payInvoiceCard} card={payInvoiceCard} onClose={() => setPayInvoiceCard(null)} onSuccess={refetchData} />
-      <ImportStatementModal wallet={importWallet} open={!!importWallet} onClose={() => setImportWallet(null)} />
+      <ImportStatementModal
+        wallet={importTarget?.wallet || null}
+        card={importTarget?.card || null}
+        open={!!importTarget}
+        onClose={() => setImportTarget(null)}
+      />
       <AddTransactionModal
         isOpen={transactionModal.isOpen}
         type={transactionModal.type}

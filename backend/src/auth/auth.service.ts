@@ -51,7 +51,13 @@ export class AuthService {
 
   async login(user: any, rememberMe = false) {
     if (!user.isEmailVerified) {
-      throw new UnauthorizedException('Email não verificado. Por favor, verifique seu email antes de logar.');
+      throw new UnauthorizedException({
+        message: 'Email não verificado. Verifique seu email para continuar.',
+        code: 'EMAIL_NOT_VERIFIED',
+        requiresEmailVerification: true,
+        userId: user.id,
+        email: user.email,
+      });
     }
 
     if (user.isTwoFactorEnabled) {
@@ -102,7 +108,38 @@ export class AuthService {
     }
 
     const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
-    const { fullName, birthDate, ...userData } = createUserDto;
+    const { fullName, birthDate } = createUserDto;
+    const userData = {
+      username: createUserDto.username,
+      email: createUserDto.email,
+    };
+
+    const existingUser = await this.usersService.findByEmail(createUserDto.email);
+    if (existingUser) {
+      if (existingUser.isEmailVerified) {
+        throw new BadRequestException('Este email já está cadastrado.');
+      }
+
+      const user = await this.usersService.updatePendingRegistration(existingUser.id, {
+        ...userData,
+        password: hashedPassword,
+        fullName,
+        birthDate: birthDate ? new Date(birthDate) : undefined,
+      });
+
+      if (isVerified) {
+        await this.usersService.markEmailAsVerified(user.id);
+      } else {
+        this.sendVerificationEmail(user).catch(err => this.logger.error('Failed to resend verification email asynchronously', err?.stack));
+      }
+
+      return {
+        message: isVerified ? 'Cadastro realizado com sucesso.' : 'Cadastro pendente encontrado. Enviamos um novo código de verificação.',
+        requiresEmailVerification: !isVerified,
+        userId: user.id,
+        email: user.email,
+      };
+    }
     
     const user = await this.usersService.create({
       ...userData,

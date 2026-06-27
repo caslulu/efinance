@@ -8,6 +8,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   Request,
   UploadedFile,
   UseGuards,
@@ -50,6 +51,7 @@ export class TransactionsController {
   previewImport(
     @Request() req,
     @Param('walletId', ParseIntPipe) walletId: number,
+    @Query('cardId') cardId: string | undefined,
     @UploadedFile() file: Express.Multer.File,
   ) {
     if (!file) {
@@ -60,6 +62,7 @@ export class TransactionsController {
       req.user.userId,
       walletId,
       file,
+      cardId ? Number(cardId) : undefined,
     );
   }
 
@@ -73,6 +76,7 @@ export class TransactionsController {
       req.user.userId,
       walletId,
       body.rows,
+      body.cardId,
     );
   }
 

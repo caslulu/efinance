@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { crypto } from '../utils/crypto-uuid';
 import { ConfirmStatementImportRowDto } from './dto/confirm-statement-import.dto';
 import { TransactionImpactService } from './transaction-impact.service';
+import { PAYMENT_METHODS, TRANSACTION_TYPES } from '../common/finance-constants';
 
 type ImportedStatementRow = {
   source_id: string;
@@ -444,6 +445,7 @@ export class StatementImportService {
     userId: number,
     walletId: number,
     rows: ImportedStatementRow[],
+    cardId?: number,
   ): Promise<Map<string, PreviewDuplicateMatch[]>> {
     if (rows.length === 0) {
       return new Map();
@@ -459,6 +461,7 @@ export class StatementImportService {
       where: {
         wallet_id: walletId,
         wallet: { user_id: userId },
+        ...(cardId !== undefined ? { card_id: cardId } : { card_id: null }),
         transaction_date: {
           gte: new Date(minDate),
           lte: new Date(maxDate),
@@ -528,19 +531,50 @@ export class StatementImportService {
     ].join('|');
   }
 
+  private async validateImportCard(
+    userId: number,
+    walletId: number,
+    cardId: number,
+  ) {
+    if (!Number.isInteger(cardId) || cardId <= 0) {
+      throw new BadRequestException('Cartão inválido para importação.');
+    }
+
+    const card = await this.prisma.card.findUnique({
+      where: { id: cardId },
+      select: {
+        id: true,
+        wallet_id: true,
+        wallet: { select: { user_id: true } },
+      },
+    });
+
+    if (!card || card.wallet.user_id !== userId || card.wallet_id !== walletId) {
+      throw new NotFoundException('Card not found');
+    }
+
+    return card;
+  }
+
   private async createImportedStatementTransaction(
     userId: number,
     wallet: { id: number; type: string },
     row: ConfirmStatementImportRowDto,
     installmentGroupIds: Map<string, string>,
+    cardId?: number,
   ) {
     const categoryId = await this.impact.resolveCategoryId(userId, row.category_id);
     const transactionDate = new Date(row.transaction_date);
     const isFuture = this.impact.isFutureDate(transactionDate);
+    const paymentMethod = cardId ? PAYMENT_METHODS.CREDIT : null;
     const installmentTotal =
       row.installment_total && row.installment_total > 1
         ? row.installment_total
         : 1;
+
+    if (cardId && row.transaction_type === TRANSACTION_TYPES.EXPENSE) {
+      await this.impact.validateCardLimit(cardId, row.value);
+    }
 
     let installmentId: string | null = null;
     if (installmentTotal > 1) {
@@ -558,6 +592,8 @@ export class StatementImportService {
         value: row.value,
         description: row.description || null,
         category_id: categoryId,
+        payment_method: paymentMethod,
+        card_id: cardId || null,
         installment_id: installmentId,
         installment_total: installmentTotal,
         installment_number: row.installment_number || 1,
@@ -569,7 +605,7 @@ export class StatementImportService {
       await this.impact.applyBalanceImpact({
         walletId: wallet.id,
         userId,
-        paymentMethod: null,
+        paymentMethod,
         walletType: wallet.type,
         transactionType: row.transaction_type,
         value: row.value,
@@ -584,6 +620,7 @@ export class StatementImportService {
     userId: number,
     walletId: number,
     file: Express.Multer.File,
+    cardId?: number,
   ) {
     const wallet = await this.prisma.wallet.findUnique({
       where: { id: walletId },
@@ -592,6 +629,10 @@ export class StatementImportService {
 
     if (!wallet || wallet.user_id !== userId) {
       throw new NotFoundException('Wallet not found');
+    }
+
+    if (cardId !== undefined) {
+      await this.validateImportCard(userId, walletId, cardId);
     }
 
     const fileName = file.originalname || 'statement';
@@ -621,6 +662,7 @@ export class StatementImportService {
       userId,
       walletId,
       validRows,
+      cardId,
     );
 
     const rows = validRows.map((row) => {
@@ -659,6 +701,7 @@ export class StatementImportService {
     userId: number,
     walletId: number,
     rows: ConfirmStatementImportRowDto[],
+    cardId?: number,
   ) {
     const wallet = await this.prisma.wallet.findUnique({
       where: { id: walletId },
@@ -667,6 +710,10 @@ export class StatementImportService {
 
     if (!wallet || wallet.user_id !== userId) {
       throw new NotFoundException('Wallet not found');
+    }
+
+    if (cardId !== undefined) {
+      await this.validateImportCard(userId, walletId, cardId);
     }
 
     if (!Array.isArray(rows) || rows.length === 0) {
@@ -684,6 +731,7 @@ export class StatementImportService {
           { id: wallet.id, type: wallet.type },
           row,
           installmentGroupIds,
+          cardId,
         );
         importedCount++;
       } catch (error) {

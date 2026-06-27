@@ -16,6 +16,7 @@ interface SortableWalletCardProps {
     onEditCard: (card: Card) => void;
     onAddCardExpense: (card: Card) => void;
     onPayCardInvoice: (card: Card) => void;
+    onImportCardStatement: (card: Card) => void;
     onImportStatement: () => void;
 }
 
@@ -29,6 +30,7 @@ export const SortableWalletCard: React.FC<SortableWalletCardProps> = ({
     onEditCard,
     onAddCardExpense,
     onPayCardInvoice,
+    onImportCardStatement,
     onImportStatement,
 }) => {
     const { data: cards = [] } = useCardsByWallet(wallet.id);
@@ -67,6 +69,7 @@ export const SortableWalletCard: React.FC<SortableWalletCardProps> = ({
                 onEditCard={onEditCard}
                 onAddCardExpense={onAddCardExpense}
                 onPayCardInvoice={onPayCardInvoice}
+                onImportCardStatement={onImportCardStatement}
                 onImportStatement={onImportStatement}
             />
         </div>

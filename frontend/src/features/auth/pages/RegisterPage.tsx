@@ -33,11 +33,15 @@ export const RegisterPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [isCapsLockOn, setIsCapsLockOn] = useState(false);
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
   const [userId, setUserId] = useState<number | null>(null);
+  const [resendTimer, setResendTimer] = useState(30);
+  const [canResend, setCanResend] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const [loading, setLoading] = useState(false);
   const [registerToken, setRegisterToken] = useState('');
 
@@ -58,6 +62,23 @@ export const RegisterPage = () => {
     if (tokenParam) setRegisterToken(tokenParam);
   }, [location]);
 
+  useEffect(() => {
+    if (!isVerifying || canResend) return;
+
+    const interval = setInterval(() => {
+      setResendTimer((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          setCanResend(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isVerifying, canResend]);
+
   const handleCapsLock = (e: React.KeyboardEvent) => {
     setIsCapsLockOn(e.getModifierState('CapsLock'));
   };
@@ -73,6 +94,7 @@ export const RegisterPage = () => {
 
     setLoading(true);
     setError('');
+    setSuccess('');
 
     try {
       const payload: {
@@ -94,6 +116,9 @@ export const RegisterPage = () => {
       } else {
         setUserId(res.data.userId);
         setIsVerifying(true);
+        setCanResend(false);
+        setResendTimer(30);
+        setSuccess(res.data.message || 'Enviamos um código de verificação para seu email.');
       }
     } catch (err) {
       setError(getErrorMessage(err, 'Falha no cadastro. Tente novamente.'));
@@ -108,15 +133,37 @@ export const RegisterPage = () => {
 
     setLoading(true);
     setError('');
+    setSuccess('');
 
     try {
       const res = await api.post('/auth/verify-email', { userId, token: verificationCode });
       login(res.data.access_token, { username });
       navigate('/', { state: { message: 'Conta verificada com sucesso!' } });
     } catch (err) {
-      setError('Código inválido ou expirado.');
+      setError(getErrorMessage(err, 'Código inválido ou expirado.'));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!userId || !canResend || isResending) return;
+
+    setIsResending(true);
+    setCanResend(false);
+    setResendTimer(30);
+    setError('');
+    setSuccess('');
+
+    try {
+      const res = await api.post('/auth/resend-verification', { userId });
+      setSuccess(res.data.message || 'Novo código enviado para seu email.');
+    } catch (err) {
+      setError(getErrorMessage(err, 'Falha ao reenviar código. Tente novamente.'));
+      setCanResend(true);
+      setResendTimer(0);
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -317,6 +364,11 @@ export const RegisterPage = () => {
                 {error}
               </div>
             )}
+            {success && (
+              <div className="mb-5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-3 text-sm text-emerald-300 reg-slide-up-d1">
+                {success}
+              </div>
+            )}
 
             {isVerifying ? (
               <form onSubmit={handleVerification} className="space-y-5">
@@ -334,12 +386,26 @@ export const RegisterPage = () => {
                       className="reg-input"
                       style={{ textAlign: 'center', fontSize: 20, letterSpacing: '0.3em' }}
                       value={verificationCode}
-                      onChange={(e) => setVerificationCode(e.target.value)}
+                      onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                       placeholder="000000"
                       maxLength={6}
                       required
                       autoFocus
                     />
+                  </div>
+                  <div className="text-center">
+                    <button
+                      type="button"
+                      onClick={handleResendVerification}
+                      disabled={!canResend || isResending}
+                      className="text-sm text-emerald-400/60 hover:text-emerald-400 transition-colors disabled:text-white/20 disabled:cursor-not-allowed"
+                    >
+                      {isResending
+                        ? 'Reenviando...'
+                        : canResend
+                          ? 'Reenviar código'
+                          : `Reenviar em ${resendTimer}s`}
+                    </button>
                   </div>
                 </div>
                 <div className="pt-2 reg-slide-up-d2">

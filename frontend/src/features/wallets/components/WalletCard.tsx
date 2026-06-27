@@ -31,6 +31,7 @@ interface WalletCardProps {
   onEditCard: (card: CardType) => void;
   onAddCardExpense: (card: CardType) => void;
   onPayCardInvoice: (card: CardType) => void;
+  onImportCardStatement: (card: CardType) => void;
   onImportStatement: () => void;
 }
 
@@ -113,6 +114,7 @@ export const WalletCard = ({
   onEditCard,
   onAddCardExpense,
   onPayCardInvoice,
+  onImportCardStatement,
   onImportStatement,
 }: WalletCardProps) => {
   const [isCardsExpanded, setIsCardsExpanded] = useState(false);
@@ -295,6 +297,7 @@ export const WalletCard = ({
                   onEdit={() => onEditCard(card)}
                   onAddExpense={() => onAddCardExpense(card)}
                   onPayInvoice={() => onPayCardInvoice(card)}
+                  onImportStatement={() => onImportCardStatement(card)}
                 />
               ))}
             </div>

@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsNumber, Min, Max } from 'class-validator';
+import { IsString, IsNotEmpty, IsNumber, IsOptional, Min, Max } from 'class-validator';
 
 export class CreateCardDto {
   @IsNumber()
@@ -26,4 +26,9 @@ export class CreateCardDto {
   @IsNumber()
   @Min(0)
   card_limit: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  usable_limit?: number;
 }

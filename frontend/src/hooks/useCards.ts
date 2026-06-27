@@ -19,7 +19,7 @@ export function useCreateCard() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: Omit<Card, 'id' | 'current_invoice' | 'due_invoice' | 'total_invoice' | 'available_limit'>) => {
+    mutationFn: async (data: Omit<Card, 'id' | 'current_invoice' | 'due_invoice' | 'total_invoice' | 'committed_limit' | 'available_limit'>) => {
       const res = await api.post('/cards', data);
       return res.data;
     },

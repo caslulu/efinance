@@ -1,6 +1,10 @@
 node_modules/
 */node_modules/
 
+.claude/
+.opencode/
+.playwright-cli/
+
 dist/
 build/
 out/
@@ -29,6 +33,11 @@ lazy-lock.json
 
 .vite/
 *.local
+
+backend/prisma/migrations/
+backend/uploads/
+frontend/playwright-report/
+frontend/test-results/
 
 *.db
 *.sqlite

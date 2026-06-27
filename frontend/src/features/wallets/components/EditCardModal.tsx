@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { useUpdateCard } from '../../../hooks/useCards';
 import type { Card } from '../../../types/Card';
+import { formatCurrency, getErrorMessage } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
@@ -51,6 +52,7 @@ export const EditCardModal = ({
   const [closingDay, setClosingDay] = useState('');
   const [dueDay, setDueDay] = useState('');
   const [cardLimit, setCardLimit] = useState('');
+  const [usableLimit, setUsableLimit] = useState('');
   
   const updateCard = useUpdateCard();
 
@@ -61,8 +63,35 @@ export const EditCardModal = ({
       setClosingDay(String(card.closing_day));
       setDueDay(String(card.due_day));
       setCardLimit(String(card.card_limit));
+      setUsableLimit(String(card.usable_limit ?? card.card_limit));
     }
   }, [card]);
+
+  const approvedLimit = Number(cardLimit || 0);
+  const committedLimit = useMemo(
+    () => Math.max(0, Number(card?.committed_limit ?? card?.total_invoice ?? 0)),
+    [card],
+  );
+  const activeLimit = Number(usableLimit || 0);
+  const sliderMax = Math.max(0, approvedLimit);
+  const sliderMin = Math.min(committedLimit, sliderMax);
+  const isLimitLocked = committedLimit > approvedLimit;
+  const remainingLimit = Math.max(0, activeLimit - committedLimit);
+
+  const updateApprovedLimit = (value: string) => {
+    setCardLimit(value);
+    const nextApproved = Number(value || 0);
+    const currentUsable = Number(usableLimit || 0);
+    if (currentUsable > nextApproved) {
+      setUsableLimit(String(nextApproved));
+    }
+  };
+
+  const updateUsableLimit = (value: string) => {
+    const parsed = Number(value || 0);
+    const clamped = Math.min(Math.max(parsed, committedLimit), approvedLimit);
+    setUsableLimit(String(Number.isFinite(clamped) ? clamped : 0));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,13 +106,14 @@ export const EditCardModal = ({
           closing_day: Number(closingDay),
           due_day: Number(dueDay),
           card_limit: Number(cardLimit),
+          usable_limit: Number(usableLimit),
         }
       });
       toast.success('Cartão atualizado!');
       onSuccess();
       onClose();
-    } catch {
-      toast.error('Falha ao atualizar cartão');
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Falha ao atualizar cartão'));
     }
   };
 
@@ -152,9 +182,55 @@ export const EditCardModal = ({
             <CurrencyInput
               id="editCardLimit"
               value={cardLimit}
-              onValueChange={setCardLimit}
+              onValueChange={updateApprovedLimit}
               required
             />
+          </div>
+          <div className="rounded-lg border border-border/70 bg-muted/30 p-4">
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div>
+                <Label htmlFor="editUsableLimit">Limite disponível para uso</Label>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Ajuste quanto deste cartão pode ficar liberado agora.
+                </p>
+              </div>
+              <span className="text-sm font-bold text-foreground">
+                {formatCurrency(activeLimit)}
+              </span>
+            </div>
+
+            <input
+              id="editUsableLimit"
+              type="range"
+              min={sliderMin}
+              max={sliderMax}
+              step="10"
+              value={Math.min(Math.max(activeLimit, sliderMin), sliderMax)}
+              disabled={isLimitLocked || sliderMax <= 0}
+              onChange={(event) => updateUsableLimit(event.target.value)}
+              className="h-2 w-full cursor-pointer appearance-none rounded-full bg-muted accent-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+            />
+
+            <div className="mt-3 grid grid-cols-3 gap-2 text-[11px]">
+              <div>
+                <p className="font-semibold uppercase tracking-wide text-muted-foreground/70">Comprometido</p>
+                <p className="font-bold text-foreground">{formatCurrency(committedLimit)}</p>
+              </div>
+              <div>
+                <p className="font-semibold uppercase tracking-wide text-muted-foreground/70">Restante</p>
+                <p className="font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(remainingLimit)}</p>
+              </div>
+              <div>
+                <p className="font-semibold uppercase tracking-wide text-muted-foreground/70">Aprovado</p>
+                <p className="font-bold text-foreground">{formatCurrency(approvedLimit)}</p>
+              </div>
+            </div>
+
+            {isLimitLocked && (
+              <p className="mt-3 rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+                O valor já comprometido está acima do limite aprovado. Aumente o limite aprovado para salvar novos ajustes.
+              </p>
+            )}
           </div>
           <DialogFooter className="flex justify-between">
             <Button

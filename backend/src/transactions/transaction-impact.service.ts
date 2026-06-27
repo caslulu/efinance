@@ -79,9 +79,10 @@ export class TransactionImpactService {
 
     const used =
       Number(totalExp._sum.value || 0) - Number(totalInc._sum.value || 0);
-    if (used + incomingExpenseValue > Number(card.card_limit)) {
+    const activeLimit = Number(card.usable_limit ?? card.card_limit);
+    if (used + incomingExpenseValue > activeLimit) {
       throw new BadRequestException(
-        `Limite do cartão excedido. Limite disponível: R$ ${(Number(card.card_limit) - used).toFixed(2)}`,
+        `Limite do cartão excedido. Limite disponível: R$ ${(activeLimit - used).toFixed(2)}`,
       );
     }
   }

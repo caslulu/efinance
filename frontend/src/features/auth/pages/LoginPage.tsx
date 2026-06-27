@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { api } from '../../../api/api';
+import { getErrorMessage } from '@/lib/utils';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, ArrowRight, Lock } from 'lucide-react';
 import { FcGoogle } from 'react-icons/fc';
+import { AxiosError } from 'axios';
 
 const defaultApiUrl = `${window.location.protocol}//${window.location.hostname}:3000`;
 const authBaseUrl = (import.meta.env.VITE_API_URL || defaultApiUrl).replace(/\/+$/, '');
@@ -13,6 +15,9 @@ export const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [twoFactorToken, setTwoFactorToken] = useState('');
   const [requires2FA, setRequires2FA] = useState(false);
+  const [requiresEmailVerification, setRequiresEmailVerification] = useState(false);
+  const [emailVerificationCode, setEmailVerificationCode] = useState('');
+  const [emailVerificationAddress, setEmailVerificationAddress] = useState('');
   const [userId, setUserId] = useState<number | null>(null);
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -59,7 +64,7 @@ export const LoginPage = () => {
   }, [location]);
 
   useEffect(() => {
-    if (!requires2FA || canResend) return;
+    if ((!requires2FA && !requiresEmailVerification) || canResend) return;
 
     const interval = setInterval(() => {
       setResendTimer((prev) => {
@@ -73,18 +78,21 @@ export const LoginPage = () => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [requires2FA, canResend]);
+  }, [requires2FA, requiresEmailVerification, canResend]);
 
   const handleResend = async () => {
     if (!userId) return;
     setCanResend(false);
     setResendTimer(30);
     setError('');
+    setSuccess('');
     try {
-      await api.post('/auth/2fa/resend', { userId });
+      await api.post(requiresEmailVerification ? '/auth/resend-verification' : '/auth/2fa/resend', { userId });
       setSuccess('Novo código enviado para seu email.');
-    } catch {
-      setError('Falha ao reenviar código. Tente novamente.');
+    } catch (err) {
+      setError(getErrorMessage(err, 'Falha ao reenviar código. Tente novamente.'));
+      setCanResend(true);
+      setResendTimer(0);
     }
   };
 
@@ -118,16 +126,41 @@ export const LoginPage = () => {
       return;
     }
 
+    if (requiresEmailVerification) {
+      try {
+        const res = await api.post('/auth/verify-email', { userId, token: emailVerificationCode });
+        login(res.data.access_token, { username });
+        navigate('/', { state: { message: 'Conta verificada com sucesso!' } });
+      } catch (err) {
+        setError(getErrorMessage(err, 'Código inválido ou expirado.'));
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     try {
       const res = await api.post('/auth/login', { username, password, rememberMe });
       if (res.data.requires2FA) {
         setRequires2FA(true);
         setUserId(res.data.id);
+        setCanResend(false);
+        setResendTimer(30);
         setSuccess('Um código de verificação foi enviado para seu email.');
       } else {
         login(res.data.access_token, { username });
       }
     } catch (err) {
+      if (err instanceof AxiosError && err.response?.data?.code === 'EMAIL_NOT_VERIFIED') {
+        setRequiresEmailVerification(true);
+        setRequires2FA(false);
+        setUserId(err.response.data.userId);
+        setEmailVerificationAddress(err.response.data.email || username);
+        setCanResend(true);
+        setResendTimer(0);
+        setSuccess('Sua conta ainda precisa ser verificada. Digite o código enviado para seu email.');
+        return;
+      }
       setError('Falha no login. Verifique suas credenciais.');
     } finally {
       setLoading(false);
@@ -319,10 +352,10 @@ export const LoginPage = () => {
 
             <div className="login-slide-up">
               <h2 className="login-display text-[1.85rem] text-white/90 mb-1">
-                {requires2FA ? 'Verificação' : 'Bem-vindo de volta'}
+                {requires2FA || requiresEmailVerification ? 'Verificação' : 'Bem-vindo de volta'}
               </h2>
               <p className="text-white/30 text-sm mb-8">
-                {requires2FA
+                {requires2FA || requiresEmailVerification
                   ? 'Digite o código enviado para seu email'
                   : 'Entre na sua conta para continuar'}
               </p>
@@ -340,7 +373,7 @@ export const LoginPage = () => {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-5">
-              {!requires2FA ? (
+              {!requires2FA && !requiresEmailVerification ? (
                 <>
                   {/* Username / Email */}
                   <div className="space-y-2 login-slide-up-d1">
@@ -442,22 +475,34 @@ export const LoginPage = () => {
                   </div>
                 </>
               ) : (
-                /* 2FA code entry */
                 <div className="space-y-4 login-slide-up-d1">
+                  {requiresEmailVerification && emailVerificationAddress && (
+                    <p className="text-sm text-white/40 text-center">
+                      Enviamos um código de verificação para{' '}
+                      <span className="text-emerald-300/80">{emailVerificationAddress}</span>.
+                    </p>
+                  )}
                   <div className="space-y-2">
                     <label
-                      htmlFor="2fa"
+                      htmlFor={requiresEmailVerification ? 'email-code' : '2fa'}
                       className="text-[11px] font-medium text-white/40 uppercase tracking-wider"
                     >
                       Código de Verificação
                     </label>
                     <input
-                      id="2fa"
+                      id={requiresEmailVerification ? 'email-code' : '2fa'}
                       type="text"
                       className="login-input"
                       style={{ textAlign: 'center', fontSize: 20, letterSpacing: '0.3em' }}
-                      value={twoFactorToken}
-                      onChange={(e) => setTwoFactorToken(e.target.value)}
+                      value={requiresEmailVerification ? emailVerificationCode : twoFactorToken}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                        if (requiresEmailVerification) {
+                          setEmailVerificationCode(value);
+                        } else {
+                          setTwoFactorToken(value);
+                        }
+                      }}
                       placeholder="000000"
                       maxLength={6}
                       required
@@ -483,7 +528,7 @@ export const LoginPage = () => {
                   <span className="flex items-center justify-center gap-2">
                     {loading
                       ? 'Processando...'
-                      : requires2FA
+                      : requires2FA || requiresEmailVerification
                         ? 'Verificar'
                         : 'Entrar'}
                     {!loading && <ArrowRight size={16} />}
@@ -492,7 +537,7 @@ export const LoginPage = () => {
               </div>
             </form>
 
-            {!requires2FA && (
+            {!requires2FA && !requiresEmailVerification && (
               <>
                 {/* Divider */}
                 <div className="relative my-7 login-slide-up-d4">
