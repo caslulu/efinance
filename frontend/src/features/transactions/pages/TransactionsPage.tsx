@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { toast } from 'sonner';
+import { advanceRecurringDate } from '@/lib/recurrence';
 
 export const TransactionsPage = () => {
   const { data: transactions = [], isLoading: loadingTx, refetch: refetchTransactions } = useTransactions();
@@ -79,35 +80,12 @@ export const TransactionsPage = () => {
               : undefined,
           });
         }
-        let nextDate: Date;
         const originalDay = new Date(sub.next_billing_date).getDate();
-        switch (sub.frequency) {
-          case 'WEEKLY':
-            nextDate = new Date(currentDate);
-            nextDate.setDate(nextDate.getDate() + 7);
-            break;
-          case 'MONTHLY': {
-            nextDate = new Date(currentDate);
-            nextDate.setMonth(nextDate.getMonth() + 1);
-            const maxDay = new Date(nextDate.getFullYear(), nextDate.getMonth() + 1, 0).getDate();
-            nextDate.setDate(Math.min(originalDay, maxDay));
-            break;
-          }
-          case 'QUARTERLY': {
-            nextDate = new Date(currentDate);
-            nextDate.setMonth(nextDate.getMonth() + 3);
-            const maxDayQ = new Date(nextDate.getFullYear(), nextDate.getMonth() + 1, 0).getDate();
-            nextDate.setDate(Math.min(originalDay, maxDayQ));
-            break;
-          }
-          case 'YEARLY':
-            nextDate = new Date(currentDate);
-            nextDate.setFullYear(nextDate.getFullYear() + 1);
-            break;
-          default:
-            nextDate = new Date(currentDate);
-        }
-        currentDate = nextDate;
+        currentDate = advanceRecurringDate(
+          currentDate,
+          sub.frequency,
+          originalDay,
+        );
       }
     });
 
@@ -173,7 +151,16 @@ export const TransactionsPage = () => {
       current: sortedGroups.find(g => g.orderKey === currentOrderKey) || null,
       future: sortedGroups.filter(g => g.orderKey > currentOrderKey)
     };
-  }, [transactions, subscriptions, searchTerm, filterCategory, filterWallet, filterType]);
+  }, [
+    transactions,
+    subscriptions,
+    searchTerm,
+    filterCategory,
+    filterWallet,
+    filterType,
+    filterStartDate,
+    filterEndDate,
+  ]);
 
   // Expand current month by default ONLY ONCE on load
   useEffect(() => {

@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { WalletsService } from '../wallets/wallets.service';
 
 const mockPrismaService = {
+  $transaction: jest.fn(),
   transaction: {
     create: jest.fn(),
     createMany: jest.fn(),
@@ -51,6 +52,9 @@ describe('StatementImportService', () => {
     walletsService = module.get<WalletsService>(WalletsService);
 
     jest.clearAllMocks();
+    mockPrismaService.$transaction.mockImplementation((callback) =>
+      callback(mockPrismaService),
+    );
     mockPrismaService.transaction.findMany.mockResolvedValue([]);
     mockPrismaService.transactionCategory.findUnique.mockResolvedValue({
       id: 1,
@@ -182,6 +186,7 @@ describe('StatementImportService', () => {
       failures: [],
     });
     expect(prisma.transaction.create).toHaveBeenCalledTimes(3);
+    expect(mockPrismaService.$transaction).toHaveBeenCalledTimes(3);
     expect(prisma.transaction.createMany).not.toHaveBeenCalled();
 
     const firstCall =
@@ -206,8 +211,10 @@ describe('StatementImportService', () => {
       installment_total: 10,
       installment_number: 4,
     });
-    expect(secondCall.installment_id).toBeTruthy();
-    expect(thirdCall.installment_id).toBe(secondCall.installment_id);
+    expect(secondCall.installment_group_id).toBeTruthy();
+    expect(thirdCall.installment_group_id).toBe(
+      secondCall.installment_group_id,
+    );
     expect(walletsService.addExpense).toHaveBeenCalledTimes(2);
 
     jest.useRealTimers();
@@ -256,7 +263,9 @@ describe('StatementImportService', () => {
       failedCount: 0,
       failures: [],
     });
-    expect(mockPrismaService.transaction.create.mock.calls[0][0].data).toMatchObject({
+    expect(
+      mockPrismaService.transaction.create.mock.calls[0][0].data,
+    ).toMatchObject({
       card_id: 10,
       payment_method: 'CREDIT',
       wallet_id: 1,
@@ -264,6 +273,106 @@ describe('StatementImportService', () => {
       value: 45.9,
     });
     expect(walletsService.addExpense).not.toHaveBeenCalled();
+
+    jest.useRealTimers();
+  });
+
+  it('should import direct meal-voucher rows as credit transactions and debit immediately', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-03-20T12:00:00.000Z'));
+
+    mockPrismaService.wallet.findUnique.mockResolvedValueOnce({
+      id: 1,
+      user_id: 1,
+      type: 'MEAL_VOUCHER',
+    });
+    mockPrismaService.transaction.create.mockResolvedValueOnce({ id: 301 });
+
+    const result = await service.confirmStatementImport(1, 1, [
+      {
+        transaction_date: '2026-03-10T12:00:00.000Z',
+        transaction_type: 'EXPENSE',
+        value: 45.9,
+        description: 'IFOOD',
+        category_id: 1,
+      },
+    ]);
+
+    expect(result).toEqual({
+      importedCount: 1,
+      failedCount: 0,
+      failures: [],
+    });
+    expect(
+      mockPrismaService.transaction.create.mock.calls[0][0].data,
+    ).toMatchObject({
+      card_id: null,
+      payment_method: 'CREDIT',
+      wallet_id: 1,
+      transaction_type: 'EXPENSE',
+      value: 45.9,
+    });
+    expect(walletsService.addExpense).toHaveBeenCalledWith(
+      1,
+      1,
+      45.9,
+      mockPrismaService,
+    );
+
+    jest.useRealTimers();
+  });
+
+  it('should debit meal-voucher card imports immediately without validating card limit', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-03-20T12:00:00.000Z'));
+
+    mockPrismaService.wallet.findUnique.mockResolvedValueOnce({
+      id: 1,
+      user_id: 1,
+      type: 'MEAL_VOUCHER',
+    });
+    mockPrismaService.card.findUnique.mockResolvedValueOnce({
+      id: 10,
+      wallet_id: 1,
+      wallet: { user_id: 1 },
+    });
+    mockPrismaService.transaction.create.mockResolvedValueOnce({ id: 301 });
+
+    const result = await service.confirmStatementImport(
+      1,
+      1,
+      [
+        {
+          transaction_date: '2026-03-10T12:00:00.000Z',
+          transaction_type: 'EXPENSE',
+          value: 45.9,
+          description: 'IFOOD',
+          category_id: 1,
+        },
+      ],
+      10,
+    );
+
+    expect(result).toEqual({
+      importedCount: 1,
+      failedCount: 0,
+      failures: [],
+    });
+    expect(
+      mockPrismaService.transaction.create.mock.calls[0][0].data,
+    ).toMatchObject({
+      card_id: 10,
+      payment_method: 'CREDIT',
+      wallet_id: 1,
+      transaction_type: 'EXPENSE',
+      value: 45.9,
+    });
+    expect(mockPrismaService.card.findUnique).toHaveBeenCalledTimes(1);
+    expect(mockPrismaService.transaction.aggregate).not.toHaveBeenCalled();
+    expect(walletsService.addExpense).toHaveBeenCalledWith(
+      1,
+      1,
+      45.9,
+      mockPrismaService,
+    );
 
     jest.useRealTimers();
   });

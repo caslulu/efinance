@@ -15,7 +15,8 @@ export interface Transaction {
   payment_method?: string;
   installment_total?: number;
   installment_number?: number;
-  installment_id?: string;
+  installment_group_id?: string;
+  recurrence_id?: string;
   subscription_id?: number;
   is_processed?: boolean;
   TransactionCategory?: Category;

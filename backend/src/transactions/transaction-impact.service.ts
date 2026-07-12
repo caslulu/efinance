@@ -5,6 +5,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { WalletsService } from '../wallets/wallets.service';
+import { Prisma } from '@prisma/client';
+import { addMonthsSafe } from '../common/finance-date';
 import {
   isImmediateDebit,
   PAYMENT_METHODS,
@@ -36,28 +38,23 @@ export class TransactionImpactService {
    * of the target month (Jan 31 + 1 month → Feb 28, not Mar 3).
    */
   addMonthsSafe(startDate: Date, monthsToAdd: number): Date {
-    const result = new Date(startDate);
-    const originalDay = startDate.getDate();
-    result.setMonth(startDate.getMonth() + monthsToAdd);
-    if (result.getDate() !== originalDay) {
-      result.setDate(0);
-    }
-    return result;
+    return addMonthsSafe(startDate, monthsToAdd);
   }
 
   async validateCardLimit(
     cardId: number,
     incomingExpenseValue: number,
     currentTransactionIdToExclude?: number,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
   ) {
-    const card = await this.prisma.card.findUnique({ where: { id: cardId } });
+    const card = await db.card.findUnique({ where: { id: cardId } });
     if (!card) return;
 
     const exclude = currentTransactionIdToExclude
       ? { id: { not: currentTransactionIdToExclude } }
       : {};
 
-    const totalExp = await this.prisma.transaction.aggregate({
+    const totalExp = await db.transaction.aggregate({
       where: {
         card_id: cardId,
         transaction_type: TRANSACTION_TYPES.EXPENSE,
@@ -67,7 +64,7 @@ export class TransactionImpactService {
       _sum: { value: true },
     });
 
-    const totalInc = await this.prisma.transaction.aggregate({
+    const totalInc = await db.transaction.aggregate({
       where: {
         card_id: cardId,
         transaction_type: TRANSACTION_TYPES.INCOME,
@@ -95,20 +92,21 @@ export class TransactionImpactService {
   async resolveCategoryId(
     userId: number,
     categoryId?: number,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
   ): Promise<number> {
     if (!categoryId) {
-      const defaultCategory = await this.prisma.transactionCategory.findFirst({
+      const defaultCategory = await db.transactionCategory.findFirst({
         where: { user_id: userId, name: 'Outro' },
       });
       if (defaultCategory) return defaultCategory.id;
 
-      const newCategory = await this.prisma.transactionCategory.create({
+      const newCategory = await db.transactionCategory.create({
         data: { name: 'Outro', user_id: userId },
       });
       return newCategory.id;
     }
 
-    const category = await this.prisma.transactionCategory.findUnique({
+    const category = await db.transactionCategory.findUnique({
       where: { id: categoryId },
     });
     if (!category || category.user_id !== userId) {
@@ -130,6 +128,7 @@ export class TransactionImpactService {
     transactionType: string;
     value: number;
     mode: 'apply' | 'revert';
+    db?: Prisma.TransactionClient | PrismaService;
   }): Promise<void> {
     if (!isImmediateDebit(params.paymentMethod, params.walletType)) return;
     const addsToWallet =
@@ -142,12 +141,14 @@ export class TransactionImpactService {
         params.walletId,
         params.userId,
         params.value,
+        params.db,
       );
     } else {
       await this.walletsService.addExpense(
         params.walletId,
         params.userId,
         params.value,
+        params.db,
       );
     }
   }

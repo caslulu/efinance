@@ -3,10 +3,12 @@ import {
   Body,
   Controller,
   Delete,
+  DefaultValuePipe,
   Get,
   Param,
   ParseIntPipe,
   Patch,
+  ParseEnumPipe,
   Post,
   Query,
   Request,
@@ -17,7 +19,10 @@ import {
 import { TransactionsService } from './transactions.service';
 import { StatementImportService } from './statement-import.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
-import { UpdateTransactionDto } from './dto/update-transaction.dto';
+import {
+  TransactionSeriesScope,
+  UpdateTransactionDto,
+} from './dto/update-transaction.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -104,7 +109,16 @@ export class TransactionsController {
   }
 
   @Delete(':id')
-  remove(@Request() req, @Param('id', ParseIntPipe) id: number) {
-    return this.transactionsService.remove(id, req.user.userId);
+  remove(
+    @Request() req,
+    @Param('id', ParseIntPipe) id: number,
+    @Query(
+      'scope',
+      new DefaultValuePipe(TransactionSeriesScope.THIS),
+      new ParseEnumPipe(TransactionSeriesScope),
+    )
+    scope: TransactionSeriesScope,
+  ) {
+    return this.transactionsService.remove(id, req.user.userId, scope);
   }
 }

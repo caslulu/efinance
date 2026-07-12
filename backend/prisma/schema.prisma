@@ -106,7 +106,8 @@ model Transaction {
   description         String?
   is_recurring        Boolean
   value               Decimal             @db.Decimal(10, 2)
-  installment_id      String?
+  installment_group_id String?
+  recurrence_id        String?
   installment_total   Int?
   installment_number  Int?
   is_processed        Boolean             @default(true)
@@ -114,6 +115,17 @@ model Transaction {
   TransactionCategory TransactionCategory @relation(fields: [category_id], references: [id])
   subscription_id     Int?
   subscription        Subscription?       @relation("SubscriptionTransactions", fields: [subscription_id], references: [id])
+  financial_event_id  String?
+  event_type           String?
+
+  @@index([financial_event_id])
+  @@index([installment_group_id])
+  @@index([recurrence_id])
+  @@index([wallet_id, transaction_date])
+  @@index([card_id, transaction_date])
+  @@index([subscription_id])
+  @@index([is_processed, transaction_date])
+  @@index([category_id, transaction_date])
 }
 
 model Subscription {

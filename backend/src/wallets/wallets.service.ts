@@ -1,8 +1,13 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { CreateWalletDto } from './dto/create-wallet.dto';
 import { UpdateWalletDto } from './dto/update-wallet.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { Decimal } from '@prisma/client/runtime/library';
+import { Prisma } from '@prisma/client';
 import { InvestmentPortfolioService } from '../investments/investment-portfolio.service';
 
 @Injectable()
@@ -10,7 +15,7 @@ export class WalletsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly investmentPortfolioService: InvestmentPortfolioService,
-  ) { }
+  ) {}
 
   async create(userId: number, createWalletDto: CreateWalletDto) {
     return this.prisma.wallet.create({
@@ -41,18 +46,29 @@ export class WalletsService {
       throw new NotFoundException(`Wallet #${id} not found`);
     }
 
-    const [enrichedWallet] = await this.enrichWalletsWithInvestmentMetrics(userId, [wallet]);
+    const [enrichedWallet] = await this.enrichWalletsWithInvestmentMetrics(
+      userId,
+      [wallet],
+    );
     return enrichedWallet;
   }
 
-  async addIncoming(id: number, userId: number, amount: number) {
+  async addIncoming(
+    id: number,
+    userId: number,
+    amount: number,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
     if (amount <= 0) {
       throw new BadRequestException('Amount must be positive');
     }
 
-    await this.findOne(id, userId);
+    const wallet = await db.wallet.findUnique({ where: { id } });
+    if (!wallet || wallet.user_id !== userId) {
+      throw new NotFoundException(`Wallet #${id} not found`);
+    }
 
-    return this.prisma.wallet.update({
+    return db.wallet.update({
       where: { id },
       data: {
         actual_cash: {
@@ -62,32 +78,36 @@ export class WalletsService {
     });
   }
 
-  async addExpense(id: number, userId: number, amount: number) {
+  async addExpense(
+    id: number,
+    userId: number,
+    amount: number,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
     if (amount <= 0) {
       throw new BadRequestException('Amount must be positive');
     }
 
-    // Use raw findOne to avoid recursion/overhead in internal call, 
-    // but check balance logic manually if needed.
-    // Actually, simply using prisma.wallet.findUnique is enough as validation is simple.
-    const wallet = await this.prisma.wallet.findUnique({ where: { id } });
-    if (!wallet || wallet.user_id !== userId) throw new NotFoundException(`Wallet #${id} not found`);
+    const debit = await db.wallet.updateMany({
+      where: {
+        id,
+        user_id: userId,
+        actual_cash: { gte: amount },
+      },
+      data: {
+        actual_cash: { decrement: amount },
+      },
+    });
 
-    const currentBalance = new Decimal(wallet.actual_cash);
-    const expenseAmount = new Decimal(amount);
-
-    if (currentBalance.lessThan(expenseAmount)) {
+    if (debit.count === 0) {
+      const wallet = await db.wallet.findUnique({ where: { id } });
+      if (!wallet || wallet.user_id !== userId) {
+        throw new NotFoundException(`Wallet #${id} not found`);
+      }
       throw new BadRequestException('Insufficient funds in wallet');
     }
 
-    return this.prisma.wallet.update({
-      where: { id },
-      data: {
-        actual_cash: {
-          decrement: amount,
-        },
-      },
-    });
+    return db.wallet.findUniqueOrThrow({ where: { id } });
   }
 
   async update(id: number, userId: number, updateWalletDto: UpdateWalletDto) {
@@ -105,15 +125,20 @@ export class WalletsService {
 
   async transfer(userId: number, fromId: number, toId: number, amount: number) {
     if (amount <= 0) throw new BadRequestException('Amount must be positive');
-    if (fromId === toId) throw new BadRequestException('Source and destination wallets must be different');
+    if (fromId === toId)
+      throw new BadRequestException(
+        'Source and destination wallets must be different',
+      );
 
     const [fromWallet, toWallet] = await Promise.all([
       this.prisma.wallet.findUnique({ where: { id: fromId } }),
       this.prisma.wallet.findUnique({ where: { id: toId } }),
     ]);
 
-    if (!fromWallet || fromWallet.user_id !== userId) throw new NotFoundException(`Source wallet #${fromId} not found`);
-    if (!toWallet || toWallet.user_id !== userId) throw new NotFoundException(`Destination wallet #${toId} not found`);
+    if (!fromWallet || fromWallet.user_id !== userId)
+      throw new NotFoundException(`Source wallet #${fromId} not found`);
+    if (!toWallet || toWallet.user_id !== userId)
+      throw new NotFoundException(`Destination wallet #${toId} not found`);
 
     if (new Decimal(fromWallet.actual_cash).lessThan(new Decimal(amount))) {
       throw new BadRequestException('Insufficient funds in source wallet');
@@ -121,12 +146,12 @@ export class WalletsService {
 
     // Default Category for Transfers
     let transferCategory = await this.prisma.transactionCategory.findFirst({
-      where: { user_id: userId, name: 'Transferência' }
+      where: { user_id: userId, name: 'Transferência' },
     });
 
     if (!transferCategory) {
       transferCategory = await this.prisma.transactionCategory.create({
-        data: { name: 'Transferência', user_id: userId }
+        data: { name: 'Transferência', user_id: userId },
       });
     }
 
@@ -134,12 +159,12 @@ export class WalletsService {
       // 1. Update Balances
       await tx.wallet.update({
         where: { id: fromId },
-        data: { actual_cash: { decrement: amount } }
+        data: { actual_cash: { decrement: amount } },
       });
 
       await tx.wallet.update({
         where: { id: toId },
-        data: { actual_cash: { increment: amount } }
+        data: { actual_cash: { increment: amount } },
       });
 
       // 2. Create Transactions
@@ -155,7 +180,7 @@ export class WalletsService {
           payment_method: 'TRANSFER',
           transaction_date: new Date(),
           is_recurring: false,
-        }
+        },
       });
 
       await tx.transaction.create({
@@ -168,7 +193,7 @@ export class WalletsService {
           payment_method: 'TRANSFER',
           transaction_date: new Date(),
           is_recurring: false,
-        }
+        },
       });
 
       return { message: 'Transfer completed successfully' };
@@ -189,7 +214,9 @@ export class WalletsService {
     });
 
     if (existingWallets.length !== walletIds.length) {
-      throw new BadRequestException('Um ou mais wallets não encontrados ou não pertencem ao usuário.');
+      throw new BadRequestException(
+        'Um ou mais wallets não encontrados ou não pertencem ao usuário.',
+      );
     }
 
     await this.prisma.$transaction(
@@ -197,28 +224,38 @@ export class WalletsService {
         this.prisma.wallet.update({
           where: { id: w.id },
           data: { order: w.order },
-        })
-      )
+        }),
+      ),
     );
 
     return { message: 'Wallets reordenados com sucesso' };
   }
 
-  private async enrichWalletsWithInvestmentMetrics<T extends {
-    id: number;
-    type: string;
-    actual_cash: Decimal;
-  }>(userId: number, wallets: T[]): Promise<Array<T & {
-    portfolioValue?: number;
-    availableCash?: number;
-    positionsCount?: number;
-    displayValue?: number;
-  }>> {
+  private async enrichWalletsWithInvestmentMetrics<
+    T extends {
+      id: number;
+      type: string;
+      actual_cash: Decimal;
+    },
+  >(
+    userId: number,
+    wallets: T[],
+  ): Promise<
+    Array<
+      T & {
+        portfolioValue?: number;
+        availableCash?: number;
+        positionsCount?: number;
+        displayValue?: number;
+      }
+    >
+  > {
     if (!wallets.some((wallet) => wallet.type === 'INVESTMENT')) {
       return wallets;
     }
 
-    const walletSummaries = await this.investmentPortfolioService.getWalletDisplaySummaries(userId);
+    const walletSummaries =
+      await this.investmentPortfolioService.getWalletDisplaySummaries(userId);
 
     return wallets.map((wallet) => {
       if (wallet.type !== 'INVESTMENT') {

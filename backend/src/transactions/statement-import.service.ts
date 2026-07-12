@@ -7,7 +7,12 @@ import { PrismaService } from '../prisma/prisma.service';
 import { crypto } from '../utils/crypto-uuid';
 import { ConfirmStatementImportRowDto } from './dto/confirm-statement-import.dto';
 import { TransactionImpactService } from './transaction-impact.service';
-import { PAYMENT_METHODS, TRANSACTION_TYPES } from '../common/finance-constants';
+import {
+  PAYMENT_METHODS,
+  TRANSACTION_TYPES,
+  WALLET_TYPES,
+} from '../common/finance-constants';
+import { Prisma } from '@prisma/client';
 
 type ImportedStatementRow = {
   source_id: string;
@@ -549,7 +554,11 @@ export class StatementImportService {
       },
     });
 
-    if (!card || card.wallet.user_id !== userId || card.wallet_id !== walletId) {
+    if (
+      !card ||
+      card.wallet.user_id !== userId ||
+      card.wallet_id !== walletId
+    ) {
       throw new NotFoundException('Card not found');
     }
 
@@ -562,18 +571,30 @@ export class StatementImportService {
     row: ConfirmStatementImportRowDto,
     installmentGroupIds: Map<string, string>,
     cardId?: number,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
   ) {
-    const categoryId = await this.impact.resolveCategoryId(userId, row.category_id);
+    const categoryId = await this.impact.resolveCategoryId(
+      userId,
+      row.category_id,
+      db,
+    );
     const transactionDate = new Date(row.transaction_date);
     const isFuture = this.impact.isFutureDate(transactionDate);
-    const paymentMethod = cardId ? PAYMENT_METHODS.CREDIT : null;
+    const paymentMethod =
+      cardId || wallet.type === WALLET_TYPES.MEAL_VOUCHER
+        ? PAYMENT_METHODS.CREDIT
+        : null;
     const installmentTotal =
       row.installment_total && row.installment_total > 1
         ? row.installment_total
         : 1;
 
-    if (cardId && row.transaction_type === TRANSACTION_TYPES.EXPENSE) {
-      await this.impact.validateCardLimit(cardId, row.value);
+    if (
+      cardId &&
+      row.transaction_type === TRANSACTION_TYPES.EXPENSE &&
+      wallet.type !== WALLET_TYPES.MEAL_VOUCHER
+    ) {
+      await this.impact.validateCardLimit(cardId, row.value, undefined, db);
     }
 
     let installmentId: string | null = null;
@@ -583,7 +604,7 @@ export class StatementImportService {
       installmentGroupIds.set(groupKey, installmentId);
     }
 
-    const transaction = await this.prisma.transaction.create({
+    const transaction = await db.transaction.create({
       data: {
         wallet_id: wallet.id,
         transaction_date: transactionDate,
@@ -594,7 +615,7 @@ export class StatementImportService {
         category_id: categoryId,
         payment_method: paymentMethod,
         card_id: cardId || null,
-        installment_id: installmentId,
+        installment_group_id: installmentId,
         installment_total: installmentTotal,
         installment_number: row.installment_number || 1,
         is_processed: !isFuture,
@@ -610,6 +631,7 @@ export class StatementImportService {
         transactionType: row.transaction_type,
         value: row.value,
         mode: 'apply',
+        db,
       });
     }
 
@@ -726,12 +748,15 @@ export class StatementImportService {
 
     for (const row of rows) {
       try {
-        await this.createImportedStatementTransaction(
-          userId,
-          { id: wallet.id, type: wallet.type },
-          row,
-          installmentGroupIds,
-          cardId,
+        await this.prisma.$transaction((tx) =>
+          this.createImportedStatementTransaction(
+            userId,
+            { id: wallet.id, type: wallet.type },
+            row,
+            installmentGroupIds,
+            cardId,
+            tx,
+          ),
         );
         importedCount++;
       } catch (error) {
