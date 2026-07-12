@@ -1,14 +1,26 @@
-import { Controller, Post, Body, Param, Get, Patch, Delete, UseGuards, ParseIntPipe, Request } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Param,
+  Get,
+  Patch,
+  Delete,
+  UseGuards,
+  ParseIntPipe,
+  Request,
+} from '@nestjs/common';
 import { WalletsService } from './wallets.service';
 import { CreateWalletDto } from './dto/create-wallet.dto';
 import { UpdateWalletDto } from './dto/update-wallet.dto';
 import { AddTransactionDto } from './dto/add-transaction.dto';
 import { AuthGuard } from '@nestjs/passport';
+import { TransferWalletDto } from './dto/transfer-wallet.dto';
 
 @Controller('wallets')
 @UseGuards(AuthGuard('jwt'))
 export class WalletsController {
-  constructor(private readonly walletsService: WalletsService) { }
+  constructor(private readonly walletsService: WalletsService) {}
 
   @Post()
   create(@Request() req, @Body() createWalletDto: CreateWalletDto) {
@@ -26,17 +38,29 @@ export class WalletsController {
   }
 
   @Patch(':id/add-incoming')
-  addIncoming(@Request() req, @Param('id', ParseIntPipe) id: number, @Body() body: AddTransactionDto) {
+  addIncoming(
+    @Request() req,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: AddTransactionDto,
+  ) {
     return this.walletsService.addIncoming(id, req.user.userId, body.amount);
   }
 
   @Patch(':id/add-expense')
-  addExpense(@Request() req, @Param('id', ParseIntPipe) id: number, @Body() body: AddTransactionDto) {
+  addExpense(
+    @Request() req,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: AddTransactionDto,
+  ) {
     return this.walletsService.addExpense(id, req.user.userId, body.amount);
   }
 
   @Patch(':id')
-  update(@Request() req, @Param('id', ParseIntPipe) id: number, @Body() updateWalletDto: UpdateWalletDto) {
+  update(
+    @Request() req,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateWalletDto: UpdateWalletDto,
+  ) {
     return this.walletsService.update(id, req.user.userId, updateWalletDto);
   }
 
@@ -46,8 +70,13 @@ export class WalletsController {
   }
 
   @Post('transfer')
-  transfer(@Request() req, @Body() body: { fromId: number; toId: number; amount: number }) {
-    return this.walletsService.transfer(req.user.userId, body.fromId, body.toId, body.amount);
+  transfer(@Request() req, @Body() body: TransferWalletDto) {
+    return this.walletsService.transfer(
+      req.user.userId,
+      body.fromWalletId,
+      body.toWalletId,
+      body.amount,
+    );
   }
 
   @Delete(':id')

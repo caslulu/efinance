@@ -1,6 +1,17 @@
-import { Controller, Get, Post, Body, Param, Delete, UseGuards, Request, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Delete,
+  UseGuards,
+  Request,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { BudgetsService } from './budgets.service';
 import { AuthGuard } from '@nestjs/passport';
+import { UpsertBudgetDto } from './dto/upsert-budget.dto';
 
 @Controller('budgets')
 @UseGuards(AuthGuard('jwt'))
@@ -18,8 +29,12 @@ export class BudgetsController {
   }
 
   @Post()
-  upsert(@Request() req, @Body() body: { category_id: number; limit: number }) {
-    return this.budgetsService.upsert(req.user.userId, body.category_id, body.limit);
+  upsert(@Request() req, @Body() body: UpsertBudgetDto) {
+    return this.budgetsService.upsert(
+      req.user.userId,
+      body.category_id,
+      body.limit,
+    );
   }
 
   @Delete(':id')

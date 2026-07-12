@@ -17,7 +17,7 @@ export function useCreateBudget() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (data: { category_id: number; limit_value: number }) => {
+    mutationFn: async (data: { category_id: number; limit: number }) => {
       const res = await api.post('/budgets', data);
       return res.data;
     },
@@ -32,8 +32,8 @@ export function useUpdateBudget() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: { category_id?: number; limit_value?: number } }) => {
-      const res = await api.patch(`/budgets/${id}`, data);
+    mutationFn: async ({ data }: { id: number; data: { category_id: number; limit: number } }) => {
+      const res = await api.post('/budgets', data);
       return res.data;
     },
     onSuccess: () => {
