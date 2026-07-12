@@ -14,6 +14,7 @@ import { CardsService } from './cards.service';
 import { CreateCardDto } from './dto/create-card.dto';
 import { UpdateCardDto } from './dto/update-card.dto';
 import { AuthGuard } from '@nestjs/passport';
+import { PayInvoiceDto } from './dto/pay-invoice.dto';
 
 @Controller('cards')
 @UseGuards(AuthGuard('jwt'))
@@ -36,6 +37,15 @@ export class CardsController {
   @Get(':id')
   findOne(@Request() req, @Param('id', ParseIntPipe) id: number) {
     return this.cardsService.findOne(id, req.user.userId);
+  }
+
+  @Post(':id/pay-invoice')
+  payInvoice(
+    @Request() req,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: PayInvoiceDto,
+  ) {
+    return this.cardsService.payInvoice(id, req.user.userId, dto);
   }
 
   @Patch(':id')

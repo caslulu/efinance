@@ -61,3 +61,32 @@ export function useDeleteCard() {
     },
   });
 }
+
+export function usePayInvoice() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      cardId,
+      sourceWalletId,
+      amount,
+    }: {
+      cardId: number;
+      sourceWalletId: number;
+      amount: number;
+    }) => {
+      const res = await api.post(`/cards/${cardId}/pay-invoice`, {
+        sourceWalletId,
+        amount,
+      });
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.cards });
+      queryClient.invalidateQueries({ queryKey: queryKeys.wallets });
+      queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
+      queryClient.invalidateQueries({ queryKey: queryKeys.budgetStatus });
+    },
+  });
+}

@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { api } from '../../../api/api';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { CurrencyInput } from '@/components/CurrencyInput';
@@ -7,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Wallet } from '../../../types/Wallet';
 import type { Card } from '../../../types/Card';
+import { usePayInvoice, useWallets } from '@/hooks';
 
 interface PayInvoiceModalProps {
   isOpen: boolean;
@@ -17,22 +17,18 @@ interface PayInvoiceModalProps {
 
 export const PayInvoiceModal = ({ isOpen, card, onClose, onSuccess }: PayInvoiceModalProps) => {
   const [amount, setAmount] = useState('');
-  const [wallets, setWallets] = useState<Wallet[]>([]);
+  const { data: wallets = [] } = useWallets();
+  const payInvoice = usePayInvoice();
   const [sourceWalletId, setSourceWalletId] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (isOpen) {
-      api.get('/wallets').then(res => {
-        setWallets(res.data);
-        // Default to first bank account or first wallet
-        const defaultSource = res.data.find((w: Wallet) => w.type === 'BANK')
-          || res.data[0];
-        if (defaultSource) setSourceWalletId(String(defaultSource.id));
-      });
-    }
-  }, [isOpen, card]);
+    if (!isOpen || sourceWalletId || wallets.length === 0) return;
+    const defaultSource = wallets.find((wallet: Wallet) => wallet.type === 'BANK')
+      || wallets[0];
+    if (defaultSource) setSourceWalletId(String(defaultSource.id));
+  }, [isOpen, sourceWalletId, wallets]);
 
   useEffect(() => {
     if (card && isOpen) {
@@ -64,25 +60,10 @@ export const PayInvoiceModal = ({ isOpen, card, onClose, onSuccess }: PayInvoice
     setError('');
 
     try {
-      // 1. Create Expense (Debit) in the Source Wallet
-      await api.post('/transactions', {
-        wallet_id: Number(sourceWalletId),
-        value: val,
-        transaction_type: 'EXPENSE',
-        payment_method: 'DEBIT',
-        transaction_date: new Date().toISOString(),
-        is_recurring: false,
-      });
-
-      // 2. Create Income (Credit) on the card to reduce its invoice
-      await api.post('/transactions', {
-        wallet_id: card.wallet_id,
-        card_id: card.id,
-        value: val,
-        transaction_type: 'INCOME',
-        payment_method: 'CREDIT',
-        transaction_date: new Date().toISOString(),
-        is_recurring: false,
+      await payInvoice.mutateAsync({
+        cardId: card.id,
+        sourceWalletId: Number(sourceWalletId),
+        amount: val,
       });
 
       onSuccess();

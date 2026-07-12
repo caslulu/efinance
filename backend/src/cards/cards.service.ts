@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+} from '@nestjs/common';
 import { CreateCardDto } from './dto/create-card.dto';
 import { UpdateCardDto } from './dto/update-card.dto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -7,6 +12,9 @@ import {
   TRANSACTION_TYPES,
   WALLET_TYPES,
 } from '../common/finance-constants';
+import { PayInvoiceDto } from './dto/pay-invoice.dto';
+import { crypto } from '../utils/crypto-uuid';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class CardsService {
@@ -90,7 +98,10 @@ export class CardsService {
       updateCardDto.usable_limit !== undefined
         ? Number(updateCardDto.usable_limit)
         : updateCardDto.card_limit !== undefined
-          ? Math.min(Number(card.usable_limit ?? card.card_limit), nextCardLimit)
+          ? Math.min(
+              Number(card.usable_limit ?? card.card_limit),
+              nextCardLimit,
+            )
           : Number(card.usable_limit ?? card.card_limit);
     const committedLimit = await this.getCommittedCreditUsage(id);
 
@@ -115,6 +126,114 @@ export class CardsService {
     }
 
     return this.prisma.card.delete({ where: { id } });
+  }
+
+  async payInvoice(cardId: number, userId: number, dto: PayInvoiceDto) {
+    return this.prisma.$transaction(
+      async (tx) => {
+        const [card, sourceWallet] = await Promise.all([
+          tx.card.findUnique({
+            where: { id: cardId },
+            include: { wallet: true },
+          }),
+          tx.wallet.findUnique({ where: { id: dto.sourceWalletId } }),
+        ]);
+
+        if (!card || card.wallet.user_id !== userId) {
+          throw new NotFoundException(`Card #${cardId} not found`);
+        }
+        if (!sourceWallet || sourceWallet.user_id !== userId) {
+          throw new NotFoundException('Source wallet not found');
+        }
+
+        const [expenses, settlements] = await Promise.all([
+          tx.transaction.aggregate({
+            where: {
+              card_id: cardId,
+              transaction_type: TRANSACTION_TYPES.EXPENSE,
+              payment_method: PAYMENT_METHODS.CREDIT,
+            },
+            _sum: { value: true },
+          }),
+          tx.transaction.aggregate({
+            where: {
+              card_id: cardId,
+              transaction_type: TRANSACTION_TYPES.INCOME,
+              payment_method: PAYMENT_METHODS.CREDIT,
+            },
+            _sum: { value: true },
+          }),
+        ]);
+        const outstanding = Math.max(
+          0,
+          Number(expenses._sum.value || 0) -
+            Number(settlements._sum.value || 0),
+        );
+        if (dto.amount > outstanding) {
+          throw new BadRequestException(
+            `O pagamento não pode ultrapassar a fatura pendente de R$ ${outstanding.toFixed(2)}.`,
+          );
+        }
+
+        const debit = await tx.wallet.updateMany({
+          where: {
+            id: dto.sourceWalletId,
+            user_id: userId,
+            actual_cash: { gte: dto.amount },
+          },
+          data: { actual_cash: { decrement: dto.amount } },
+        });
+        if (debit.count === 0) {
+          throw new BadRequestException(
+            'Saldo insuficiente na carteira de origem.',
+          );
+        }
+
+        let category = await tx.transactionCategory.findFirst({
+          where: { user_id: userId, name: 'Pagamento de fatura' },
+        });
+        category ??= await tx.transactionCategory.create({
+          data: { user_id: userId, name: 'Pagamento de fatura' },
+        });
+
+        const eventId = crypto.randomUUID();
+        const transactionDate = new Date();
+        await tx.transaction.create({
+          data: {
+            wallet_id: dto.sourceWalletId,
+            category_id: category.id,
+            transaction_date: transactionDate,
+            transaction_type: TRANSACTION_TYPES.EXPENSE,
+            payment_method: PAYMENT_METHODS.DEBIT,
+            description: `Pagamento de fatura - ${card.name}`,
+            value: dto.amount,
+            is_recurring: false,
+            is_processed: true,
+            financial_event_id: eventId,
+            event_type: 'INVOICE_PAYMENT',
+          },
+        });
+        await tx.transaction.create({
+          data: {
+            wallet_id: card.wallet_id,
+            card_id: card.id,
+            category_id: category.id,
+            transaction_date: transactionDate,
+            transaction_type: TRANSACTION_TYPES.INCOME,
+            payment_method: PAYMENT_METHODS.CREDIT,
+            description: `Pagamento recebido - ${card.name}`,
+            value: dto.amount,
+            is_recurring: false,
+            is_processed: true,
+            financial_event_id: eventId,
+            event_type: 'INVOICE_PAYMENT',
+          },
+        });
+
+        return { amount: dto.amount, financial_event_id: eventId };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
   }
 
   /**
@@ -145,9 +264,17 @@ export class CardsService {
     const closingDay = card.closing_day;
 
     // 1. Open (Accumulating) Cycle
-    let openCloseDate = new Date(today.getFullYear(), today.getMonth(), closingDay);
+    let openCloseDate = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      closingDay,
+    );
     if (currentDay >= closingDay) {
-      openCloseDate = new Date(today.getFullYear(), today.getMonth() + 1, closingDay);
+      openCloseDate = new Date(
+        today.getFullYear(),
+        today.getMonth() + 1,
+        closingDay,
+      );
     }
     openCloseDate.setHours(23, 59, 59, 999);
 
@@ -214,7 +341,8 @@ export class CardsService {
     const remainingIncomes = Math.max(0, incomes - pastExp);
     const currentInvoiceValue = Math.max(0, currExp - remainingIncomes);
 
-    const totalInvoice = Number(totalExp._sum.value || 0) - Number(totalInc._sum.value || 0);
+    const totalInvoice =
+      Number(totalExp._sum.value || 0) - Number(totalInc._sum.value || 0);
     const committedLimit = Math.max(0, totalInvoice);
     const availableLimit = usableLimit - committedLimit;
 
@@ -253,7 +381,9 @@ export class CardsService {
       throw new BadRequestException('Limite disponível inválido.');
     }
     if (usableLimit > approvedLimit) {
-      throw new BadRequestException('O limite disponível não pode ultrapassar o limite aprovado.');
+      throw new BadRequestException(
+        'O limite disponível não pode ultrapassar o limite aprovado.',
+      );
     }
     if (usableLimit < committedLimit) {
       throw new BadRequestException(

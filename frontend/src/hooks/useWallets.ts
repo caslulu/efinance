@@ -63,23 +63,6 @@ export function useDeleteWallet() {
   });
 }
 
-export function usePayInvoice() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async ({ walletId, sourceWalletId }: { walletId: number; sourceWalletId: number }) => {
-      const res = await api.post(`/wallets/${walletId}/pay-invoice`, { sourceWalletId });
-      return res.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.wallets });
-      queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
-      queryClient.invalidateQueries({ queryKey: queryKeys.investmentPortfolio });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
-    },
-  });
-}
-
 export function useTransferBetweenWallets() {
   const queryClient = useQueryClient();
   
