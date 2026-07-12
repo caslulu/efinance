@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { BudgetsService } from '../budgets/budgets.service';
 import { InvestmentPortfolioService } from '../investments/investment-portfolio.service';
+import { PAYMENT_METHODS, WALLET_TYPES } from '../common/finance-constants';
+import { excludeInternalCashflowFilter } from '../common/internal-cashflow-filter';
 
 @Injectable()
 export class DashboardService {
@@ -9,22 +11,13 @@ export class DashboardService {
     private readonly prisma: PrismaService,
     private readonly budgetsService: BudgetsService,
     private readonly investmentPortfolioService: InvestmentPortfolioService,
-  ) { }
+  ) {}
 
-  private excludeInternalCashflowFilter() {
-    return {
-      NOT: [
-        { payment_method: 'TRANSFER' as const },
-        { payment_method: 'INVESTMENT' as const },
-        { description: { contains: 'Aplicação RDB', mode: 'insensitive' as const } },
-        { description: { contains: 'Resgate RDB', mode: 'insensitive' as const } },
-        { description: { contains: 'Pagamento de fatura', mode: 'insensitive' as const } },
-        { description: { contains: 'Pagamento recebido', mode: 'insensitive' as const } },
-      ],
-    };
-  }
-
-  async getOverview(userId: number, startDateStr?: string, endDateStr?: string) {
+  async getOverview(
+    userId: number,
+    startDateStr?: string,
+    endDateStr?: string,
+  ) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -50,10 +43,34 @@ export class DashboardService {
     const oneYearFuture = new Date();
     oneYearFuture.setFullYear(today.getFullYear() + 1);
 
-    const startOfCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    const endOfCurrentMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
-    const startOfPreviousMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-    const endOfPreviousMonth = new Date(today.getFullYear(), today.getMonth(), 0, 23, 59, 59, 999);
+    const startOfCurrentMonth = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      1,
+    );
+    const endOfCurrentMonth = new Date(
+      today.getFullYear(),
+      today.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999,
+    );
+    const startOfPreviousMonth = new Date(
+      today.getFullYear(),
+      today.getMonth() - 1,
+      1,
+    );
+    const endOfPreviousMonth = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      0,
+      23,
+      59,
+      59,
+      999,
+    );
 
     const sevenDaysAgo = new Date(today);
     sevenDaysAgo.setDate(today.getDate() - 7);
@@ -63,7 +80,7 @@ export class DashboardService {
       where: {
         wallet: { user_id: userId },
         transaction_type: 'EXPENSE',
-        ...this.excludeInternalCashflowFilter(),
+        ...excludeInternalCashflowFilter(),
         transaction_date: {
           gte: periodStart,
           lte: periodEnd,
@@ -83,19 +100,24 @@ export class DashboardService {
       });
     });
 
-    const expensesByCategory = Array.from(categoriesMap.entries()).map(([name, data]) => ({
-      name,
-      value: Number(data.value.toFixed(2)),
-      icon: data.icon,
-    }));
+    const expensesByCategory = Array.from(categoriesMap.entries()).map(
+      ([name, data]) => ({
+        name,
+        value: Number(data.value.toFixed(2)),
+        icon: data.icon,
+      }),
+    );
 
     // 2. 24-Month Invoice/Expense Flow (Past 12 + Future 12)
     const allTransactions24m = await this.prisma.transaction.findMany({
       where: {
         wallet: { user_id: userId },
         transaction_type: 'EXPENSE',
-        payment_method: { not: 'CREDIT' },
-        ...this.excludeInternalCashflowFilter(),
+        OR: [
+          { payment_method: { not: PAYMENT_METHODS.CREDIT } },
+          { wallet: { type: WALLET_TYPES.MEAL_VOUCHER } },
+        ],
+        ...excludeInternalCashflowFilter(),
         transaction_date: {
           gte: twelveMonthsAgo,
           lte: oneYearFuture,
@@ -103,21 +125,30 @@ export class DashboardService {
       },
     });
 
-    const flowMap = new Map<string, { name: string; value: number; isProjected: boolean }>();
+    const flowMap = new Map<
+      string,
+      { name: string; value: number; isProjected: boolean }
+    >();
 
     // Initialize 24 months
     for (let i = -11; i <= 12; i++) {
       const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
-      const monthLabel = d.toLocaleString('pt-BR', { month: 'short', year: '2-digit' });
+      const monthLabel = d.toLocaleString('pt-BR', {
+        month: 'short',
+        year: '2-digit',
+      });
       flowMap.set(monthLabel, {
         name: monthLabel,
         value: 0,
-        isProjected: i > 0 || (i === 0 && d > today)
+        isProjected: i > 0 || (i === 0 && d > today),
       });
     }
 
     allTransactions24m.forEach((t) => {
-      const monthLabel = t.transaction_date.toLocaleString('pt-BR', { month: 'short', year: '2-digit' });
+      const monthLabel = t.transaction_date.toLocaleString('pt-BR', {
+        month: 'short',
+        year: '2-digit',
+      });
       const current = flowMap.get(monthLabel);
       if (current) {
         current.value += Number(t.value);
@@ -140,7 +171,7 @@ export class DashboardService {
       },
       include: {
         TransactionCategory: true,
-        wallet: true
+        wallet: true,
       },
       orderBy: { transaction_date: 'asc' },
       take: 5,
@@ -150,11 +181,11 @@ export class DashboardService {
     const recentTransactions = await this.prisma.transaction.findMany({
       where: {
         wallet: { user_id: userId },
-        transaction_date: { lte: new Date() }
+        transaction_date: { lte: new Date() },
       },
       include: {
         TransactionCategory: true,
-        wallet: true
+        wallet: true,
       },
       orderBy: { transaction_date: 'desc' },
       take: 5,
@@ -171,7 +202,13 @@ export class DashboardService {
     });
 
     // 6. Totals, Savings Rate & Net Worth
-    const [totalWallets, totalInvestments, portfolioSummary, totalExpensesMonth, totalIncomesMonth] = await Promise.all([
+    const [
+      totalWallets,
+      totalInvestments,
+      portfolioSummary,
+      totalExpensesMonth,
+      totalIncomesMonth,
+    ] = await Promise.all([
       this.prisma.wallet.aggregate({
         where: { user_id: userId, type: { not: 'CREDIT_CARD' } },
         _sum: { actual_cash: true },
@@ -185,7 +222,7 @@ export class DashboardService {
         where: {
           wallet: { user_id: userId },
           transaction_type: 'EXPENSE',
-          ...this.excludeInternalCashflowFilter(),
+          ...excludeInternalCashflowFilter(),
           transaction_date: { gte: periodStart, lte: periodEnd },
         },
         _sum: { value: true },
@@ -194,7 +231,7 @@ export class DashboardService {
         where: {
           wallet: { user_id: userId },
           transaction_type: 'INCOME',
-          ...this.excludeInternalCashflowFilter(),
+          ...excludeInternalCashflowFilter(),
           transaction_date: { gte: periodStart, lte: periodEnd },
         },
         _sum: { value: true },
@@ -216,7 +253,7 @@ export class DashboardService {
       where: {
         wallet: { user_id: userId },
         transaction_type: 'EXPENSE',
-        ...this.excludeInternalCashflowFilter(),
+        ...excludeInternalCashflowFilter(),
         transaction_date: { gte: periodStart, lte: periodEnd },
       },
       select: {
@@ -241,21 +278,35 @@ export class DashboardService {
     });
 
     const totalExpenseBase = fixedExpensesMonthly + variableExpensesMonthly;
-    const fixedExpenseRatio = totalExpenseBase > 0 ? (fixedExpensesMonthly / totalExpenseBase) * 100 : 0;
-    const variableExpenseRatio = totalExpenseBase > 0 ? (variableExpensesMonthly / totalExpenseBase) * 100 : 0;
+    const fixedExpenseRatio =
+      totalExpenseBase > 0
+        ? (fixedExpensesMonthly / totalExpenseBase) * 100
+        : 0;
+    const variableExpenseRatio =
+      totalExpenseBase > 0
+        ? (variableExpensesMonthly / totalExpenseBase) * 100
+        : 0;
 
-    const budgetPlanned = budgetSummary.reduce((acc, item) => acc + Number(item.limit || 0), 0);
-    const budgetSpent = budgetSummary.reduce((acc, item) => acc + Number(item.spent || 0), 0);
-    const budgetAdherencePercent = budgetPlanned > 0 ? (budgetSpent / budgetPlanned) * 100 : 0;
+    const budgetPlanned = budgetSummary.reduce(
+      (acc, item) => acc + Number(item.limit || 0),
+      0,
+    );
+    const budgetSpent = budgetSummary.reduce(
+      (acc, item) => acc + Number(item.spent || 0),
+      0,
+    );
+    const budgetAdherencePercent =
+      budgetPlanned > 0 ? (budgetSpent / budgetPlanned) * 100 : 0;
 
     const averageDailyExpense = expense / 30;
-    const financialAutonomyDays = averageDailyExpense > 0 ? cash / averageDailyExpense : 0;
+    const financialAutonomyDays =
+      averageDailyExpense > 0 ? cash / averageDailyExpense : 0;
 
     const weeklyExpensesAgg = await this.prisma.transaction.aggregate({
       where: {
         wallet: { user_id: userId },
         transaction_type: 'EXPENSE',
-        ...this.excludeInternalCashflowFilter(),
+        ...excludeInternalCashflowFilter(),
         transaction_date: { gte: sevenDaysAgo, lte: new Date() },
       },
       _sum: { value: true },
@@ -267,7 +318,7 @@ export class DashboardService {
       where: {
         wallet: { user_id: userId },
         transaction_type: 'EXPENSE',
-        ...this.excludeInternalCashflowFilter(),
+        ...excludeInternalCashflowFilter(),
         transaction_date: {
           gte: startOfPreviousMonth,
           lte: endOfCurrentMonth,
@@ -280,7 +331,12 @@ export class DashboardService {
 
     const categoryGrowthMap = new Map<
       string,
-      { name: string; icon?: string; currentMonth: number; previousMonth: number }
+      {
+        name: string;
+        icon?: string;
+        currentMonth: number;
+        previousMonth: number;
+      }
     >();
 
     expensesForGrowth.forEach((transaction) => {
@@ -308,7 +364,12 @@ export class DashboardService {
     const topGrowingCategories = Array.from(categoryGrowthMap.values())
       .map((item) => {
         const growth = item.currentMonth - item.previousMonth;
-        const growthPercent = item.previousMonth > 0 ? (growth / item.previousMonth) * 100 : item.currentMonth > 0 ? 100 : 0;
+        const growthPercent =
+          item.previousMonth > 0
+            ? (growth / item.previousMonth) * 100
+            : item.currentMonth > 0
+              ? 100
+              : 0;
 
         return {
           name: item.name,
@@ -346,7 +407,7 @@ export class DashboardService {
       monthFlow,
       upcomingTransactions,
       recentTransactions,
-      budgetSummary
+      budgetSummary,
     };
   }
 
@@ -355,7 +416,9 @@ export class DashboardService {
     const oneMonthAgo = new Date();
     oneMonthAgo.setMonth(today.getMonth() - 1);
 
-    console.log(`[DashboardService] Fetching transactions for User: ${userId}, Category: "${categoryName}"`);
+    console.log(
+      `[DashboardService] Fetching transactions for User: ${userId}, Category: "${categoryName}"`,
+    );
 
     const txs = await this.prisma.transaction.findMany({
       where: {
@@ -363,22 +426,24 @@ export class DashboardService {
         TransactionCategory: {
           name: {
             equals: categoryName,
-            mode: 'insensitive'
-          }
+            mode: 'insensitive',
+          },
         },
         transaction_type: 'EXPENSE',
-        ...this.excludeInternalCashflowFilter(),
-        transaction_date: { gte: oneMonthAgo, lte: today }
+        ...excludeInternalCashflowFilter(),
+        transaction_date: { gte: oneMonthAgo, lte: today },
       },
       include: {
         wallet: { select: { name: true } },
-        TransactionCategory: true
+        TransactionCategory: true,
       },
       orderBy: { transaction_date: 'desc' },
-      take: 20
+      take: 20,
     });
 
-    console.log(`[DashboardService] Found ${txs.length} transactions for "${categoryName}"`);
+    console.log(
+      `[DashboardService] Found ${txs.length} transactions for "${categoryName}"`,
+    );
     return txs;
   }
 }

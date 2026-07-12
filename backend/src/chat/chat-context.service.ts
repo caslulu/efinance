@@ -1,18 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { excludeInternalCashflowFilter } from '../common/internal-cashflow-filter';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class ChatContextService {
   constructor(private readonly prisma: PrismaService) {}
-
-  private excludeInternalCashflowFilter() {
-    return {
-      NOT: [
-        { payment_method: 'TRANSFER' as const },
-        { payment_method: 'INVESTMENT' as const },
-      ],
-    };
-  }
 
   async buildFinancialContext(userId: number): Promise<string> {
     const today = new Date();
@@ -20,7 +12,15 @@ export class ChatContextService {
     thirtyDaysAgo.setDate(today.getDate() - 30);
 
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
+    const endOfMonth = new Date(
+      today.getFullYear(),
+      today.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999,
+    );
 
     const [
       wallets,
@@ -36,7 +36,12 @@ export class ChatContextService {
       // 1. Wallets with balances
       this.prisma.wallet.findMany({
         where: { user_id: userId },
-        select: { name: true, actual_cash: true, type: true, is_transfer_only: true },
+        select: {
+          name: true,
+          actual_cash: true,
+          type: true,
+          is_transfer_only: true,
+        },
       }),
 
       // 2. Recent expenses by category (last 30 days)
@@ -44,10 +49,13 @@ export class ChatContextService {
         where: {
           wallet: { user_id: userId },
           transaction_type: 'EXPENSE',
-          ...this.excludeInternalCashflowFilter(),
+          ...excludeInternalCashflowFilter(),
           transaction_date: { gte: thirtyDaysAgo, lte: today },
         },
-        include: { TransactionCategory: true, wallet: { select: { name: true } } },
+        include: {
+          TransactionCategory: true,
+          wallet: { select: { name: true } },
+        },
         orderBy: { transaction_date: 'desc' },
         take: 50,
       }),
@@ -57,7 +65,7 @@ export class ChatContextService {
         where: {
           wallet: { user_id: userId },
           transaction_type: 'INCOME',
-          ...this.excludeInternalCashflowFilter(),
+          ...excludeInternalCashflowFilter(),
           transaction_date: { gte: thirtyDaysAgo, lte: today },
         },
         include: { TransactionCategory: true },
@@ -68,7 +76,12 @@ export class ChatContextService {
       // 4. Active subscriptions
       this.prisma.subscription.findMany({
         where: { user_id: userId, status: 'ACTIVE' },
-        select: { name: true, value: true, frequency: true, next_billing_date: true },
+        select: {
+          name: true,
+          value: true,
+          frequency: true,
+          next_billing_date: true,
+        },
       }),
 
       // 5. Investments
@@ -100,7 +113,7 @@ export class ChatContextService {
         where: {
           wallet: { user_id: userId },
           transaction_type: 'EXPENSE',
-          ...this.excludeInternalCashflowFilter(),
+          ...excludeInternalCashflowFilter(),
           transaction_date: { gte: startOfMonth, lte: endOfMonth },
         },
         _sum: { value: true },
@@ -111,7 +124,7 @@ export class ChatContextService {
         where: {
           wallet: { user_id: userId },
           transaction_type: 'INCOME',
-          ...this.excludeInternalCashflowFilter(),
+          ...excludeInternalCashflowFilter(),
           transaction_date: { gte: startOfMonth, lte: endOfMonth },
         },
         _sum: { value: true },
@@ -136,7 +149,10 @@ export class ChatContextService {
           limit: Number(budget.limit),
           spent,
           remaining: Math.max(0, Number(budget.limit) - spent),
-          percentage: Number(budget.limit) > 0 ? ((spent / Number(budget.limit)) * 100).toFixed(1) : '0',
+          percentage:
+            Number(budget.limit) > 0
+              ? ((spent / Number(budget.limit)) * 100).toFixed(1)
+              : '0',
         };
       }),
     );
@@ -145,28 +161,43 @@ export class ChatContextService {
     const categoryExpenses = new Map<string, number>();
     recentExpenses.forEach((t) => {
       const cat = t.TransactionCategory?.name || 'Outro';
-      categoryExpenses.set(cat, (categoryExpenses.get(cat) || 0) + Number(t.value));
+      categoryExpenses.set(
+        cat,
+        (categoryExpenses.get(cat) || 0) + Number(t.value),
+      );
     });
     const topCategories = Array.from(categoryExpenses.entries())
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10);
 
     // KPIs
-    const totalCash = wallets.reduce((sum, w) => sum + Number(w.actual_cash), 0);
-    const totalInvested = investments.reduce((sum, i) => sum + Number(i.current_amount), 0);
+    const totalCash = wallets.reduce(
+      (sum, w) => sum + Number(w.actual_cash),
+      0,
+    );
+    const totalInvested = investments.reduce(
+      (sum, i) => sum + Number(i.current_amount),
+      0,
+    );
     const netWorth = totalCash + totalInvested;
     const monthIncome = Number(totalIncomeAgg._sum.value || 0);
     const monthExpense = Number(totalExpenseAgg._sum.value || 0);
-    const savingsRate = monthIncome > 0 ? ((monthIncome - monthExpense) / monthIncome) * 100 : 0;
+    const savingsRate =
+      monthIncome > 0 ? ((monthIncome - monthExpense) / monthIncome) * 100 : 0;
     const avgDailyExpense = monthExpense / Math.max(today.getDate(), 1);
     const autonomyDays = avgDailyExpense > 0 ? totalCash / avgDailyExpense : 0;
 
-    const recurringTotal = activeSubscriptions.reduce((sum, s) => sum + Number(s.value), 0);
+    const recurringTotal = activeSubscriptions.reduce(
+      (sum, s) => sum + Number(s.value),
+      0,
+    );
 
     // Build context string
     const sections: string[] = [];
 
-    sections.push(`## Dados Financeiros do Usuário (${today.toLocaleDateString('pt-BR')})`);
+    sections.push(
+      `## Dados Financeiros do Usuário (${today.toLocaleDateString('pt-BR')})`,
+    );
 
     // KPIs
     sections.push(`\n### Resumo Geral
@@ -184,7 +215,9 @@ export class ChatContextService {
     if (wallets.length > 0) {
       sections.push(`\n### Carteiras`);
       wallets.forEach((w) => {
-        sections.push(`- ${w.name} (${w.type}): R$ ${Number(w.actual_cash).toFixed(2)}${w.is_transfer_only ? ' [só transferência]' : ''}`);
+        sections.push(
+          `- ${w.name} (${w.type}): R$ ${Number(w.actual_cash).toFixed(2)}${w.is_transfer_only ? ' [só transferência]' : ''}`,
+        );
       });
     }
 
@@ -200,8 +233,15 @@ export class ChatContextService {
     if (budgetStatus.length > 0) {
       sections.push(`\n### Orçamentos (mês atual)`);
       budgetStatus.forEach((b) => {
-        const status = Number(b.percentage) > 100 ? '⚠️ ESTOURADO' : Number(b.percentage) > 80 ? '⚠️ QUASE NO LIMITE' : '✅';
-        sections.push(`- ${b.category}: R$ ${b.spent.toFixed(2)} / R$ ${b.limit.toFixed(2)} (${b.percentage}%) ${status}`);
+        const status =
+          Number(b.percentage) > 100
+            ? '⚠️ ESTOURADO'
+            : Number(b.percentage) > 80
+              ? '⚠️ QUASE NO LIMITE'
+              : '✅';
+        sections.push(
+          `- ${b.category}: R$ ${b.spent.toFixed(2)} / R$ ${b.limit.toFixed(2)} (${b.percentage}%) ${status}`,
+        );
       });
     }
 
@@ -209,7 +249,9 @@ export class ChatContextService {
     if (activeSubscriptions.length > 0) {
       sections.push(`\n### Assinaturas Ativas`);
       activeSubscriptions.forEach((s) => {
-        sections.push(`- ${s.name}: R$ ${Number(s.value).toFixed(2)} (${s.frequency})`);
+        sections.push(
+          `- ${s.name}: R$ ${Number(s.value).toFixed(2)} (${s.frequency})`,
+        );
       });
     }
 
@@ -217,10 +259,17 @@ export class ChatContextService {
     if (investments.length > 0) {
       sections.push(`\n### Investimentos`);
       investments.forEach((i) => {
-        const returnPct = Number(i.investment_amount) > 0
-          ? (((Number(i.current_amount) - Number(i.investment_amount)) / Number(i.investment_amount)) * 100).toFixed(2)
-          : '0.00';
-        sections.push(`- ${i.name} (${i.typeInvestment?.name || 'N/A'}): Investido R$ ${Number(i.investment_amount).toFixed(2)} → Atual R$ ${Number(i.current_amount).toFixed(2)} (${returnPct}% rentabilidade)`);
+        const returnPct =
+          Number(i.investment_amount) > 0
+            ? (
+                ((Number(i.current_amount) - Number(i.investment_amount)) /
+                  Number(i.investment_amount)) *
+                100
+              ).toFixed(2)
+            : '0.00';
+        sections.push(
+          `- ${i.name} (${i.typeInvestment?.name || 'N/A'}): Investido R$ ${Number(i.investment_amount).toFixed(2)} → Atual R$ ${Number(i.current_amount).toFixed(2)} (${returnPct}% rentabilidade)`,
+        );
       });
     }
 
@@ -231,8 +280,12 @@ export class ChatContextService {
     if (allProducts.length > 0) {
       sections.push(`\n### Lista de Desejos`);
       allProducts.forEach((p) => {
-        const priceHistory = p.history.map((h) => `R$ ${Number(h.price).toFixed(2)}`).join(' → ');
-        sections.push(`- ${p.name_product} (${p.wishlistName}): R$ ${Number(p.price).toFixed(2)}${priceHistory ? ` | Histórico: ${priceHistory}` : ''}`);
+        const priceHistory = p.history
+          .map((h) => `R$ ${Number(h.price).toFixed(2)}`)
+          .join(' → ');
+        sections.push(
+          `- ${p.name_product} (${p.wishlistName}): R$ ${Number(p.price).toFixed(2)}${priceHistory ? ` | Histórico: ${priceHistory}` : ''}`,
+        );
       });
     }
 
@@ -241,7 +294,9 @@ export class ChatContextService {
     if (recentTxs.length > 0) {
       sections.push(`\n### Últimas Transações`);
       recentTxs.forEach((t) => {
-        sections.push(`- ${t.transaction_date.toLocaleDateString('pt-BR')} | ${t.description || 'Sem descrição'} | R$ ${Number(t.value).toFixed(2)} | ${t.TransactionCategory?.name || 'Outro'} | ${t.wallet?.name || ''}`);
+        sections.push(
+          `- ${t.transaction_date.toLocaleDateString('pt-BR')} | ${t.description || 'Sem descrição'} | R$ ${Number(t.value).toFixed(2)} | ${t.TransactionCategory?.name || 'Outro'} | ${t.wallet?.name || ''}`,
+        );
       });
     }
 
