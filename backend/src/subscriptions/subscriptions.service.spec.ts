@@ -6,11 +6,13 @@ import { NotFoundException } from '@nestjs/common';
 import { Decimal } from '@prisma/client/runtime/library';
 
 const mockPrismaService = {
+  $transaction: jest.fn(),
   subscription: {
     create: jest.fn(),
     findMany: jest.fn(),
     findUnique: jest.fn(),
     update: jest.fn(),
+    updateMany: jest.fn(),
     delete: jest.fn(),
   },
   transaction: {
@@ -49,6 +51,10 @@ describe('SubscriptionsService', () => {
     transactionsService = module.get<TransactionsService>(TransactionsService);
 
     jest.clearAllMocks();
+    mockPrismaService.$transaction.mockImplementation((callback) =>
+      callback(mockPrismaService),
+    );
+    mockPrismaService.subscription.updateMany.mockResolvedValue({ count: 1 });
   });
 
   it('should be defined', () => {
@@ -59,16 +65,26 @@ describe('SubscriptionsService', () => {
     it('should create a subscription', async () => {
       const dto = {
         name: 'Netflix',
-        value: 39.90,
+        value: 39.9,
         frequency: 'MONTHLY',
         wallet_id: 1,
         category_id: 1,
         start_date: new Date().toISOString(),
       };
 
-      mockPrismaService.wallet.findUnique.mockResolvedValue({ id: 1, user_id: userId });
-      mockPrismaService.transactionCategory.findUnique.mockResolvedValue({ id: 1, user_id: userId });
-      mockPrismaService.subscription.create.mockResolvedValue({ id: 1, ...dto, user_id: userId });
+      mockPrismaService.wallet.findUnique.mockResolvedValue({
+        id: 1,
+        user_id: userId,
+      });
+      mockPrismaService.transactionCategory.findUnique.mockResolvedValue({
+        id: 1,
+        user_id: userId,
+      });
+      mockPrismaService.subscription.create.mockResolvedValue({
+        id: 1,
+        ...dto,
+        user_id: userId,
+      });
       mockPrismaService.subscription.findMany.mockResolvedValue([]);
 
       const result = await service.create(userId, dto as any);
@@ -83,7 +99,7 @@ describe('SubscriptionsService', () => {
         id: 1,
         user_id: 1,
         name: 'Netflix',
-        value: new Decimal(39.90),
+        value: new Decimal(39.9),
         frequency: 'MONTHLY',
         wallet_id: 1,
         category_id: 1,
@@ -97,17 +113,26 @@ describe('SubscriptionsService', () => {
 
       await service.triggerCheck();
 
-      expect(transactionsService.create).toHaveBeenCalledWith(1, expect.objectContaining({
-        value: 39.90,
-        transaction_type: 'EXPENSE',
-      }));
-
-      expect(prisma.subscription.update).toHaveBeenCalledWith(expect.objectContaining({
-        where: { id: 1 },
-        data: expect.objectContaining({
-          next_billing_date: expect.any(Date),
+      expect(transactionsService.create).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          value: 39.9,
+          transaction_type: 'EXPENSE',
         }),
-      }));
+        mockPrismaService,
+      );
+
+      expect(prisma.subscription.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            id: 1,
+            next_billing_date: expect.any(Date),
+          }),
+          data: expect.objectContaining({
+            next_billing_date: expect.any(Date),
+          }),
+        }),
+      );
     });
 
     it('should NOT generate transactions for PAUSED subscriptions', async () => {
@@ -124,7 +149,7 @@ describe('SubscriptionsService', () => {
         id: 1,
         user_id: 1,
         name: 'Spotify',
-        value: new Decimal(19.90),
+        value: new Decimal(19.9),
         frequency: 'MONTHLY',
         wallet_id: 1,
         category_id: 1,
@@ -168,16 +193,41 @@ describe('SubscriptionsService', () => {
       expect(transactionsService.create).toHaveBeenCalledTimes(3);
       expect(result.processed).toBe(3);
 
-      const dates = mockTransactionsService.create.mock.calls.map(
-        (c) => c[1].transaction_date.slice(0, 10),
+      const dates = mockTransactionsService.create.mock.calls.map((c) =>
+        c[1].transaction_date.slice(0, 10),
       );
       expect(dates).toEqual(['2026-04-15', '2026-05-15', '2026-06-15']);
 
-      const updateCall = mockPrismaService.subscription.update.mock.calls[0][0];
-      expect((updateCall.data.next_billing_date as Date).toISOString().slice(0, 10))
-        .toBe('2026-07-15');
+      const updateCall =
+        mockPrismaService.subscription.updateMany.mock.calls[2][0];
+      expect(
+        (updateCall.data.next_billing_date as Date).toISOString().slice(0, 10),
+      ).toBe('2026-07-15');
 
       jest.useRealTimers();
+    });
+
+    it('should skip a billing cycle when another worker already claimed it', async () => {
+      const dueSub = {
+        id: 1,
+        user_id: 1,
+        name: 'Netflix',
+        value: new Decimal(39.9),
+        frequency: 'MONTHLY',
+        wallet_id: 1,
+        category_id: 1,
+        status: 'ACTIVE',
+        start_date: new Date('2026-01-01'),
+        next_billing_date: new Date('2026-01-01'),
+        transaction_type: 'EXPENSE',
+      };
+      mockPrismaService.subscription.findMany.mockResolvedValue([dueSub]);
+      mockPrismaService.subscription.updateMany.mockResolvedValue({ count: 0 });
+
+      const result = await service.triggerCheck();
+
+      expect(result.processed).toBe(0);
+      expect(transactionsService.create).not.toHaveBeenCalled();
     });
   });
 
@@ -196,9 +246,19 @@ describe('SubscriptionsService', () => {
       await service.remove(9, userId);
 
       expect(transactionsService.remove).toHaveBeenCalledTimes(2);
-      expect(transactionsService.remove).toHaveBeenNthCalledWith(1, 101, userId);
-      expect(transactionsService.remove).toHaveBeenNthCalledWith(2, 102, userId);
-      expect(prisma.subscription.delete).toHaveBeenCalledWith({ where: { id: 9 } });
+      expect(transactionsService.remove).toHaveBeenNthCalledWith(
+        1,
+        101,
+        userId,
+      );
+      expect(transactionsService.remove).toHaveBeenNthCalledWith(
+        2,
+        102,
+        userId,
+      );
+      expect(prisma.subscription.delete).toHaveBeenCalledWith({
+        where: { id: 9 },
+      });
     });
   });
 

@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Request,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { SubscriptionsService } from './subscriptions.service';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
@@ -11,12 +22,15 @@ export class SubscriptionsController {
 
   @Post()
   create(@Request() req, @Body() createSubscriptionDto: CreateSubscriptionDto) {
-    return this.subscriptionsService.create(req.user.userId, createSubscriptionDto);
+    return this.subscriptionsService.create(
+      req.user.userId,
+      createSubscriptionDto,
+    );
   }
 
   @Post('trigger')
-  triggerCheck() {
-    return this.subscriptionsService.triggerCheck();
+  triggerCheck(@Request() req) {
+    return this.subscriptionsService.triggerCheck(req.user.userId);
   }
 
   @Get()
@@ -30,8 +44,16 @@ export class SubscriptionsController {
   }
 
   @Patch(':id')
-  update(@Request() req, @Param('id', ParseIntPipe) id: number, @Body() updateSubscriptionDto: UpdateSubscriptionDto) {
-    return this.subscriptionsService.update(id, req.user.userId, updateSubscriptionDto);
+  update(
+    @Request() req,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateSubscriptionDto: UpdateSubscriptionDto,
+  ) {
+    return this.subscriptionsService.update(
+      id,
+      req.user.userId,
+      updateSubscriptionDto,
+    );
   }
 
   @Patch(':id/pause')

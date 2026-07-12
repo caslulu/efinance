@@ -4,6 +4,7 @@ import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { Frequency, SubscriptionStatus } from '@prisma/client';
+import { addMonthsSafe } from '../common/finance-date';
 
 type SubscriptionBillingRecord = {
   id: number;
@@ -28,21 +29,6 @@ export class SubscriptionsService {
     private readonly prisma: PrismaService,
     private readonly transactionsService: TransactionsService,
   ) {}
-
-  /**
-   * Safely advance a date by N months, clamping to the last valid day.
-   * E.g. Jan 31 + 1 month → Feb 28 (not Mar 3).
-   */
-  private addMonthsSafe(date: Date, months: number): Date {
-    const result = new Date(date);
-    const targetDay = result.getDate();
-    result.setMonth(result.getMonth() + months);
-    // If the day shifted (e.g. 31 → 3 because month has fewer days), clamp
-    if (result.getDate() !== targetDay) {
-      result.setDate(0); // Go back to last day of previous month
-    }
-    return result;
-  }
 
   async create(userId: number, createSubscriptionDto: CreateSubscriptionDto) {
     const wallet = await this.prisma.wallet.findUnique({
@@ -78,7 +64,7 @@ export class SubscriptionsService {
       },
     });
 
-    await this.triggerCheck();
+    await this.triggerCheck(userId, sub.id);
 
     return sub;
   }
@@ -94,9 +80,9 @@ export class SubscriptionsService {
         return next;
       }
       case Frequency.MONTHLY:
-        return this.addMonthsSafe(from, 1);
+        return addMonthsSafe(from, 1);
       case Frequency.QUARTERLY:
-        return this.addMonthsSafe(from, 3);
+        return addMonthsSafe(from, 3);
       case Frequency.YEARLY: {
         const next = new Date(from);
         next.setFullYear(next.getFullYear() + 1);
@@ -107,7 +93,7 @@ export class SubscriptionsService {
     }
   }
 
-  async triggerCheck() {
+  async triggerCheck(userId?: number, subscriptionId?: number) {
     const today = new Date();
     today.setHours(23, 59, 59, 999);
 
@@ -115,6 +101,8 @@ export class SubscriptionsService {
       where: {
         status: SubscriptionStatus.ACTIVE,
         next_billing_date: { lte: today },
+        ...(userId !== undefined ? { user_id: userId } : {}),
+        ...(subscriptionId !== undefined ? { id: subscriptionId } : {}),
       },
     });
 
@@ -128,29 +116,46 @@ export class SubscriptionsService {
       // cycle it represents (NOT on the day the cron runs). Loop stops when
       // the next scheduled date is past today.
       while (currentDate <= today) {
-        await this.transactionsService.create(sub.user_id, {
-          transaction_date: currentDate.toISOString(),
-          wallet_id: sub.wallet_id,
-          category_id: sub.category_id,
-          value: Number(sub.value),
-          description: sub.description || sub.name,
-          transaction_type: sub.transaction_type,
-          is_recurring: true,
-          subscription_id: sub.id,
-          payment_method: sub.payment_method || undefined,
-          card_id: sub.card_id || undefined,
-        });
-        processedCycles++;
-        details.push(
-          `Generated "${sub.name}" for ${currentDate.toISOString().slice(0, 10)}`,
-        );
-        currentDate = this.advanceBillingDate(currentDate, sub.frequency);
-      }
+        const cycleDate = currentDate;
+        const nextDate = this.advanceBillingDate(cycleDate, sub.frequency);
+        const claimed = await this.prisma.$transaction(async (tx) => {
+          const claim = await tx.subscription.updateMany({
+            where: {
+              id: sub.id,
+              status: SubscriptionStatus.ACTIVE,
+              next_billing_date: cycleDate,
+            },
+            data: { next_billing_date: nextDate },
+          });
+          if (claim.count === 0) return false;
 
-      await this.prisma.subscription.update({
-        where: { id: sub.id },
-        data: { next_billing_date: currentDate },
-      });
+          await this.transactionsService.create(
+            sub.user_id,
+            {
+              transaction_date: cycleDate.toISOString(),
+              wallet_id: sub.wallet_id,
+              category_id: sub.category_id,
+              value: Number(sub.value),
+              description: sub.description || sub.name,
+              transaction_type: sub.transaction_type,
+              is_recurring: true,
+              subscription_id: sub.id,
+              payment_method: sub.payment_method || undefined,
+              card_id: sub.card_id || undefined,
+            },
+            tx,
+          );
+          return true;
+        });
+
+        if (claimed) {
+          processedCycles++;
+          details.push(
+            `Generated "${sub.name}" for ${cycleDate.toISOString().slice(0, 10)}`,
+          );
+        }
+        currentDate = nextDate;
+      }
     }
 
     return { processed: processedCycles, details };
