@@ -1,4 +1,11 @@
-import { Injectable, Logger, UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { MailerService } from '@nestjs-modules/mailer';
@@ -18,10 +25,10 @@ export class AuthService {
   ) {}
 
   generateRegisterToken(profile: any) {
-    const payload = { 
-      email: profile.email, 
+    const payload = {
+      email: profile.email,
       firstName: profile.firstName,
-      isGoogleVerified: true 
+      isGoogleVerified: true,
     };
     return this.jwtService.sign(payload, { expiresIn: '15m' });
   }
@@ -31,11 +38,11 @@ export class AuthService {
     if (!user) {
       // Return temporary token for registration completion
       const registerToken = this.generateRegisterToken(googleUser);
-      return { 
-        isNewUser: true, 
+      return {
+        isNewUser: true,
         registerToken,
         email: googleUser.email,
-        firstName: googleUser.firstName 
+        firstName: googleUser.firstName,
       };
     }
     return user;
@@ -61,11 +68,16 @@ export class AuthService {
     }
 
     if (user.isTwoFactorEnabled) {
-      this.sendTwoFactorToken(user).catch(err => this.logger.error('Failed to send 2FA email asynchronously', err?.stack));
+      this.sendTwoFactorToken(user).catch((err) =>
+        this.logger.error(
+          'Failed to send 2FA email asynchronously',
+          err?.stack,
+        ),
+      );
       return {
         requires2FA: true,
         username: user.username,
-        id: user.id
+        id: user.id,
       };
     }
 
@@ -81,7 +93,9 @@ export class AuthService {
     }
 
     if (new Date() > user.twoFactorTokenExpiry) {
-      throw new UnauthorizedException('O código expirou. Faça login novamente.');
+      throw new UnauthorizedException(
+        'O código expirou. Faça login novamente.',
+      );
     }
 
     if (user.twoFactorToken !== token) {
@@ -114,33 +128,40 @@ export class AuthService {
       email: createUserDto.email,
     };
 
-    const existingUser = await this.usersService.findByEmail(createUserDto.email);
+    const existingUser = await this.usersService.findByEmail(
+      createUserDto.email,
+    );
     if (existingUser) {
       if (existingUser.isEmailVerified) {
         throw new BadRequestException('Este email já está cadastrado.');
       }
 
-      const user = await this.usersService.updatePendingRegistration(existingUser.id, {
-        ...userData,
-        password: hashedPassword,
-        fullName,
-        birthDate: birthDate ? new Date(birthDate) : undefined,
-      });
+      const user = await this.usersService.updatePendingRegistration(
+        existingUser.id,
+        {
+          ...userData,
+          password: hashedPassword,
+          fullName,
+          birthDate: birthDate ? new Date(birthDate) : undefined,
+        },
+      );
 
       if (isVerified) {
         await this.usersService.markEmailAsVerified(user.id);
       } else {
-        this.sendVerificationEmail(user).catch(err => this.logger.error('Failed to resend verification email asynchronously', err?.stack));
+        await this.sendVerificationEmail(user);
       }
 
       return {
-        message: isVerified ? 'Cadastro realizado com sucesso.' : 'Cadastro pendente encontrado. Enviamos um novo código de verificação.',
+        message: isVerified
+          ? 'Cadastro realizado com sucesso.'
+          : 'Cadastro pendente encontrado. Enviamos um novo código de verificação.',
         requiresEmailVerification: !isVerified,
         userId: user.id,
         email: user.email,
       };
     }
-    
+
     const user = await this.usersService.create({
       ...userData,
       password: hashedPassword,
@@ -151,14 +172,16 @@ export class AuthService {
     if (isVerified) {
       await this.usersService.markEmailAsVerified(user.id);
     } else {
-      this.sendVerificationEmail(user).catch(err => this.logger.error('Failed to send verification email asynchronously', err?.stack));
+      await this.sendVerificationEmail(user);
     }
 
     return {
-      message: isVerified ? 'Cadastro realizado com sucesso.' : 'Cadastro realizado. Verifique seu email.',
+      message: isVerified
+        ? 'Cadastro realizado com sucesso.'
+        : 'Cadastro realizado. Verifique seu email.',
       requiresEmailVerification: !isVerified,
       userId: user.id,
-      email: user.email
+      email: user.email,
     };
   }
 
@@ -174,7 +197,10 @@ export class AuthService {
       throw new BadRequestException('Código de verificação inválido.');
     }
 
-    if (user.emailVerificationTokenExpiry && new Date() > user.emailVerificationTokenExpiry) {
+    if (
+      user.emailVerificationTokenExpiry &&
+      new Date() > user.emailVerificationTokenExpiry
+    ) {
       throw new BadRequestException('Código expirado.');
     }
 
@@ -185,7 +211,8 @@ export class AuthService {
   async resendVerificationToken(userId: number) {
     const user = await this.usersService.findOne(userId);
     if (!user) throw new NotFoundException('User not found');
-    if (user.isEmailVerified) throw new BadRequestException('Email já verificado.');
+    if (user.isEmailVerified)
+      throw new BadRequestException('Email já verificado.');
 
     await this.sendVerificationEmail(user);
     return { message: 'Novo código de verificação enviado.' };
@@ -194,22 +221,27 @@ export class AuthService {
   async resendToken(userId: number) {
     const user = await this.usersService.findOne(userId);
     if (!user) throw new NotFoundException('User not found');
-    
+
     await this.sendTwoFactorToken(user);
     return { message: 'Novo código enviado.' };
   }
 
   async forgotPassword(email: string) {
     const user = await this.usersService.findByUsername(email);
-    
+
     if (user) {
       const resetToken = randomBytes(32).toString('hex');
       const resetTokenExpiry = new Date(Date.now() + 3600000);
-      const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:5173';
+      const frontendUrl =
+        this.configService.get('FRONTEND_URL') || 'http://localhost:5173';
       const resetLink = `${frontendUrl}/reset-password?token=${resetToken}`;
 
-      await this.usersService.setResetToken(user.id, resetToken, resetTokenExpiry);
-      
+      await this.usersService.setResetToken(
+        user.id,
+        resetToken,
+        resetTokenExpiry,
+      );
+
       try {
         await this.mailerService.sendMail({
           to: email,
@@ -223,14 +255,19 @@ export class AuthService {
           `,
         });
       } catch (error) {
-        this.logger.error('Failed to send password reset email', (error as Error)?.stack);
+        this.logger.error(
+          'Failed to send password reset email',
+          (error as Error)?.stack,
+        );
         if (process.env.NODE_ENV === 'development') {
           this.logger.debug(`[DEV FALLBACK] Reset Link: ${resetLink}`);
         }
       }
     }
 
-    return { message: 'Se o email existir, um link de recuperação foi enviado.' };
+    return {
+      message: 'Se o email existir, um link de recuperação foi enviado.',
+    };
   }
 
   async resetPassword(token: string, newPassword: string) {
@@ -290,6 +327,18 @@ export class AuthService {
   }
 
   private async sendVerificationEmail(user: any) {
+    const mailHost = this.configService.get<string>('MAIL_HOST');
+    const mailUser = this.configService.get<string>('MAIL_USER');
+    const mailPass = this.configService.get<string>('MAIL_PASS');
+    if (!mailHost || !mailUser || !mailPass) {
+      this.logger.error(
+        'Verification email is unavailable: SMTP is not configured',
+      );
+      throw new ServiceUnavailableException(
+        'O serviço de email não está configurado. Tente novamente mais tarde.',
+      );
+    }
+
     const token = randomInt(100000, 999999).toString();
     const expiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
@@ -305,7 +354,7 @@ export class AuthService {
               <h1 style="color: #ffffff; margin: 0;">Bem-vindo ao Finance Pro!</h1>
             </div>
             <div style="padding: 20px;">
-              <p style="font-size: 16px;">Olá, <strong>${user.username}</strong>!</p>
+              <p style="font-size: 16px;">Olá, <strong>${this.escapeHtml(user.username)}</strong>!</p>
               <p style="font-size: 16px;">Estamos muito felizes em tê-lo conosco. Para garantir a segurança da sua conta e começar a usar o Finance Pro, por favor, utilize o código abaixo para verificar seu email:</p>
               
               <div style="text-align: center; margin: 30px 0;">
@@ -322,10 +371,26 @@ export class AuthService {
         `,
       });
     } catch (error) {
-      this.logger.error('Failed to send verification email', (error as Error)?.stack);
-      if (process.env.NODE_ENV === 'development') {
-        this.logger.debug(`[DEV FALLBACK] Verification Token: ${token}`);
-      }
+      this.logger.error(
+        'Failed to send verification email',
+        (error as Error)?.stack,
+      );
+      throw new ServiceUnavailableException(
+        'Não foi possível enviar o código de verificação. Tente reenviar em instantes.',
+      );
     }
+  }
+
+  private escapeHtml(value: unknown): string {
+    return String(value ?? '').replace(/[&<>'"]/g, (character) => {
+      const entities: Record<string, string> = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        "'": '&#39;',
+        '"': '&quot;',
+      };
+      return entities[character];
+    });
   }
 }

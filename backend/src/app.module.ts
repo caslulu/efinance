@@ -26,37 +26,52 @@ import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
-    ThrottlerModule.forRoot([{
-      ttl: 60000,
-      limit: 100,
-    }]),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 100,
+      },
+    ]),
     ScheduleModule.forRoot(),
     ConfigModule.forRoot({ isGlobal: true }),
     MailerModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        transport: {
-          host: configService.get('MAIL_HOST'),
-          port: Number(configService.get('MAIL_PORT')) || 587,
-          secure: false,
-          auth: {
-            user: configService.get('MAIL_USER'),
-            pass: configService.get('MAIL_PASS'),
+      useFactory: async (configService: ConfigService) => {
+        const host = configService.get<string>('MAIL_HOST');
+        const port = Number(configService.get('MAIL_PORT')) || 587;
+        const secure =
+          configService.get<string>('MAIL_SECURE') === 'true' || port === 465;
+
+        return {
+          transport: {
+            host,
+            port,
+            secure,
+            requireTLS: !secure,
+            connectionTimeout: 10_000,
+            greetingTimeout: 10_000,
+            socketTimeout: 15_000,
+            auth: {
+              user: configService.get('MAIL_USER'),
+              pass: configService.get('MAIL_PASS'),
+            },
           },
-        },
-        defaults: {
-          from: configService.get('MAIL_FROM') || '"No Reply" <noreply@financepro.com>',
-        },
-      }),
+          defaults: {
+            from:
+              configService.get('MAIL_FROM') ||
+              '"No Reply" <noreply@financepro.com>',
+          },
+        };
+      },
       inject: [ConfigService],
     }),
-    PrismaModule, 
-    UsersModule, 
-    AuthModule, 
-    WalletsModule, 
-    TransactionsModule, 
-    CategoriesModule, 
-    SubscriptionsModule, 
+    PrismaModule,
+    UsersModule,
+    AuthModule,
+    WalletsModule,
+    TransactionsModule,
+    CategoriesModule,
+    SubscriptionsModule,
     InvestmentsModule,
     DashboardModule,
     BudgetsModule,
