@@ -1,0 +1,213 @@
+name: CI/CD
+
+on:
+  pull_request:
+  push:
+    branches: [master, main]
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Atualizar produção depois dos testes e da publicação das imagens
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  deployment-checks:
+    name: Validar automação de deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - run: bash -n deploy/deploy.sh
+      - run: node --test deploy/deploy.test.mjs
+
+  backend:
+    name: Backend — testes e build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/finance_ci?schema=public
+      JWT_SECRET: ci-only-secret-not-for-production
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run db:generate
+      - run: npx --no-install prisma validate
+      - run: npm test -- --runInBand
+      - run: npm run build
+
+  frontend:
+    name: Frontend — testes e build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      VITE_API_URL: /api
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+  images:
+    name: Imagens Docker
+    needs: [backend, frontend, deployment-checks]
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      backend: ${{ steps.names.outputs.backend }}@${{ steps.backend.outputs.digest }}
+      frontend: ${{ steps.names.outputs.frontend }}@${{ steps.frontend.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Nomes das imagens
+        id: names
+        env:
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          repository="${REPOSITORY,,}"
+          echo "backend=ghcr.io/$repository-backend" >> "$GITHUB_OUTPUT"
+          echo "frontend=ghcr.io/$repository-frontend" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build backend
+        id: backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          platforms: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
+          push: ${{ github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+          tags: ${{ steps.names.outputs.backend }}:sha-${{ github.sha }}
+          labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+      - name: Build frontend
+        id: frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          platforms: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
+          push: ${{ github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+          tags: ${{ steps.names.outputs.frontend }}:sha-${{ github.sha }}
+          labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          build-args: VITE_API_URL=/api
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+  deploy:
+    name: Produção
+    needs: images
+    if: >-
+      github.event_name != 'pull_request' &&
+      github.ref == format('refs/heads/{0}', github.event.repository.default_branch) &&
+      vars.DEPLOY_ENABLED == 'true' &&
+      (github.event_name != 'workflow_dispatch' || inputs.deploy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    permissions:
+      contents: read
+      packages: read
+    env:
+      DEPLOY_HOST: ${{ vars.DEPLOY_HOST || '136.248.123.233' }}
+      DEPLOY_USER: ${{ vars.DEPLOY_USER || 'ubuntu' }}
+      DEPLOY_PORT: ${{ vars.DEPLOY_PORT || '22' }}
+      DEPLOY_PATH: ${{ vars.DEPLOY_PATH || '/home/ubuntu/finance-pro' }}
+      RELEASE_ID: ${{ github.sha }}
+      REGISTRY_DIR: registry-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Configurar SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          [[ -n "$SSH_PRIVATE_KEY" ]] || { echo 'Configure o secret DEPLOY_SSH_KEY no environment production.' >&2; exit 1; }
+          [[ "$DEPLOY_HOST" =~ ^[a-zA-Z0-9.-]+$ && "$DEPLOY_USER" =~ ^[a-zA-Z0-9_-]+$ && "$DEPLOY_PORT" =~ ^[0-9]+$ ]]
+          [[ "$DEPLOY_PATH" =~ ^/[a-zA-Z0-9_/-]+$ && "$DEPLOY_PATH" != / ]]
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/deploy_key"
+          chmod 600 "$HOME/.ssh/deploy_key"
+          if [[ -n "$SSH_KNOWN_HOSTS" ]]; then
+            printf '%s\n' "$SSH_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          else
+            cp deploy/known_hosts "$HOME/.ssh/known_hosts"
+          fi
+          cat > "$HOME/.ssh/config" <<EOF
+          Host production
+            HostName $DEPLOY_HOST
+            User $DEPLOY_USER
+            Port $DEPLOY_PORT
+            IdentityFile $HOME/.ssh/deploy_key
+            IdentitiesOnly yes
+            BatchMode yes
+            StrictHostKeyChecking yes
+            ConnectTimeout 15
+          EOF
+          ssh production "test -f '$DEPLOY_PATH/.env.prod' && test -f '$DEPLOY_PATH/backend/.env.prod' && mkdir -p '$DEPLOY_PATH/.deploy/releases/$RELEASE_ID'"
+      - name: Enviar arquivos da release
+        run: |
+          scp docker-compose.prod.yml deploy/deploy.sh "production:$DEPLOY_PATH/.deploy/releases/$RELEASE_ID/"
+      - name: Autenticar o servidor no GHCR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_USER: ${{ github.actor }}
+        run: |
+          printf '%s' "$GH_TOKEN" | ssh production "umask 077; mkdir -p '$DEPLOY_PATH/.deploy/$REGISTRY_DIR'; docker --config '$DEPLOY_PATH/.deploy/$REGISTRY_DIR' login ghcr.io -u '$GH_USER' --password-stdin"
+      - name: Atualizar aplicação
+        env:
+          BACKEND_IMAGE: ${{ needs.images.outputs.backend }}
+          FRONTEND_IMAGE: ${{ needs.images.outputs.frontend }}
+        run: |
+          ssh production "DOCKER_CONFIG='$DEPLOY_PATH/.deploy/$REGISTRY_DIR' bash '$DEPLOY_PATH/.deploy/releases/$RELEASE_ID/deploy.sh' '$DEPLOY_PATH' '$RELEASE_ID' '$BACKEND_IMAGE' '$FRONTEND_IMAGE'"
+      - name: Remover credenciais temporárias
+        if: always()
+        run: |
+          if [[ -f "$HOME/.ssh/deploy_key" ]]; then
+            ssh production "rm -f '$DEPLOY_PATH/.deploy/$REGISTRY_DIR/config.json'; rmdir '$DEPLOY_PATH/.deploy/$REGISTRY_DIR' 2>/dev/null || true" || true
+            rm -f "$HOME/.ssh/deploy_key"
+          fi

@@ -130,8 +130,8 @@ npm run test
 
 ## Observacoes
 
-- Este repositorio esta configurado para uso local.
-- Arquivos de producao, Nginx, HTTPS, CI/CD e historico de migrations foram
-  removidos enquanto a aplicacao ainda esta em fase de testes.
-- Se a aplicacao for publicada futuramente, reintroduza migrations Prisma antes
-  de ter usuarios ou dados persistentes reais.
+- O ambiente local continua usando `docker-compose.yml`.
+- O deploy usa GitHub Actions, imagens no GHCR e `docker-compose.prod.yml`.
+  Consulte [CI/CD e configuração do servidor](docs/ci-cd.md).
+- O schema ainda não possui migrations versionadas. O deploy faz backup e
+  bloqueia alterações que exigem aceitar perda de dados.
