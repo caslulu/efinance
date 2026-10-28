@@ -17,6 +17,7 @@ const mockPrismaService = {
   },
   transaction: {
     findMany: jest.fn(),
+    findFirst: jest.fn(),
   },
   wallet: {
     findUnique: jest.fn(),
@@ -228,6 +229,37 @@ describe('SubscriptionsService', () => {
 
       expect(result.processed).toBe(0);
       expect(transactionsService.create).not.toHaveBeenCalled();
+    });
+
+    it('should advance the cycle without duplicating a pre-materialized transaction', async () => {
+      const dueSub = {
+        id: 1,
+        user_id: 1,
+        name: 'Netflix',
+        value: new Decimal(39.9),
+        frequency: 'MONTHLY',
+        wallet_id: 1,
+        category_id: 1,
+        status: 'ACTIVE',
+        start_date: new Date('2026-01-01'),
+        next_billing_date: new Date('2026-01-01'),
+        transaction_type: 'EXPENSE',
+      };
+      mockPrismaService.subscription.findMany.mockResolvedValue([dueSub]);
+      mockPrismaService.subscription.updateMany.mockResolvedValue({ count: 1 });
+      mockPrismaService.transaction.findFirst.mockResolvedValue({ id: 99 });
+
+      const result = await service.triggerCheck();
+
+      expect(result.processed).toBe(0);
+      expect(transactionsService.create).not.toHaveBeenCalled();
+      expect(prisma.subscription.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            next_billing_date: expect.any(Date),
+          }),
+        }),
+      );
     });
   });
 

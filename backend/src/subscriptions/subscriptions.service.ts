@@ -129,6 +129,19 @@ export class SubscriptionsService {
           });
           if (claim.count === 0) return false;
 
+          // Cycles can be materialized ahead of time (for example, a 12-month
+          // forecast imported from a statement). The cycle was already claimed
+          // above, so advancing the next billing date is enough; creating
+          // another transaction here would duplicate the forecast.
+          const alreadyMaterialized = await tx.transaction.findFirst({
+            where: {
+              subscription_id: sub.id,
+              transaction_date: cycleDate,
+            },
+            select: { id: true },
+          });
+          if (alreadyMaterialized) return false;
+
           await this.transactionsService.create(
             sub.user_id,
             {
