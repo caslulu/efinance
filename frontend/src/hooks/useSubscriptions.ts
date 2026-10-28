@@ -45,6 +45,22 @@ export function useUpdateSubscription() {
   });
 }
 
+export function useSetSubscriptionStatus() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: 'ACTIVE' | 'PAUSED' }) => {
+      const action = status === 'PAUSED' ? 'pause' : 'resume';
+      const res = await api.patch(`/subscriptions/${id}/${action}`);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.subscriptions });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
+    },
+  });
+}
+
 export function useDeleteSubscription() {
   const queryClient = useQueryClient();
   

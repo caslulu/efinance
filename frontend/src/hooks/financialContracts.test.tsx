@@ -6,10 +6,13 @@ import { api } from "@/api/api";
 import { useCreateBudget, useUpdateBudget } from "./useBudgets";
 import { useTransferBetweenWallets } from "./useWallets";
 import { useAnalyzeStatementImport } from "./useTransactions";
+import { useSetSubscriptionStatus } from "./useSubscriptions";
+import { queryKeys } from "@/lib/queryClient";
 
 vi.mock("@/api/api", () => ({
   api: {
     post: vi.fn(),
+    patch: vi.fn(),
   },
 }));
 
@@ -26,6 +29,26 @@ function wrapper({ children }: PropsWithChildren) {
 describe("financial hook contracts", () => {
   beforeEach(() => {
     mockedPost.mockReset().mockResolvedValue({ data: {} });
+    vi.mocked(api.patch).mockReset().mockResolvedValue({ data: {} });
+  });
+
+  it.each([
+    ['PAUSED', 'pause'],
+    ['ACTIVE', 'resume'],
+  ] as const)('sets subscription status %s using its dedicated endpoint', async (status, action) => {
+    const client = new QueryClient();
+    const invalidate = vi.spyOn(client, 'invalidateQueries');
+    const hook = renderHook(() => useSetSubscriptionStatus(), {
+      wrapper: ({ children }: PropsWithChildren) => (
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      ),
+    });
+
+    await hook.result.current.mutateAsync({ id: 7, status });
+
+    expect(api.patch).toHaveBeenCalledWith(`/subscriptions/7/${action}`);
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.subscriptions });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.dashboard });
   });
 
   it("creates and updates budgets through the upsert contract", async () => {

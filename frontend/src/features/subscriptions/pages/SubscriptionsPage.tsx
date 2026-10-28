@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
-import { useSubscriptions, useDeleteSubscription, useUpdateSubscription, useTriggerSubscriptionCheck } from '@/hooks';
+import { useSubscriptions, useDeleteSubscription, useSetSubscriptionStatus, useTriggerSubscriptionCheck } from '@/hooks';
 import type { Subscription } from '../../../types/Subscription';
 import { CreateSubscriptionModal } from '../components/CreateSubscriptionModal';
 import { EditSubscriptionModal } from '../components/EditSubscriptionModal';
@@ -30,7 +30,7 @@ const frequencyLabels: Record<string, string> = {
 export const SubscriptionsPage = () => {
   const { data: subscriptions = [], isLoading: loading, refetch: refetchSubscriptions } = useSubscriptions();
   const deleteSubscription = useDeleteSubscription();
-  const updateSubscription = useUpdateSubscription();
+  const setSubscriptionStatus = useSetSubscriptionStatus();
   const triggerCheck = useTriggerSubscriptionCheck();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
@@ -72,7 +72,8 @@ export const SubscriptionsPage = () => {
   const handleToggleStatus = async (sub: Subscription) => {
     const newStatus = sub.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
     try {
-      await updateSubscription.mutateAsync({ id: sub.id, data: { status: newStatus } });
+      await setSubscriptionStatus.mutateAsync({ id: sub.id, status: newStatus });
+      toast.success(newStatus === 'PAUSED' ? 'Recorrência pausada' : 'Recorrência ativada');
     } catch (error) {
       toast.error('Falha ao atualizar status');
     }
@@ -182,7 +183,7 @@ export const SubscriptionsPage = () => {
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center">
-                    <Button variant="ghost" size="icon" onClick={() => handleToggleStatus(sub)} title={sub.status === 'ACTIVE' ? 'Pausar' : 'Ativar'}>
+                    <Button variant="ghost" size="icon" onClick={() => handleToggleStatus(sub)} disabled={setSubscriptionStatus.isPending} aria-label={sub.status === 'ACTIVE' ? 'Pausar' : 'Ativar'} title={sub.status === 'ACTIVE' ? 'Pausar' : 'Ativar'}>
                       {sub.status === 'ACTIVE' ? (
                         <PauseCircle className="h-4 w-4 text-yellow-500" />
                       ) : (
