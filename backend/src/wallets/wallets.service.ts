@@ -8,14 +8,10 @@ import { UpdateWalletDto } from './dto/update-wallet.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { Decimal } from '@prisma/client/runtime/library';
 import { Prisma } from '@prisma/client';
-import { InvestmentPortfolioService } from '../investments/investment-portfolio.service';
 
 @Injectable()
 export class WalletsService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly investmentPortfolioService: InvestmentPortfolioService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(userId: number, createWalletDto: CreateWalletDto) {
     return this.prisma.wallet.create({
@@ -33,7 +29,7 @@ export class WalletsService {
       include: { cards: true },
     });
 
-    return this.enrichWalletsWithInvestmentMetrics(userId, wallets);
+    return wallets.map((wallet) => this.normalizeLegacyWallet(wallet));
   }
 
   async findOne(id: number, userId: number) {
@@ -46,11 +42,7 @@ export class WalletsService {
       throw new NotFoundException(`Wallet #${id} not found`);
     }
 
-    const [enrichedWallet] = await this.enrichWalletsWithInvestmentMetrics(
-      userId,
-      [wallet],
-    );
-    return enrichedWallet;
+    return this.normalizeLegacyWallet(wallet);
   }
 
   async addIncoming(
@@ -231,46 +223,8 @@ export class WalletsService {
     return { message: 'Wallets reordenados com sucesso' };
   }
 
-  private async enrichWalletsWithInvestmentMetrics<
-    T extends {
-      id: number;
-      type: string;
-      actual_cash: Decimal;
-    },
-  >(
-    userId: number,
-    wallets: T[],
-  ): Promise<
-    Array<
-      T & {
-        portfolioValue?: number;
-        availableCash?: number;
-        positionsCount?: number;
-        displayValue?: number;
-      }
-    >
-  > {
-    if (!wallets.some((wallet) => wallet.type === 'INVESTMENT')) {
-      return wallets;
-    }
-
-    const walletSummaries =
-      await this.investmentPortfolioService.getWalletDisplaySummaries(userId);
-
-    return wallets.map((wallet) => {
-      if (wallet.type !== 'INVESTMENT') {
-        return wallet;
-      }
-
-      const summary = walletSummaries.get(wallet.id);
-
-      return {
-        ...wallet,
-        portfolioValue: summary?.portfolioValue ?? 0,
-        availableCash: summary?.availableCash ?? Number(wallet.actual_cash),
-        positionsCount: summary?.positionsCount ?? 0,
-        displayValue: summary?.displayValue ?? 0,
-      };
-    });
+  // Keep existing accounts usable without changing stored balances or deleting history.
+  private normalizeLegacyWallet<T extends { type: string }>(wallet: T): T {
+    return wallet.type === 'INVESTMENT' ? { ...wallet, type: 'OTHER' } : wallet;
   }
 }

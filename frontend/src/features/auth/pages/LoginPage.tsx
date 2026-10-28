@@ -322,7 +322,7 @@ export const LoginPage = () => {
             </h1>
 
             <p className="text-white/35 text-lg leading-relaxed max-w-sm login-fade-in-d1">
-              Controle total sobre seus gastos, investimentos e metas financeiras em um só lugar.
+              Controle total sobre seus gastos e metas financeiras em um só lugar.
             </p>
 
             <div className="mt-14 flex items-center gap-3 login-fade-in-d2">

@@ -27,8 +27,6 @@ export class ChatContextService {
       recentExpenses,
       recentIncomes,
       activeSubscriptions,
-      investments,
-      wishlists,
       budgets,
       totalExpenseAgg,
       totalIncomeAgg,
@@ -84,31 +82,13 @@ export class ChatContextService {
         },
       }),
 
-      // 5. Investments
-      this.prisma.investment.findMany({
-        where: { wallet: { user_id: userId } },
-        include: { typeInvestment: true, economicIndicator: true },
-      }),
-
-      // 6. Wishlists with products
-      this.prisma.wishlist.findMany({
-        where: { user_id: userId },
-        include: {
-          products: {
-            include: {
-              history: { orderBy: { created_at: 'desc' }, take: 3 },
-            },
-          },
-        },
-      }),
-
-      // 7. Budgets with current spending
+      // 5. Budgets with current spending
       this.prisma.budget.findMany({
         where: { user_id: userId },
         include: { category: true },
       }),
 
-      // 8. Total expenses this month
+      // 6. Total expenses this month
       this.prisma.transaction.aggregate({
         where: {
           wallet: { user_id: userId },
@@ -119,7 +99,7 @@ export class ChatContextService {
         _sum: { value: true },
       }),
 
-      // 9. Total income this month
+      // 7. Total income this month
       this.prisma.transaction.aggregate({
         where: {
           wallet: { user_id: userId },
@@ -175,11 +155,6 @@ export class ChatContextService {
       (sum, w) => sum + Number(w.actual_cash),
       0,
     );
-    const totalInvested = investments.reduce(
-      (sum, i) => sum + Number(i.current_amount),
-      0,
-    );
-    const netWorth = totalCash + totalInvested;
     const monthIncome = Number(totalIncomeAgg._sum.value || 0);
     const monthExpense = Number(totalExpenseAgg._sum.value || 0);
     const savingsRate =
@@ -201,9 +176,7 @@ export class ChatContextService {
 
     // KPIs
     sections.push(`\n### Resumo Geral
-- Patrimônio Líquido: R$ ${netWorth.toFixed(2)}
 - Dinheiro em Carteiras: R$ ${totalCash.toFixed(2)}
-- Total Investido: R$ ${totalInvested.toFixed(2)}
 - Receitas do Mês: R$ ${monthIncome.toFixed(2)}
 - Despesas do Mês: R$ ${monthExpense.toFixed(2)}
 - Taxa de Poupança: ${savingsRate.toFixed(1)}%
@@ -216,7 +189,7 @@ export class ChatContextService {
       sections.push(`\n### Carteiras`);
       wallets.forEach((w) => {
         sections.push(
-          `- ${w.name} (${w.type}): R$ ${Number(w.actual_cash).toFixed(2)}${w.is_transfer_only ? ' [só transferência]' : ''}`,
+          `- ${w.name} (${w.type === 'INVESTMENT' ? 'OTHER' : w.type}): R$ ${Number(w.actual_cash).toFixed(2)}${w.is_transfer_only ? ' [só transferência]' : ''}`,
         );
       });
     }
@@ -251,40 +224,6 @@ export class ChatContextService {
       activeSubscriptions.forEach((s) => {
         sections.push(
           `- ${s.name}: R$ ${Number(s.value).toFixed(2)} (${s.frequency})`,
-        );
-      });
-    }
-
-    // Investments
-    if (investments.length > 0) {
-      sections.push(`\n### Investimentos`);
-      investments.forEach((i) => {
-        const returnPct =
-          Number(i.investment_amount) > 0
-            ? (
-                ((Number(i.current_amount) - Number(i.investment_amount)) /
-                  Number(i.investment_amount)) *
-                100
-              ).toFixed(2)
-            : '0.00';
-        sections.push(
-          `- ${i.name} (${i.typeInvestment?.name || 'N/A'}): Investido R$ ${Number(i.investment_amount).toFixed(2)} → Atual R$ ${Number(i.current_amount).toFixed(2)} (${returnPct}% rentabilidade)`,
-        );
-      });
-    }
-
-    // Wishlist
-    const allProducts = wishlists.flatMap((w) =>
-      w.products.map((p) => ({ wishlistName: w.name, ...p })),
-    );
-    if (allProducts.length > 0) {
-      sections.push(`\n### Lista de Desejos`);
-      allProducts.forEach((p) => {
-        const priceHistory = p.history
-          .map((h) => `R$ ${Number(h.price).toFixed(2)}`)
-          .join(' → ');
-        sections.push(
-          `- ${p.name_product} (${p.wishlistName}): R$ ${Number(p.price).toFixed(2)}${priceHistory ? ` | Histórico: ${priceHistory}` : ''}`,
         );
       });
     }

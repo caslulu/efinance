@@ -9,5 +9,6 @@ import { LlmService } from './llm.service';
   imports: [PrismaModule],
   controllers: [ChatController],
   providers: [ChatService, ChatContextService, LlmService],
+  exports: [LlmService],
 })
 export class ChatModule {}

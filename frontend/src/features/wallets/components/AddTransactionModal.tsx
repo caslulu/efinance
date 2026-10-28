@@ -63,7 +63,6 @@ export const AddTransactionModal = ({ isOpen, type, walletId, walletType, cardId
     if (walletType === 'BANK') normalizedType = WALLET_TYPES.BANK_ACCOUNT;
     if (walletType === 'PHYSICAL') normalizedType = WALLET_TYPES.PHYSICAL;
     if (walletType === 'MEAL_VOUCHER') normalizedType = WALLET_TYPES.MEAL_VOUCHER;
-    if (walletType === 'INVESTMENT') normalizedType = WALLET_TYPES.INVESTMENT;
     if (walletType === 'OTHER') normalizedType = WALLET_TYPES.OTHER;
 
     return ALLOWED_METHODS[normalizedType] || [];

@@ -321,7 +321,7 @@ export const RegisterPage = () => {
             </h1>
 
             <p className="text-white/35 text-lg leading-relaxed max-w-sm reg-fade-in-d1">
-              Crie sua conta e tenha controle total sobre seus gastos, investimentos e metas.
+              Crie sua conta e tenha controle total sobre seus gastos e metas.
             </p>
 
             <div className="mt-14 flex items-center gap-3 reg-fade-in-d2">

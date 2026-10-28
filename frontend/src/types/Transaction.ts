@@ -34,10 +34,13 @@ export interface StatementImportDuplicateMatch {
 export interface StatementImportPreviewRow {
   source_id: string;
   source_file?: string;
-  transaction_date: string;
-  value: number;
-  transaction_type: "INCOME" | "EXPENSE";
+  transaction_date: string | null;
+  value: number | null;
+  transaction_type: "INCOME" | "EXPENSE" | null;
   description: string | null;
+  category_id?: number;
+  source_ref?: string;
+  needs_review?: boolean;
   is_recurring?: boolean;
   installment_total?: number;
   installment_number?: number;
@@ -48,7 +51,10 @@ export interface StatementImportPreview {
   walletId: number;
   walletName: string;
   fileName: string;
-  format: "OFX" | "CSV";
+  format: "OFX" | "CSV" | "XLSX" | "TXT" | "TEXT";
+  analysis?: "ai";
+  questions?: string[];
+  warnings?: string[];
   summary: {
     totalRows: number;
     duplicateRows: number;
@@ -56,6 +62,17 @@ export interface StatementImportPreview {
     expenseCount: number;
   };
   rows: StatementImportPreviewRow[];
+}
+
+export interface StatementImportConfirmRow {
+  transaction_date: string;
+  value: number;
+  transaction_type: "INCOME" | "EXPENSE";
+  description: string | null;
+  category_id?: number | null;
+  is_recurring?: boolean;
+  installment_total?: number;
+  installment_number?: number;
 }
 
 export interface StatementImportConfirmResponse {

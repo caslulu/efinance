@@ -3,7 +3,6 @@ import { WalletsService } from './wallets.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Decimal } from '@prisma/client/runtime/library';
-import { InvestmentPortfolioService } from '../investments/investment-portfolio.service';
 
 const mockPrismaService = {
   wallet: {
@@ -14,10 +13,6 @@ const mockPrismaService = {
     findUniqueOrThrow: jest.fn(),
     findMany: jest.fn(),
   },
-};
-
-const mockInvestmentPortfolioService = {
-  getWalletDisplaySummaries: jest.fn(),
 };
 
 describe('WalletsService', () => {
@@ -33,10 +28,6 @@ describe('WalletsService', () => {
           provide: PrismaService,
           useValue: mockPrismaService,
         },
-        {
-          provide: InvestmentPortfolioService,
-          useValue: mockInvestmentPortfolioService,
-        },
       ],
     }).compile();
 
@@ -44,13 +35,33 @@ describe('WalletsService', () => {
     prisma = module.get<PrismaService>(PrismaService);
 
     jest.clearAllMocks();
-    mockInvestmentPortfolioService.getWalletDisplaySummaries.mockResolvedValue(
-      new Map(),
-    );
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  it('keeps legacy accounts and their balances accessible as other wallets', async () => {
+    const legacyWallet = {
+      id: 8,
+      user_id: userId,
+      name: 'Conta antiga',
+      type: 'INVESTMENT',
+      actual_cash: new Decimal(250),
+      cards: [],
+    };
+    mockPrismaService.wallet.findMany.mockResolvedValue([legacyWallet]);
+    mockPrismaService.wallet.findUnique.mockResolvedValue(legacyWallet);
+
+    expect(await service.findAll(userId)).toEqual([
+      { ...legacyWallet, type: 'OTHER' },
+    ]);
+    expect(await service.findOne(8, userId)).toEqual({
+      ...legacyWallet,
+      type: 'OTHER',
+    });
+    expect(legacyWallet.type).toBe('INVESTMENT');
+    expect(mockPrismaService.wallet.update).not.toHaveBeenCalled();
   });
 
   describe('create', () => {

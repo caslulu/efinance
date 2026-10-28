@@ -5,7 +5,6 @@ import {
   ArrowLeftRight,
   Menu,
   Target,
-  Gift,
   Repeat,
   Tags,
   Settings,
@@ -72,7 +71,6 @@ export const BottomNav = () => {
           
           <div className="grid grid-cols-3 gap-4 p-4 bg-muted dark:bg-gray-900 rounded-xl">
             <NavItem to="/budgets" icon={Target} label="Metas" />
-            <NavItem to="/wishlists" icon={Gift} label="Wishlist" />
             <NavItem to="/subscriptions" icon={Repeat} label="Recorrências" />
             <NavItem to="/categories" icon={Tags} label="Categorias" />
             <NavItem to="/chat" icon={Sparkles} label="Assistente IA" />

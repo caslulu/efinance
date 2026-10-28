@@ -10,12 +10,10 @@ import { WalletsModule } from './wallets/wallets.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { CategoriesModule } from './categories/categories.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
-import { InvestmentsModule } from './investments/investments.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { BudgetsModule } from './budgets/budgets.module';
-import { WishlistModule } from './wishlist/wishlist.module';
 import { CardsModule } from './cards/cards.module';
 import { ChatModule } from './chat/chat.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
@@ -72,10 +70,8 @@ import { ScheduleModule } from '@nestjs/schedule';
     TransactionsModule,
     CategoriesModule,
     SubscriptionsModule,
-    InvestmentsModule,
     DashboardModule,
     BudgetsModule,
-    WishlistModule,
     CardsModule,
     ChatModule,
   ],

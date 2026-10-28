@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   ArrowDownLeft,
@@ -15,11 +15,13 @@ import {
   useCategories,
   useConfirmStatementImport,
   usePreviewStatementImport,
+  useAnalyzeStatementImport,
 } from "@/hooks";
 import type { Category } from "@/types/Category";
 import type {
   StatementImportPreview,
   StatementImportPreviewRow,
+  StatementImportConfirmRow,
 } from "@/types/Transaction";
 import type { Card } from "@/types/Card";
 import type { Wallet } from "@/types/Wallet";
@@ -42,7 +44,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-type EditableImportRow = StatementImportPreviewRow & {
+type EditableImportRow = Omit<StatementImportPreviewRow, "category_id"> & {
   category_id: string;
   selected: boolean;
   batchDuplicate: boolean;
@@ -66,18 +68,36 @@ export function ImportStatementModal({
 }: ImportStatementModalProps) {
   const previewImport = usePreviewStatementImport();
   const confirmImport = useConfirmStatementImport();
+  const analyzeImport = useAnalyzeStatementImport();
   const { data: categories = [] } = useCategories();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<StatementImportPreview[]>([]);
   const [rows, setRows] = useState<EditableImportRow[]>([]);
+  const [sourceType, setSourceType] = useState<"file" | "text">("file");
+  const [mode, setMode] = useState<"conventional" | "assisted" | "automatic">(
+    "assisted",
+  );
+  const [message, setMessage] = useState("");
+  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [clarifications, setClarifications] = useState<Record<number, string>>(
+    {},
+  );
+  const [busy, setBusy] = useState(false);
+  const requestVersion = useRef(0);
 
   const resetState = () => {
+    requestVersion.current++;
     setSelectedFiles([]);
     setPreviews([]);
     setRows([]);
+    setMessage("");
+    setAnswers({});
+    setClarifications({});
+    setBusy(false);
   };
 
   const handleClose = () => {
+    if (confirmImport.isPending) return;
     resetState();
     onClose();
   };
@@ -110,29 +130,109 @@ export function ImportStatementModal({
   };
 
   const handlePreview = async () => {
-    if (!wallet || selectedFiles.length === 0) {
-      toast.warning("Selecione um ou mais arquivos OFX ou CSV.");
+    if (
+      !wallet ||
+      (sourceType === "file" ? selectedFiles.length === 0 : !message.trim())
+    ) {
+      toast.warning("Selecione um arquivo ou descreva seus lançamentos.");
       return;
     }
-
+    const version = ++requestVersion.current;
+    setBusy(true);
     try {
       const results: StatementImportPreview[] = [];
-
-      for (const file of selectedFiles) {
-        const result = await previewImport.mutateAsync({
-          walletId: wallet.id,
-          cardId: card?.id,
-          file,
-        });
-        results.push(result);
+      if (sourceType === "text") {
+        results.push(
+          await analyzeImport.mutateAsync({
+            walletId: wallet.id,
+            cardId: card?.id,
+            message,
+            mode: mode === "automatic" ? "automatic" : "assisted",
+          }),
+        );
+      } else {
+        for (const file of selectedFiles) {
+          if (version !== requestVersion.current) return;
+          if (mode === "conventional") {
+            results.push(
+              await previewImport.mutateAsync({
+                walletId: wallet.id,
+                cardId: card?.id,
+                file,
+              }),
+            );
+          } else {
+            results.push(
+              await analyzeImport.mutateAsync({
+                walletId: wallet.id,
+                cardId: card?.id,
+                file,
+                mode,
+              }),
+            );
+          }
+        }
       }
-
-      const batchRows = buildEditableBatchRows(results);
-
+      if (version !== requestVersion.current) return;
       setPreviews(results);
-      setRows(batchRows);
+      setRows(buildEditableBatchRows(results));
+      setAnswers({});
+      setClarifications({});
     } catch (error) {
-      toast.error(getErrorMessage(error, "Falha ao ler um dos extratos."));
+      if (version === requestVersion.current)
+        toast.error(getErrorMessage(error, "Falha ao ler os lançamentos."));
+    } finally {
+      if (version === requestVersion.current) setBusy(false);
+    }
+  };
+
+  const handleClarify = async (index: number) => {
+    if (!wallet || !answers[index]?.trim()) return;
+    const clarification = [
+      clarifications[index],
+      `Perguntas: ${(previews[index].questions || []).join("; ")}\nResposta: ${answers[index]}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+    if (clarification.length > 20000) {
+      toast.warning(
+        "As respostas ficaram muito longas. Reinicie a análise com um texto mais curto.",
+      );
+      return;
+    }
+    const version = ++requestVersion.current;
+    setBusy(true);
+    try {
+      const result = await analyzeImport.mutateAsync({
+        walletId: wallet.id,
+        cardId: card?.id,
+        file: sourceType === "file" ? selectedFiles[index] : undefined,
+        message: sourceType === "text" ? message : undefined,
+        clarification,
+        mode: "assisted",
+      });
+      if (version !== requestVersion.current) return;
+      const next = previews.map((preview, i) =>
+        i === index ? result : preview,
+      );
+      setPreviews(next);
+      setRows((current) => {
+        const unchanged = new Map(
+          current
+            .filter((row) => !row.source_id.startsWith(`${index}::`))
+            .map((row) => [row.source_id, row]),
+        );
+        return buildEditableBatchRows(next).map(
+          (row) => unchanged.get(row.source_id) || row,
+        );
+      });
+      setClarifications((current) => ({ ...current, [index]: clarification }));
+      setAnswers((current) => ({ ...current, [index]: "" }));
+    } catch (error) {
+      if (version === requestVersion.current)
+        toast.error(getErrorMessage(error, "Falha ao atualizar a análise."));
+    } finally {
+      if (version === requestVersion.current) setBusy(false);
     }
   };
 
@@ -155,9 +255,35 @@ export function ImportStatementModal({
         return;
       }
 
-      if (!row.date_input) {
+      if (
+        !/^\d{4}-\d{2}-\d{2}$/.test(row.date_input) ||
+        Number.isNaN(Date.parse(row.date_input)) ||
+        new Date(row.date_input).toISOString().slice(0, 10) !== row.date_input
+      ) {
         toast.warning(
           `Data inválida na linha ${row.description_input || row.source_id}.`,
+        );
+        return;
+      }
+
+      if (!row.transaction_type) {
+        toast.warning(
+          "Escolha receita ou despesa para os lançamentos selecionados.",
+        );
+        return;
+      }
+      if (
+        (row.installment_total &&
+          (!Number.isInteger(row.installment_total) ||
+            row.installment_total < 2 ||
+            row.installment_total > 600)) ||
+        (row.installment_number &&
+          (!Number.isInteger(row.installment_number) ||
+            row.installment_number < 1 ||
+            row.installment_number > (row.installment_total || 1)))
+      ) {
+        toast.warning(
+          "Confira o número e o total de parcelas dos lançamentos selecionados.",
         );
         return;
       }
@@ -185,6 +311,34 @@ export function ImportStatementModal({
         toast.warning(
           `${result.importedCount} importadas e ${result.failedCount} com falha.`,
         );
+        // Keep only failed rows selected so a retry cannot import successful rows again.
+        const failures = new Map<string, number>();
+        const rowKey = (row: Partial<StatementImportConfirmRow>) =>
+          JSON.stringify([
+            row.transaction_date,
+            row.value,
+            row.transaction_type,
+            row.description || "",
+            row.category_id ?? null,
+            row.is_recurring || false,
+            row.installment_total ?? null,
+            row.installment_number ?? null,
+          ]);
+        result.failures.forEach(({ row }) =>
+          failures.set(rowKey(row), (failures.get(rowKey(row)) || 0) + 1),
+        );
+        const failedIds = new Set<string>();
+        for (let i = 0; i < parsedRows.length; i++) {
+          const key = rowKey(parsedRows[i]);
+          if ((failures.get(key) || 0) > 0) {
+            failedIds.add(rowsToImport[i].source_id);
+            failures.set(key, failures.get(key)! - 1);
+          }
+        }
+        setRows((current) =>
+          current.filter((row) => failedIds.has(row.source_id)),
+        );
+        return;
       } else {
         toast.success(`${result.importedCount} transação(ões) importadas.`);
       }
@@ -202,13 +356,13 @@ export function ImportStatementModal({
         if (!nextOpen) handleClose();
       }}
     >
-      <DialogContent className="max-w-7xl overflow-hidden border-emerald-500/20 bg-slate-950 text-slate-50">
+      <DialogContent className="max-h-[92dvh] max-w-7xl overflow-y-auto border-emerald-500/20 bg-slate-950 text-slate-50">
         <DialogHeader className="border-b border-white/10 pb-4">
           <DialogTitle className="flex items-center gap-3 text-2xl font-semibold tracking-tight">
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-300">
               <FileSpreadsheet className="h-5 w-5" />
             </span>
-            Importar extrato para {importTargetName}
+            Adicionar lançamentos em {importTargetName}
           </DialogTitle>
           <DialogDescription className="text-slate-300">
             {walletGuidance.description}
@@ -217,69 +371,162 @@ export function ImportStatementModal({
 
         {previews.length === 0 ? (
           <div className="grid gap-5 py-5">
-            <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-[linear-gradient(135deg,rgba(6,95,70,0.08),rgba(15,23,42,0.94))] p-6">
-              <div className="absolute right-0 top-0 h-36 w-36 rounded-full bg-emerald-400/10 blur-3xl" />
-              <div className="relative grid gap-4 md:grid-cols-[1.15fr_0.85fr] md:items-end">
-                <div className="space-y-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-300/70">
-                    Importação revisada
-                  </p>
-                  <h3 className="text-3xl font-semibold leading-tight text-white">
-                    {walletGuidance.title}
-                  </h3>
-                  <p className="max-w-2xl text-sm leading-6 text-slate-300">
-                    {walletGuidance.helper}
-                  </p>
-                </div>
-
-                <div className="rounded-2xl border border-white/10 bg-black/20 p-4 backdrop-blur">
-                  <label className="mb-3 block text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
-                    Arquivos
-                  </label>
-                  <div className="flex items-center gap-3 rounded-2xl border border-dashed border-emerald-400/30 bg-emerald-400/5 p-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-400/10 text-emerald-300">
-                      {selectedFiles.length > 1 ? (
-                        <Files className="h-5 w-5" />
-                      ) : (
-                        <UploadCloud className="h-5 w-5" />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <Input
-                        type="file"
-                        accept=".ofx,.csv"
-                        multiple
-                        className="border-white/10 bg-transparent text-slate-100 file:mr-3 file:rounded-full file:border-0 file:bg-emerald-500/20 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-emerald-100 hover:file:bg-emerald-500/30"
-                        onChange={(event) => {
-                          setSelectedFiles(
-                            Array.from(event.target.files || []),
-                          );
-                        }}
-                      />
-                      <p className="mt-2 truncate text-xs text-slate-400">
-                        {selectedFiles.length > 0
-                          ? formatSelectedFiles(selectedFiles)
-                          : walletGuidance.filePrompt}
-                      </p>
-                    </div>
+            <div className="grid gap-4 rounded-2xl border border-white/10 p-4 md:grid-cols-2">
+              <div>
+                <label htmlFor="import-source" className="mb-2 block text-sm">
+                  Como deseja adicionar?
+                </label>
+                <select
+                  id="import-source"
+                  value={sourceType}
+                  disabled={busy}
+                  onChange={(event) =>
+                    setSourceType(event.target.value as "file" | "text")
+                  }
+                  className="w-full rounded-xl border border-white/10 bg-slate-900 p-3"
+                >
+                  <option value="file">Importar arquivos</option>
+                  <option value="text">Descrever em texto</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="import-mode" className="mb-2 block text-sm">
+                  Modo de leitura
+                </label>
+                <select
+                  id="import-mode"
+                  value={
+                    sourceType === "text" && mode === "conventional"
+                      ? "assisted"
+                      : mode
+                  }
+                  disabled={busy}
+                  onChange={(event) =>
+                    setMode(event.target.value as typeof mode)
+                  }
+                  className="w-full rounded-xl border border-white/10 bg-slate-900 p-3"
+                >
+                  <option value="assisted">
+                    IA assistida — pergunta quando houver dúvidas
+                  </option>
+                  <option value="automatic">
+                    IA automática — prepara a prévia sem perguntas
+                  </option>
+                  {sourceType === "file" && (
+                    <option value="conventional">
+                      Convencional — OFX/CSV sem IA
+                    </option>
+                  )}
+                </select>
+              </div>
+              <p className="text-xs text-slate-400 md:col-span-2">
+                {mode === "conventional" && sourceType === "file"
+                  ? "Leitura de OFX/CSV sem envio para IA."
+                  : "O conteúdo enviado e os nomes das suas categorias serão analisados pelo serviço de IA configurado. Revise os valores antes de salvar."}
+              </p>
+            </div>
+            {sourceType === "text" ? (
+              <div className="space-y-3 rounded-2xl border border-emerald-500/20 p-5">
+                <label htmlFor="import-message" className="block font-medium">
+                  Descreva suas entradas e gastos
+                </label>
+                <textarea
+                  id="import-message"
+                  value={message}
+                  disabled={busy}
+                  onChange={(event) => setMessage(event.target.value)}
+                  maxLength={20000}
+                  rows={5}
+                  placeholder="Ontem gastei R$ 85,90 no mercado e hoje recebi R$ 3.000 de salário."
+                  className="w-full rounded-xl border border-white/10 bg-slate-900 p-3 text-sm"
+                />
+                <Button
+                  disabled={busy || !message.trim()}
+                  onClick={handlePreview}
+                >
+                  {busy ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Analisando
+                    </>
+                  ) : (
+                    "Organizar lançamentos"
+                  )}
+                </Button>
+              </div>
+            ) : (
+              <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-[linear-gradient(135deg,rgba(6,95,70,0.08),rgba(15,23,42,0.94))] p-6">
+                <div className="absolute right-0 top-0 h-36 w-36 rounded-full bg-emerald-400/10 blur-3xl" />
+                <div className="relative grid gap-4 md:grid-cols-[1.15fr_0.85fr] md:items-end">
+                  <div className="space-y-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-300/70">
+                      Importação revisada
+                    </p>
+                    <h3 className="text-3xl font-semibold leading-tight text-white">
+                      {walletGuidance.title}
+                    </h3>
+                    <p className="max-w-2xl text-sm leading-6 text-slate-300">
+                      {walletGuidance.helper}
+                    </p>
                   </div>
-                  <Button
-                    className="mt-4 w-full bg-emerald-400 text-emerald-950 hover:bg-emerald-300"
-                    disabled={selectedFiles.length === 0 || previewImport.isPending}
-                    onClick={handlePreview}
-                  >
-                    {previewImport.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Lendo arquivos
-                      </>
-                    ) : (
-                      "Abrir tabela única"
-                    )}
-                  </Button>
+
+                  <div className="rounded-2xl border border-white/10 bg-black/20 p-4 backdrop-blur">
+                    <label className="mb-3 block text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
+                      Arquivos
+                    </label>
+                    <div className="flex items-center gap-3 rounded-2xl border border-dashed border-emerald-400/30 bg-emerald-400/5 p-3">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-400/10 text-emerald-300">
+                        {selectedFiles.length > 1 ? (
+                          <Files className="h-5 w-5" />
+                        ) : (
+                          <UploadCloud className="h-5 w-5" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <Input
+                          type="file"
+                          accept={
+                            mode === "conventional"
+                              ? ".ofx,.csv"
+                              : ".ofx,.csv,.xlsx,.txt"
+                          }
+                          disabled={busy}
+                          aria-label="Arquivos para importar"
+                          multiple
+                          className="border-white/10 bg-transparent text-slate-100 file:mr-3 file:rounded-full file:border-0 file:bg-emerald-500/20 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-emerald-100 hover:file:bg-emerald-500/30"
+                          onChange={(event) => {
+                            setSelectedFiles(
+                              Array.from(event.target.files || []),
+                            );
+                          }}
+                        />
+                        <p className="mt-2 truncate text-xs text-slate-400">
+                          {selectedFiles.length > 0
+                            ? formatSelectedFiles(selectedFiles)
+                            : walletGuidance.filePrompt}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      className="mt-4 w-full bg-emerald-400 text-emerald-950 hover:bg-emerald-300"
+                      disabled={selectedFiles.length === 0 || busy}
+                      onClick={handlePreview}
+                    >
+                      {busy ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Lendo arquivos
+                        </>
+                      ) : mode === "conventional" ? (
+                        "Abrir tabela única"
+                      ) : (
+                        "Analisar arquivos com IA"
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             <div className="grid gap-3 md:grid-cols-3">
               <MetricCard
@@ -301,6 +548,70 @@ export function ImportStatementModal({
           </div>
         ) : (
           <div className="grid gap-5 py-5">
+            {previews.map((preview, index) => (
+              <div key={index} className="space-y-3">
+                {(preview.questions?.length || 0) > 0 && (
+                  <div className="space-y-3 rounded-2xl border border-amber-300/30 bg-amber-300/5 p-4">
+                    <p className="font-medium">
+                      Vamos esclarecer — {preview.fileName}
+                    </p>
+                    <ul className="list-disc space-y-1 pl-5 text-sm text-slate-200">
+                      {preview.questions!.map((question, i) => (
+                        <li key={i}>{question}</li>
+                      ))}
+                    </ul>
+                    <label
+                      htmlFor={`clarification-${index}`}
+                      className="block text-sm"
+                    >
+                      Sua resposta
+                    </label>
+                    <textarea
+                      id={`clarification-${index}`}
+                      value={answers[index] || ""}
+                      onChange={(event) =>
+                        setAnswers((current) => ({
+                          ...current,
+                          [index]: event.target.value,
+                        }))
+                      }
+                      disabled={busy || confirmImport.isPending}
+                      maxLength={10000}
+                      rows={3}
+                      className="w-full rounded-xl border border-white/10 bg-slate-900 p-3 text-sm"
+                    />
+                    <Button
+                      disabled={
+                        busy ||
+                        confirmImport.isPending ||
+                        !answers[index]?.trim()
+                      }
+                      onClick={() => handleClarify(index)}
+                    >
+                      {busy ? "Analisando…" : "Responder e atualizar prévia"}
+                    </Button>
+                    <p className="text-xs text-slate-400">
+                      A resposta refaz a prévia deste arquivo. Faça os ajustes
+                      manuais depois de esclarecer as dúvidas.
+                    </p>
+                  </div>
+                )}
+                {(preview.warnings?.length || 0) > 0 && (
+                  <ul className="list-disc space-y-1 rounded-xl border border-amber-300/20 p-4 pl-8 text-sm text-amber-100">
+                    {preview.warnings!.map((warning, i) => (
+                      <li key={i}>{warning}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))}
+            {previews.some((preview) => preview.analysis === "ai") && (
+              <p className="text-sm text-slate-300">
+                Confira os trechos de origem. Lançamentos com dúvidas começam
+                desmarcados; ajuste os campos e selecione apenas os que deseja
+                salvar.
+              </p>
+            )}
             <div className="grid gap-3 md:grid-cols-4">
               <MetricCard
                 label="Arquivos"
@@ -340,16 +651,20 @@ export function ImportStatementModal({
                 <Button
                   variant="outline"
                   className="border-white/10 bg-transparent text-slate-200 hover:bg-white/10"
+                  disabled={busy || confirmImport.isPending}
                   onClick={() => {
                     setPreviews([]);
                     setRows([]);
                   }}
                 >
-                  Trocar arquivos
+                  Alterar origem
                 </Button>
               </div>
 
-              <div className="max-h-[56vh] overflow-auto">
+              <fieldset
+                disabled={busy || confirmImport.isPending}
+                className="max-h-[56vh] min-w-0 overflow-auto"
+              >
                 <Table className="min-w-[1180px]">
                   <TableHeader className="bg-white/5">
                     <TableRow className="border-white/10 hover:bg-white/5">
@@ -404,8 +719,31 @@ export function ImportStatementModal({
                               ) : (
                                 <ArrowUpRight className="mr-1 h-3.5 w-3.5" />
                               )}
-                              {isExpense ? "Despesa" : "Receita"}
+                              {row.transaction_type
+                                ? isExpense
+                                  ? "Despesa"
+                                  : "Receita"
+                                : "Definir tipo"}
                             </Badge>
+                            <select
+                              aria-label="Tipo do lançamento"
+                              value={row.transaction_type || ""}
+                              onChange={(event) =>
+                                updateRow(row.source_id, (current) => ({
+                                  ...current,
+                                  transaction_type: event.target.value as
+                                    | "INCOME"
+                                    | "EXPENSE",
+                                }))
+                              }
+                              className="mt-2 w-full rounded border border-white/10 bg-slate-900 p-1 text-xs"
+                            >
+                              <option value="" disabled>
+                                Escolha
+                              </option>
+                              <option value="EXPENSE">Despesa</option>
+                              <option value="INCOME">Receita</option>
+                            </select>
                           </TableCell>
                           <TableCell>
                             <span className="block max-w-[170px] truncate text-xs text-slate-400">
@@ -443,6 +781,7 @@ export function ImportStatementModal({
                             <div className="space-y-2">
                               <Input
                                 type="text"
+                                maxLength={255}
                                 value={row.description_input}
                                 className="border-white/10 bg-black/20 text-slate-100"
                                 placeholder="Nome da transação"
@@ -453,6 +792,74 @@ export function ImportStatementModal({
                                   }))
                                 }
                               />
+                              {row.source_ref && (
+                                <p className="max-w-sm whitespace-pre-wrap break-words text-xs text-slate-400">
+                                  Origem: {row.source_ref}
+                                </p>
+                              )}
+                              {row.needs_review && (
+                                <p className="text-xs text-amber-200">
+                                  Confira as dúvidas antes de selecionar.
+                                </p>
+                              )}
+                              <details className="text-xs text-slate-400">
+                                <summary className="cursor-pointer">
+                                  Recorrência e parcelas
+                                </summary>
+                                <label className="my-2 flex items-center gap-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={row.is_recurring || false}
+                                    onChange={(event) =>
+                                      updateRow(row.source_id, (current) => ({
+                                        ...current,
+                                        is_recurring: event.target.checked,
+                                      }))
+                                    }
+                                  />
+                                  Recorrente
+                                </label>
+                                <div className="flex gap-2">
+                                  <label>
+                                    Parcela
+                                    <input
+                                      aria-label="Número da parcela"
+                                      type="number"
+                                      min={1}
+                                      max={600}
+                                      value={row.installment_number || ""}
+                                      onChange={(event) =>
+                                        updateRow(row.source_id, (current) => ({
+                                          ...current,
+                                          installment_number: event.target.value
+                                            ? Number(event.target.value)
+                                            : undefined,
+                                        }))
+                                      }
+                                      className="mt-1 w-20 rounded bg-slate-900 p-1"
+                                    />
+                                  </label>
+                                  <label>
+                                    Total
+                                    <input
+                                      aria-label="Total de parcelas"
+                                      type="number"
+                                      min={2}
+                                      max={600}
+                                      value={row.installment_total || ""}
+                                      onChange={(event) =>
+                                        updateRow(row.source_id, (current) => ({
+                                          ...current,
+                                          installment_total: event.target.value
+                                            ? Number(event.target.value)
+                                            : undefined,
+                                        }))
+                                      }
+                                      className="mt-1 w-20 rounded bg-slate-900 p-1"
+                                    />
+                                  </label>
+                                </div>
+                              </details>
                               {row.duplicateMatches.length > 0 && (
                                 <p className="text-[11px] leading-5 text-amber-100/80">
                                   Já existe {row.duplicateMatches.length}{" "}
@@ -474,7 +881,8 @@ export function ImportStatementModal({
                             />
                           </TableCell>
                           <TableCell>
-                            {row.duplicateMatches.length > 0 || row.batchDuplicate ? (
+                            {row.duplicateMatches.length > 0 ||
+                            row.batchDuplicate ? (
                               <div className="space-y-2">
                                 <Badge
                                   variant="outline"
@@ -538,7 +946,7 @@ export function ImportStatementModal({
                     })}
                   </TableBody>
                 </Table>
-              </div>
+              </fieldset>
             </div>
 
             <div className="flex flex-col gap-3 border-t border-white/10 pt-4 md:flex-row md:items-center md:justify-between">
@@ -548,7 +956,9 @@ export function ImportStatementModal({
               </p>
               <Button
                 className="bg-emerald-400 text-emerald-950 hover:bg-emerald-300"
-                disabled={confirmImport.isPending || rowsToImport.length === 0}
+                disabled={
+                  busy || confirmImport.isPending || rowsToImport.length === 0
+                }
                 onClick={handleConfirm}
               >
                 {confirmImport.isPending ? (
@@ -575,48 +985,44 @@ function getWalletImportGuidance(wallet: Wallet | null, card?: Card | null) {
       description:
         "As linhas importadas serão vinculadas ao cartão e entrarão na fatura, sem baixar o saldo da conta imediatamente.",
       helper:
-        "Use OFX ou CSV da fatura. Compras, estornos e pagamentos entram como lançamentos de crédito associados ao cartão selecionado.",
-      filePrompt: "Selecione o OFX ou CSV da fatura do cartão.",
+        "Envie OFX, CSV, XLSX ou TXT com IA, ou use a leitura convencional de OFX/CSV. Confira estornos e pagamentos antes de selecionar as linhas.",
+      filePrompt: "OFX/CSV, ou XLSX/TXT com IA. Até 5 MB por arquivo.",
       primary: "Fatura",
       primaryHelper: "vinculada ao cartão",
     };
   }
 
-  const walletName = wallet?.name?.toLowerCase() || "";
   const isMealVoucher = wallet?.type === "MEAL_VOUCHER";
-  const isNubank = walletName.includes("nubank") || walletName.includes("nu ");
 
   if (isMealVoucher) {
     return {
-      title: "Flash fica sob seu controle, sem sincronização automática.",
+      title: "Importe os gastos do seu vale alimentação.",
       description:
-        "Use esta carteira para Flash/vale alimentação. Quando houver CSV, revise as linhas aqui; quando não houver, lance as compras manualmente.",
+        "Os lançamentos serão registrados nesta carteira de vale alimentação.",
       helper:
-        "Vale alimentação costuma se comportar como saldo pré-pago: cada despesa reduz o saldo na hora. Por isso o app mantém o Flash separado do Nubank.",
-      filePrompt: "Selecione um CSV do Flash, se disponível.",
-      primary: "Flash",
-      primaryHelper: "CSV ou lançamento manual",
+        "Cada despesa reduz o saldo do benefício. Você pode enviar OFX, CSV, XLSX ou TXT com IA, ou usar a leitura convencional de OFX/CSV.",
+      filePrompt: "OFX/CSV, ou XLSX/TXT com IA. Até 5 MB por arquivo.",
+      primary: "Vale alimentação",
+      primaryHelper: "gastos vinculados ao benefício",
     };
   }
 
   return {
-    title: isNubank
-      ? "Nubank entra por OFX, sempre com revisão antes de salvar."
-      : "Importe OFX/CSV e revise cada linha antes de salvar.",
+    title: "Envie seus arquivos e revise antes de salvar.",
     description:
       "O arquivo vira uma tabela editável para você decidir exatamente quais entradas e saídas entram.",
     helper:
-      "Para o Nubank, exporte o OFX e importe aqui. Duplicidades começam desmarcadas, e categorias podem ser ajustadas antes da confirmação.",
-    filePrompt: "Selecione o OFX do Nubank ou um CSV.",
-    primary: "Nubank OFX",
-    primaryHelper: "fluxo principal recomendado",
+      "A IA interpreta OFX, CSV, XLSX e TXT. A leitura convencional continua disponível para OFX/CSV. Dúvidas e possíveis duplicidades começam desmarcadas.",
+    filePrompt: "OFX/CSV, ou XLSX/TXT com IA. Até 5 MB por arquivo.",
+    primary: "Sua carteira",
+    primaryHelper: "entradas e gastos no destino selecionado",
   };
 }
 
 function buildEditableBatchRows(previews: StatementImportPreview[]) {
   const seen = new Map<string, number>();
 
-  const editableRows = previews.flatMap((preview) =>
+  const editableRows = previews.flatMap((preview, previewIndex) =>
     preview.rows.map((row) => {
       const duplicateKey = buildBatchDuplicateKey(row);
       const seenCount = seen.get(duplicateKey) || 0;
@@ -625,14 +1031,17 @@ function buildEditableBatchRows(previews: StatementImportPreview[]) {
 
       return {
         ...row,
-        source_id: `${preview.fileName}::${row.source_id}`,
+        source_id: `${previewIndex}::${row.source_id}`,
         source_file: preview.fileName,
-        category_id: "",
-        selected: row.duplicateMatches.length === 0 && !batchDuplicate,
+        category_id: row.category_id ? String(row.category_id) : "",
+        selected:
+          row.duplicateMatches.length === 0 &&
+          !batchDuplicate &&
+          !row.needs_review,
         batchDuplicate,
-        value_input: row.value.toFixed(2),
+        value_input: row.value?.toFixed(2) || "",
         description_input: row.description || "",
-        date_input: row.transaction_date,
+        date_input: row.transaction_date || "",
       };
     }),
   );
@@ -653,8 +1062,7 @@ function groupRowsByDuplicateKey(rows: EditableImportRow[]) {
   rows.forEach((row, index) => {
     const duplicateKey = buildBatchDuplicateKey(row);
     const currentGroup = groups.get(duplicateKey);
-    const hasConflict =
-      row.batchDuplicate || row.duplicateMatches.length > 0;
+    const hasConflict = row.batchDuplicate || row.duplicateMatches.length > 0;
 
     if (currentGroup) {
       currentGroup.rows.push(row);
@@ -683,7 +1091,12 @@ function groupRowsByDuplicateKey(rows: EditableImportRow[]) {
     .flatMap((group) => group.rows);
 }
 
-function buildBatchDuplicateKey(row: StatementImportPreviewRow) {
+function buildBatchDuplicateKey(
+  row: Pick<
+    StatementImportPreviewRow,
+    "transaction_date" | "value" | "transaction_type"
+  >,
+) {
   return `${row.transaction_date}|${Number(row.value).toFixed(2)}|${row.transaction_type}`;
 }
 
@@ -693,7 +1106,9 @@ function formatSelectedFiles(files: File[]) {
 }
 
 function summarizePreviewFormats(previews: StatementImportPreview[]) {
-  const formats = Array.from(new Set(previews.map((preview) => preview.format)));
+  const formats = Array.from(
+    new Set(previews.map((preview) => preview.format)),
+  );
   return formats.join(" + ");
 }
 
@@ -737,7 +1152,12 @@ function parseImportValue(value: string): number | null {
   }
 
   const parsed = Number(normalized);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  return Number.isFinite(parsed) &&
+    parsed > 0 &&
+    parsed <= 99999999.99 &&
+    Math.abs(Math.round(parsed * 100) - parsed * 100) < 0.000001
+    ? parsed
+    : null;
 }
 
 function MetricCard({

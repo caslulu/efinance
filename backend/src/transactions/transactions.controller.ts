@@ -27,6 +27,9 @@ import { AuthGuard } from '@nestjs/passport';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { ConfirmStatementImportDto } from './dto/confirm-statement-import.dto';
+import { AnalyzeStatementDto } from './dto/analyze-statement.dto';
+import { AiStatementImportService } from './ai-statement-import.service';
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('transactions')
 @UseGuards(AuthGuard('jwt'))
@@ -34,6 +37,7 @@ export class TransactionsController {
   constructor(
     private readonly transactionsService: TransactionsService,
     private readonly statementImportService: StatementImportService,
+    private readonly aiStatementImportService: AiStatementImportService,
   ) {}
 
   @Post()
@@ -82,6 +86,36 @@ export class TransactionsController {
       walletId,
       body.rows,
       body.cardId,
+    );
+  }
+
+  @Post('import/:walletId/analyze')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: {
+        fileSize: 5 * 1024 * 1024,
+        fields: 3,
+        fieldSize: 80000,
+        files: 1,
+      },
+    }),
+  )
+  analyzeImport(
+    @Request() req,
+    @Param('walletId', ParseIntPipe) walletId: number,
+    @Query('cardId', new ParseIntPipe({ optional: true }))
+    cardId: number | undefined,
+    @Body() body: AnalyzeStatementDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    return this.aiStatementImportService.analyze(
+      req.user.userId,
+      walletId,
+      body,
+      file,
+      cardId,
     );
   }
 

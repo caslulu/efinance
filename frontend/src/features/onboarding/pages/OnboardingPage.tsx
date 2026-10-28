@@ -12,7 +12,7 @@ import { Wallet, CheckCircle2 } from 'lucide-react';
 export const OnboardingPage = () => {
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
-  const [type, setType] = useState<"BANK" | "PHYSICAL" | "MEAL_VOUCHER" | "INVESTMENT" | "OTHER">('BANK');
+  const [type, setType] = useState<"BANK" | "PHYSICAL" | "MEAL_VOUCHER" | "OTHER">('BANK');
   const [balance, setBalance] = useState('');
   const createWallet = useCreateWallet();
   const navigate = useNavigate();
@@ -84,7 +84,6 @@ export const OnboardingPage = () => {
                     <SelectItem value="BANK">Conta Bancária</SelectItem>
                     <SelectItem value="PHYSICAL">Dinheiro Físico</SelectItem>
                     <SelectItem value="MEAL_VOUCHER">Vale Alimentação/Refeição</SelectItem>
-                    <SelectItem value="INVESTMENT">Conta de Investimento</SelectItem>
                     <SelectItem value="OTHER">Outros</SelectItem>
                   </SelectContent>
                 </Select>

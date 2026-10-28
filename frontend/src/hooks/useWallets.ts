@@ -26,7 +26,6 @@ export function useCreateWallet() {
         return [...(old || []), newWallet];
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.wallets });
-      queryClient.invalidateQueries({ queryKey: queryKeys.investmentPortfolio });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
     },
   });
@@ -42,7 +41,6 @@ export function useUpdateWallet() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.wallets });
-      queryClient.invalidateQueries({ queryKey: queryKeys.investmentPortfolio });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
     },
   });
@@ -57,7 +55,6 @@ export function useDeleteWallet() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.wallets });
-      queryClient.invalidateQueries({ queryKey: queryKeys.investmentPortfolio });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
     },
   });
@@ -74,7 +71,6 @@ export function useTransferBetweenWallets() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.wallets });
       queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
-      queryClient.invalidateQueries({ queryKey: queryKeys.investmentPortfolio });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
     },
   });

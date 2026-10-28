@@ -6,6 +6,8 @@ import {
   IsDateString,
   IsEnum,
   IsNumber,
+  IsInt,
+  Max,
   IsOptional,
   IsString,
   MaxLength,
@@ -14,11 +16,12 @@ import {
 } from 'class-validator';
 
 export class ConfirmStatementImportRowDto {
-  @IsDateString()
+  @IsDateString({ strict: true })
   transaction_date: string;
 
-  @IsNumber()
+  @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0.01)
+  @Max(99999999.99)
   value: number;
 
   @IsEnum(['INCOME', 'EXPENSE'])
@@ -30,7 +33,7 @@ export class ConfirmStatementImportRowDto {
   description?: string;
 
   @IsOptional()
-  @IsNumber()
+  @IsInt()
   @Min(1)
   category_id?: number;
 
@@ -39,19 +42,21 @@ export class ConfirmStatementImportRowDto {
   is_recurring?: boolean;
 
   @IsOptional()
-  @IsNumber()
+  @IsInt()
   @Min(2)
+  @Max(600)
   installment_total?: number;
 
   @IsOptional()
-  @IsNumber()
+  @IsInt()
   @Min(1)
+  @Max(600)
   installment_number?: number;
 }
 
 export class ConfirmStatementImportDto {
   @IsOptional()
-  @IsNumber()
+  @IsInt()
   @Min(1)
   cardId?: number;
 

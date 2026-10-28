@@ -50,7 +50,7 @@ export const CardItem = ({ card, onEdit, onAddExpense, onPayInvoice, onImportSta
             <button
               className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
               onClick={onImportStatement}
-              title="Importar fatura"
+              title="Importar fatura ou adicionar com IA"
               aria-label={`Importar fatura de ${card.name}`}
             >
               <FileUp className="h-3 w-3" />

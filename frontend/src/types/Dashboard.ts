@@ -36,7 +36,6 @@ export interface DashboardTransaction extends Transaction {
 export interface DashboardOverview {
   netWorth: number;
   totalBalance: number;
-  totalInvested: number;
   monthlyIncomes: number;
   savingsRate: number;
   financialAutonomyDays?: number;

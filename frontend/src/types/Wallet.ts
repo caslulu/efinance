@@ -7,15 +7,10 @@ export interface Wallet {
     | 'BANK'
     | 'PHYSICAL'
     | 'MEAL_VOUCHER'
-    | 'INVESTMENT'
     | 'CREDIT_CARD'
     | 'OTHER';
   user_id: number;
   actual_cash: number;
-  portfolioValue?: number;
-  availableCash?: number;
-  positionsCount?: number;
-  displayValue?: number;
   is_transfer_only?: boolean;
   order?: number;
   cards?: Card[];

@@ -16,12 +16,8 @@ import { CategoriesPage } from './features/categories/pages/CategoriesPage';
 import { SettingsPage } from './features/settings/pages/SettingsPage';
 import { ProfilePage } from './features/profile/pages/ProfilePage';
 import { BudgetsPage } from './features/budgets/pages/BudgetsPage';
-import { WishlistPage } from './features/wishlist/pages/WishlistPage';
-import { InvestmentsPage } from './features/investments/pages/InvestmentsPage';
 import { ChatPage } from './features/chat/pages/ChatPage';
 import { ChatWidget } from './features/chat/components/ChatWidget';
-import { useMarkPriceAlertAsRead, usePriceAlertNotifications } from './hooks';
-import { Popover, PopoverContent, PopoverTrigger } from './components/ui/popover';
 import { NotFoundPage } from './features/404/NotFoundPage';
 import { LoadingSpinner } from './components/LoadingSpinner';
 import { BottomNav } from './components/BottomNav';
@@ -37,13 +33,10 @@ import {
   Wallet,
   ArrowLeftRight,
   Target,
-  Gift,
   Repeat,
-  TrendingUp,
   Tags,
   Menu,
   X,
-  Bell,
   Sparkles,
   type LucideProps
 } from 'lucide-react';
@@ -102,8 +95,6 @@ const PAGE_TITLES: Record<string, string> = {
   '/wallets': 'Minhas Carteiras',
   '/transactions': 'Histórico de Transações',
   '/budgets': 'Metas de Gastos',
-  '/wishlists': 'Wishlist',
-  '/investments': 'Investimentos',
   '/subscriptions': 'Recorrências',
   '/categories': 'Categorias',
   '/chat': 'Assistente IA',
@@ -113,8 +104,6 @@ const PAGE_TITLES: Record<string, string> = {
 
 const Layout = ({ children }: { children: ReactNode }) => {
   const { logout, user } = useAuth();
-  const { data: priceAlerts } = usePriceAlertNotifications();
-  const markAsRead = useMarkPriceAlertAsRead();
   const location = useLocation();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -191,8 +180,6 @@ const Layout = ({ children }: { children: ReactNode }) => {
             <NavLink to="/wallets" icon={Wallet} label="Carteiras" isCollapsed={isCollapsed} onClick={() => setIsSidebarOpen(false)} />
             <NavLink to="/transactions" icon={ArrowLeftRight} label="Transações" isCollapsed={isCollapsed} onClick={() => setIsSidebarOpen(false)} />
             <NavLink to="/budgets" icon={Target} label="Metas" isCollapsed={isCollapsed} onClick={() => setIsSidebarOpen(false)} />
-            <NavLink to="/wishlists" icon={Gift} label="Wishlist" isCollapsed={isCollapsed} onClick={() => setIsSidebarOpen(false)} />
-            <NavLink to="/investments" icon={TrendingUp} label="Investimentos" isCollapsed={isCollapsed} onClick={() => setIsSidebarOpen(false)} />
             <NavLink to="/subscriptions" icon={Repeat} label="Recorrências" isCollapsed={isCollapsed} onClick={() => setIsSidebarOpen(false)} />
             <NavLink to="/categories" icon={Tags} label="Categorias" isCollapsed={isCollapsed} onClick={() => setIsSidebarOpen(false)} />
             <NavLink to="/chat" icon={Sparkles} label="Assistente IA" isCollapsed={isCollapsed} onClick={() => setIsSidebarOpen(false)} />
@@ -230,58 +217,6 @@ const Layout = ({ children }: { children: ReactNode }) => {
 
           <div className="flex items-center gap-4">
             <ThemeToggle />
-            <Popover>
-              <PopoverTrigger asChild>
-                <button
-                  className="relative rounded-full p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
-                  aria-label="Notificações"
-                >
-                  <Bell size={20} />
-                  {!!priceAlerts?.unreadCount && (
-                    <span className="absolute right-1 top-1 min-w-4 h-4 px-1 rounded-full bg-red-600 text-white text-[10px] flex items-center justify-center font-bold">
-                      {priceAlerts.unreadCount > 9 ? '9+' : priceAlerts.unreadCount}
-                    </span>
-                  )}
-                </button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-80 lg:w-96 p-0 shadow-xl border-border">
-                <div className="border-b px-4 py-3 bg-muted rounded-t-lg">
-                  <p className="font-bold text-sm text-foreground">Alertas de preço</p>
-                </div>
-                <div className="max-h-80 overflow-y-auto">
-                  {priceAlerts?.notifications?.length ? (
-                    priceAlerts.notifications.map((notification) => (
-                      <button
-                        key={notification.id}
-                        className={`w-full border-b px-4 py-4 text-left hover:bg-emerald-900/30 transition-colors ${notification.is_read ? 'bg-card opacity-60' : 'bg-emerald-900/10'
-                          }`}
-                        onClick={() => {
-                          if (!notification.is_read) {
-                            markAsRead.mutate(notification.id);
-                          }
-                          if (notification.wishlistProduct.url) {
-                            window.open(
-                              notification.wishlistProduct.url,
-                              '_blank',
-                              'noopener,noreferrer',
-                            );
-                          }
-                        }}
-                      >
-                        <p className="text-sm font-medium text-foreground">{notification.message}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {new Date(notification.notified_at).toLocaleString('pt-BR')}
-                        </p>
-                      </button>
-                    ))
-                  ) : (
-                    <div className="px-4 py-10 text-center text-sm text-muted-foreground">
-                      Sem notificações no momento.
-                    </div>
-                  )}
-                </div>
-              </PopoverContent>
-            </Popover>
 
             <div className="relative" ref={dropdownRef}>
               <button
@@ -436,30 +371,6 @@ function App() {
             }
           />
           <Route
-            path="/wishlists"
-            element={
-              <ProtectedRoute>
-                <OnboardingWrapper>
-                  <Layout>
-                    <WishlistPage />
-                  </Layout>
-                </OnboardingWrapper>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/investments"
-            element={
-              <ProtectedRoute>
-                <OnboardingWrapper>
-                  <Layout>
-                    <InvestmentsPage />
-                  </Layout>
-                </OnboardingWrapper>
-              </ProtectedRoute>
-            }
-          />
-          <Route
             path="/profile"
             element={
               <ProtectedRoute>
@@ -482,7 +393,9 @@ function App() {
             }
           />
           <Route path="/perfil" element={<Navigate to="/profile" replace />} />
-          <Route path="/investimentos" element={<Navigate to="/investments" replace />} />
+          <Route path="/investimentos" element={<Navigate to="/" replace />} />
+          <Route path="/investments" element={<Navigate to="/" replace />} />
+          <Route path="/wishlists" element={<Navigate to="/" replace />} />
           <Route path="/configuracoes" element={<Navigate to="/settings" replace />} />
           <Route path="/settings/profile" element={<Navigate to="/profile" replace />} />
           <Route path="/configuracoes/perfil" element={<Navigate to="/profile" replace />} />

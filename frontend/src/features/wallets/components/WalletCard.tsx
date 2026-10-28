@@ -15,7 +15,6 @@ import {
   Landmark,
   Banknote,
   UtensilsCrossed,
-  TrendingUp,
   Wallet as WalletIcon,
 } from 'lucide-react';
 import { CardItem } from './CardItem';
@@ -74,15 +73,6 @@ const TYPE_CONFIG: Record<
     label: 'Vale Refeição',
     glow: 'hover:shadow-amber-500/8',
   },
-  INVESTMENT: {
-    accentBar: 'from-violet-500 to-purple-400',
-    gradient: 'from-violet-500/15 to-purple-500/5',
-    accent: 'text-violet-600 dark:text-violet-400',
-    accentMuted: 'bg-violet-500/10 text-violet-700 dark:text-violet-300',
-    icon: TrendingUp,
-    label: 'Investimento',
-    glow: 'hover:shadow-violet-500/8',
-  },
   CREDIT_CARD: {
     accentBar: 'from-sky-500 to-cyan-400',
     gradient: 'from-sky-500/15 to-cyan-500/5',
@@ -120,13 +110,9 @@ export const WalletCard = ({
   const [isCardsExpanded, setIsCardsExpanded] = useState(false);
   const config = TYPE_CONFIG[wallet.type] || TYPE_CONFIG.OTHER;
   const TypeIcon = config.icon;
-  const isInvestmentWallet = wallet.type === 'INVESTMENT';
   const isCreditCardWallet = wallet.type === 'CREDIT_CARD';
   const hasLinkedCreditWallet = !!linkedCreditWallet;
-  const headlineValue = isInvestmentWallet
-    ? Number(wallet.displayValue ?? 0)
-    : Number(wallet.actual_cash);
-  const availableCash = Number(wallet.availableCash ?? wallet.actual_cash);
+  const headlineValue = Number(wallet.actual_cash);
   const linkedCreditLimit = Number(linkedCreditWallet?.actual_cash ?? 0);
 
   return (
@@ -166,7 +152,8 @@ export const WalletCard = ({
               size="icon"
               className="h-7 w-7 text-muted-foreground hover:text-emerald-500"
               onClick={onImportStatement}
-              title="Importar extrato"
+              title="Importar extrato ou adicionar com IA"
+              aria-label={`Importar extrato ou adicionar com IA em ${wallet.name}`}
             >
               <FileUp className="h-3.5 w-3.5" />
             </Button>
@@ -185,11 +172,7 @@ export const WalletCard = ({
         <div>
           <div className="flex items-center justify-between mb-1">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-              {isInvestmentWallet
-                ? 'Valor Investido'
-                : isCreditCardWallet
-                  ? 'Limite disponível'
-                  : 'Saldo Disponível'}
+              {isCreditCardWallet ? 'Limite disponível' : 'Saldo Disponível'}
             </p>
             {wallet.is_transfer_only && (
               <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
@@ -200,16 +183,6 @@ export const WalletCard = ({
           <p className="font-display text-3xl font-extrabold tracking-tight text-foreground">
             {formatCurrency(headlineValue)}
           </p>
-          {isInvestmentWallet && (
-            <div className="mt-2 space-y-1">
-              <p className="text-[11px] text-muted-foreground">
-                Caixa disponível: <span className="font-medium text-foreground">{formatCurrency(availableCash)}</span>
-              </p>
-              <p className="text-[11px] text-muted-foreground">
-                Posições: <span className="font-medium text-foreground">{wallet.positionsCount ?? 0}</span>
-              </p>
-            </div>
-          )}
           {hasLinkedCreditWallet && (
             <div className="mt-2 rounded-lg border border-sky-500/15 bg-sky-500/10 px-3 py-2">
               <div className="flex items-center justify-between gap-3">

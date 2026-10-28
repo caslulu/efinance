@@ -31,7 +31,6 @@ const WALLET_TYPE_OPTIONS = [
   { value: 'BANK', label: WALLET_TYPES.BANK_ACCOUNT },
   { value: 'PHYSICAL', label: WALLET_TYPES.PHYSICAL },
   { value: 'MEAL_VOUCHER', label: WALLET_TYPES.MEAL_VOUCHER },
-  { value: 'INVESTMENT', label: WALLET_TYPES.INVESTMENT },
   { value: 'OTHER', label: WALLET_TYPES.OTHER },
 ];
 

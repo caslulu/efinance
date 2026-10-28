@@ -6,6 +6,16 @@ foi lancado; por isso o banco pode ser resetado com frequencia e o
 
 ## Stack
 
+O escopo atual é controle de gastos: carteiras, cartões, transações, importação de
+extratos com IA, categorias, orçamentos, recorrências e assistente financeiro.
+Investimentos e lista de desejos foram removidos da interface e da API, incluindo
+consultas de mercado e alertas de preço. Links antigos desses módulos levam ao início.
+
+As tabelas antigas permanecem no schema para preservar dados existentes; não é
+necessário resetar o banco para esta remoção. Carteiras antigas de investimento
+aparecem como “Outros”, com seu saldo em dinheiro, sem posições ou rentabilidade.
+O resumo financeiro passa a considerar apenas saldos de carteiras, sem ativos.
+
 - Backend: NestJS, Prisma e PostgreSQL
 - Frontend: React, Vite, TypeScript e Tailwind CSS
 - Banco local: PostgreSQL 15 via Docker Compose
@@ -88,6 +98,10 @@ npm run dev
 
 ## Banco de dados
 
+A importação de OFX/CSV, XLSX/TXT com IA e os lançamentos por texto estão
+descritos em [Importação assistida](docs/importacao-assistida.md), incluindo a
+configuração do Ollama e os formatos aceitos.
+
 Nao ha migrations versionadas neste momento. Como o banco local e descartavel,
 o fluxo e:
 
@@ -130,8 +144,8 @@ npm run test
 
 ## Observacoes
 
-- Este repositorio esta configurado para uso local.
-- Arquivos de producao, Nginx, HTTPS, CI/CD e historico de migrations foram
-  removidos enquanto a aplicacao ainda esta em fase de testes.
-- Se a aplicacao for publicada futuramente, reintroduza migrations Prisma antes
-  de ter usuarios ou dados persistentes reais.
+- O ambiente local continua usando `docker-compose.yml`.
+- O deploy usa GitHub Actions, imagens no GHCR e `docker-compose.prod.yml`.
+  Consulte [CI/CD e configuração do servidor](docs/ci-cd.md).
+- O schema ainda não possui migrations versionadas. O deploy faz backup e
+  bloqueia alterações que exigem aceitar perda de dados.

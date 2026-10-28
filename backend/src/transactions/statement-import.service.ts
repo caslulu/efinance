@@ -14,12 +14,15 @@ import {
 } from '../common/finance-constants';
 import { Prisma } from '@prisma/client';
 
-type ImportedStatementRow = {
+export type ImportedStatementRow = {
   source_id: string;
   transaction_date: string;
   value: number;
   transaction_type: 'INCOME' | 'EXPENSE';
   description: string | null;
+  category_id?: number;
+  source_ref?: string;
+  needs_review?: boolean;
   is_recurring?: boolean;
   installment_total?: number;
   installment_number?: number;
@@ -573,6 +576,14 @@ export class StatementImportService {
     cardId?: number,
     db: Prisma.TransactionClient | PrismaService = this.prisma,
   ) {
+    if (
+      row.installment_number &&
+      (!row.installment_total || row.installment_number > row.installment_total)
+    ) {
+      throw new BadRequestException(
+        'Número da parcela deve ser menor ou igual ao total de parcelas.',
+      );
+    }
     const categoryId = await this.impact.resolveCategoryId(
       userId,
       row.category_id,
@@ -680,19 +691,73 @@ export class StatementImportService {
       );
     }
 
+    return this.buildExtractedPreview(
+      userId,
+      walletId,
+      wallet.name,
+      validRows,
+      fileName,
+      isOfx ? 'OFX' : 'CSV',
+      cardId,
+    );
+  }
+
+  async previewExtractedRows(
+    userId: number,
+    walletId: number,
+    extractedRows: ImportedStatementRow[],
+    fileName: string,
+    format: string,
+    cardId?: number,
+  ) {
+    const wallet = await this.prisma.wallet.findUnique({
+      where: { id: walletId },
+      select: { id: true, user_id: true, name: true },
+    });
+    if (!wallet || wallet.user_id !== userId)
+      throw new NotFoundException('Wallet not found');
+    if (cardId !== undefined)
+      await this.validateImportCard(userId, walletId, cardId);
+
+    return this.buildExtractedPreview(
+      userId,
+      walletId,
+      wallet.name,
+      extractedRows,
+      fileName,
+      format,
+      cardId,
+    );
+  }
+
+  private async buildExtractedPreview(
+    userId: number,
+    walletId: number,
+    walletName: string,
+    extractedRows: ImportedStatementRow[],
+    fileName: string,
+    format: string,
+    cardId?: number,
+  ) {
+    const completeRows = extractedRows.filter(
+      (row) => row.value > 0 && row.transaction_date && row.transaction_type,
+    );
     const duplicateMap = await this.findImportDuplicates(
       userId,
       walletId,
-      validRows,
+      completeRows,
       cardId,
     );
 
-    const rows = validRows.map((row) => {
-      const key = this.buildImportDuplicateKey(
-        row.transaction_date,
-        row.value,
-        row.transaction_type,
-      );
+    const rows = extractedRows.map((row) => {
+      const key =
+        row.transaction_date && row.value && row.transaction_type
+          ? this.buildImportDuplicateKey(
+              row.transaction_date,
+              row.value,
+              row.transaction_type,
+            )
+          : '';
       const duplicateMatches = duplicateMap.get(key) || [];
 
       return {
@@ -703,9 +768,9 @@ export class StatementImportService {
 
     return {
       walletId,
-      walletName: wallet.name,
+      walletName,
       fileName,
-      format: isOfx ? 'OFX' : 'CSV',
+      format,
       summary: {
         totalRows: rows.length,
         duplicateRows: rows.filter((row) => row.duplicateMatches.length > 0)

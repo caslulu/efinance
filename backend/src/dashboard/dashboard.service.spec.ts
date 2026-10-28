@@ -2,21 +2,15 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { DashboardService } from './dashboard.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { BudgetsService } from '../budgets/budgets.service';
-import { InvestmentPortfolioService } from '../investments/investment-portfolio.service';
 
 const mockPrismaService = {
   wallet: { aggregate: jest.fn(), findMany: jest.fn() },
-  investment: { aggregate: jest.fn() },
   transaction: { aggregate: jest.fn(), findMany: jest.fn() },
   subscription: { aggregate: jest.fn() },
 };
 
 const mockBudgetsService = {
   getBudgetStatus: jest.fn(),
-};
-
-const mockInvestmentPortfolioService = {
-  getPortfolioSummary: jest.fn(),
 };
 
 describe('DashboardService', () => {
@@ -28,10 +22,6 @@ describe('DashboardService', () => {
         DashboardService,
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: BudgetsService, useValue: mockBudgetsService },
-        {
-          provide: InvestmentPortfolioService,
-          useValue: mockInvestmentPortfolioService,
-        },
       ],
     }).compile();
 
@@ -39,9 +29,6 @@ describe('DashboardService', () => {
     jest.clearAllMocks();
     mockPrismaService.wallet.aggregate.mockResolvedValue({
       _sum: { actual_cash: 0 },
-    });
-    mockPrismaService.investment.aggregate.mockResolvedValue({
-      _sum: { current_amount: 0 },
     });
     mockPrismaService.transaction.aggregate.mockResolvedValue({
       _sum: { value: 0 },
@@ -52,20 +39,22 @@ describe('DashboardService', () => {
       _count: { id: 0 },
     });
     mockBudgetsService.getBudgetStatus.mockResolvedValue([]);
-    mockInvestmentPortfolioService.getPortfolioSummary.mockResolvedValue({
-      totalPortfolioValue: 0,
-      totalAvailableCash: 0,
-      totalGainLoss: 0,
-      totalGainLossPercent: 0,
-      totalDividends: 0,
-      totalJcp: 0,
-      totalPositions: 0,
-      totalWallets: 0,
-    });
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  it('reports wallet cash without querying removed asset services', async () => {
+    mockPrismaService.wallet.aggregate.mockResolvedValue({
+      _sum: { actual_cash: 1250 },
+    });
+
+    const overview = await service.getOverview(1);
+
+    expect(overview.totalBalance).toBe(1250);
+    expect(overview.netWorth).toBe(1250);
+    expect(overview).not.toHaveProperty('totalInvested');
   });
 
   it('should include meal-voucher credit expenses in the 24-month cashflow filter', async () => {

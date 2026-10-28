@@ -19,7 +19,7 @@ const KPI_TOOLTIP_DELAY_MS = 1000;
 const formatDays = (val: number) => `${Math.max(0, Number(val || 0)).toFixed(1)} dias`;
 
 const kpiExplanations: Record<string, string> = {
-  netWorth: 'Soma do saldo em carteiras com o valor investido. Representa seu patrimônio financeiro atual.',
+  netWorth: 'Soma dos saldos disponíveis nas suas carteiras.',
   monthlyIncomes: 'Total de receitas registradas nos últimos 30 dias, desconsiderando transferências internas.',
   savingsRate: 'Percentual economizado no período: (receitas - despesas) / receitas.',
   financialAutonomy: 'Estimativa de quantos dias você consegue se manter com o saldo atual, no ritmo médio de gastos.',
@@ -130,17 +130,16 @@ export function DashboardKpis({ data }: { data: DashboardOverview }) {
         <div className="flex items-center gap-3">
           <div className="w-1 h-4 rounded-full bg-emerald-500" />
           <h2 className="text-xs font-semibold text-foreground uppercase tracking-wider">Visão Financeira</h2>
-          <span className="text-[10px] text-muted-foreground">Patrimônio e renda</span>
+          <span className="text-[10px] text-muted-foreground">Saldos e renda</span>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <KpiCard
             kpiKey="netWorth"
             icon={Coins}
-            title="Patrimônio Total"
+            title="Saldo Total"
             value={formatCurrency(data.netWorth)}
             badge={<>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium">Saldo: {formatCurrency(data.totalBalance)}</span>
-              {data.totalInvested > 0 && <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 font-medium">Inv: {formatCurrency(data.totalInvested)}</span>}
             </>}
           />
           <KpiCard

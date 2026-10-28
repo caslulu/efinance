@@ -16,7 +16,6 @@ import {
   ArrowRightLeft,
   Plus,
   Wallet as WalletIcon,
-  TrendingUp,
   Landmark,
   Banknote,
   UtensilsCrossed,
@@ -48,7 +47,6 @@ const TYPE_ICONS: Record<string, typeof WalletIcon> = {
   BANK: Landmark,
   PHYSICAL: Banknote,
   MEAL_VOUCHER: UtensilsCrossed,
-  INVESTMENT: TrendingUp,
   CREDIT_CARD: CreditCard,
   OTHER: WalletIcon,
 };
@@ -57,23 +55,16 @@ const TYPE_LABELS: Record<string, string> = {
   BANK: 'Bancos',
   PHYSICAL: 'Dinheiro',
   MEAL_VOUCHER: 'Vale Refeição',
-  INVESTMENT: 'Investimentos',
   CREDIT_CARD: 'Cartões de crédito',
   OTHER: 'Outros',
 };
 
 const getWalletNetWorthValue = (wallet: Wallet) => {
   if (wallet.type === 'CREDIT_CARD') return 0;
-  if (wallet.type === 'INVESTMENT') {
-    return Number(wallet.displayValue ?? 0) + Number(wallet.availableCash ?? wallet.actual_cash);
-  }
   return Number(wallet.actual_cash);
 };
 
 const getWalletTypeDisplayValue = (wallet: Wallet) => {
-  if (wallet.type === 'INVESTMENT') {
-    return Number(wallet.displayValue ?? 0) + Number(wallet.availableCash ?? wallet.actual_cash);
-  }
   return Number(wallet.actual_cash);
 };
 

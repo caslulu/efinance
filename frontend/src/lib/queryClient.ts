@@ -31,9 +31,6 @@ export const queryKeys = {
   subscriptions: ['subscriptions'] as const,
   subscription: (id: number) => ['subscriptions', id] as const,
 
-  wishlists: ['wishlists'] as const,
-  wishlist: (id: number) => ['wishlists', id] as const,
-  priceAlertNotifications: ['price-alert-notifications'] as const,
   
   budgets: ['budgets'] as const,
   budgetStatus: ['budgets', 'status'] as const,
@@ -41,10 +38,6 @@ export const queryKeys = {
   cards: ['cards'] as const,
   cardsByWallet: (walletId: number) => ['cards', 'wallet', walletId] as const,
 
-  investments: ['investments'] as const,
-  investmentPortfolio: ['investments', 'portfolio'] as const,
-  investmentMarketData: (symbols: string[], periods: number[], market: string) =>
-    ['investments', 'market-data', market, symbols.join(','), periods.join(',')] as const,
   
   dashboard: ['dashboard'] as const,
   dashboardCategory: (category: string) => ['dashboard', 'category', category] as const,

@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { BudgetsService } from '../budgets/budgets.service';
-import { InvestmentPortfolioService } from '../investments/investment-portfolio.service';
 import { PAYMENT_METHODS, WALLET_TYPES } from '../common/finance-constants';
 import { excludeInternalCashflowFilter } from '../common/internal-cashflow-filter';
 
@@ -10,7 +9,6 @@ export class DashboardService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly budgetsService: BudgetsService,
-    private readonly investmentPortfolioService: InvestmentPortfolioService,
   ) {}
 
   async getOverview(
@@ -201,11 +199,9 @@ export class DashboardService {
       _count: { id: true },
     });
 
-    // 6. Totals, Savings Rate & Net Worth
+    // 6. Wallet balances and savings rate
     const [
       totalWallets,
-      totalInvestments,
-      portfolioSummary,
       totalExpensesMonth,
       totalIncomesMonth,
     ] = await Promise.all([
@@ -213,11 +209,6 @@ export class DashboardService {
         where: { user_id: userId, type: { not: 'CREDIT_CARD' } },
         _sum: { actual_cash: true },
       }),
-      this.prisma.investment.aggregate({
-        where: { wallet: { user_id: userId } },
-        _sum: { current_amount: true },
-      }),
-      this.investmentPortfolioService.getPortfolioSummary(userId),
       this.prisma.transaction.aggregate({
         where: {
           wallet: { user_id: userId },
@@ -243,9 +234,6 @@ export class DashboardService {
     const savingsRate = income > 0 ? ((income - expense) / income) * 100 : 0;
 
     const cash = Number(totalWallets._sum.actual_cash || 0);
-    const invested =
-      Number(totalInvestments._sum.current_amount || 0) +
-      portfolioSummary.totalPortfolioValue;
 
     const budgetSummary = await this.budgetsService.getBudgetStatus(userId);
 
@@ -386,8 +374,7 @@ export class DashboardService {
 
     return {
       totalBalance: cash,
-      totalInvested: invested,
-      netWorth: cash + invested,
+      netWorth: cash,
       monthlyExpenses: expense,
       monthlyIncomes: income,
       savingsRate: Number(savingsRate.toFixed(1)),

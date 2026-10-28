@@ -1,10 +1,8 @@
 import {
   Wallet,
-  TrendingUp,
   Target,
   HeartPulse,
   PiggyBank,
-  ShoppingCart,
   Sparkles,
 } from 'lucide-react';
 
@@ -41,20 +39,6 @@ const suggestions = [
     gradient: 'from-blue-500/15 to-indigo-500/10 hover:from-blue-500/25 hover:to-indigo-500/18',
     iconColor: 'text-blue-500',
   },
-  {
-    icon: ShoppingCart,
-    label: 'Lista de desejos',
-    question: 'Vale a pena comprar algum item da minha lista de desejos agora?',
-    gradient: 'from-violet-500/15 to-purple-500/10 hover:from-violet-500/25 hover:to-purple-500/18',
-    iconColor: 'text-violet-500',
-  },
-  {
-    icon: TrendingUp,
-    label: 'Investimentos',
-    question: 'Como estão meus investimentos? Deveria investir mais?',
-    gradient: 'from-cyan-500/15 to-sky-500/10 hover:from-cyan-500/25 hover:to-sky-500/18',
-    iconColor: 'text-cyan-500',
-  },
 ];
 
 export function SuggestedQuestions({ onSelect }: SuggestedQuestionsProps) {
@@ -66,7 +50,7 @@ export function SuggestedQuestions({ onSelect }: SuggestedQuestionsProps) {
         </div>
         <h2 className="text-2xl font-bold text-foreground tracking-tight">Assistente Financeiro</h2>
         <p className="text-sm text-muted-foreground mt-2 max-w-md">
-          Pergunte sobre suas finanças, orçamento, investimentos ou lista de desejos
+          Pergunte sobre seus gastos, orçamento e oportunidades de economia
         </p>
       </div>
 

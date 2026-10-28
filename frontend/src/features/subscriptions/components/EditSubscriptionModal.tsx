@@ -81,7 +81,6 @@ export const EditSubscriptionModal = ({ isOpen, subscription, onClose, onSuccess
         if (selectedWallet.type === 'BANK') normalizedType = WALLET_TYPES.BANK_ACCOUNT;
         if (selectedWallet.type === 'PHYSICAL') normalizedType = WALLET_TYPES.PHYSICAL;
         if (selectedWallet.type === 'MEAL_VOUCHER') normalizedType = WALLET_TYPES.MEAL_VOUCHER;
-        if (selectedWallet.type === 'INVESTMENT') normalizedType = WALLET_TYPES.INVESTMENT;
         if (selectedWallet.type === 'OTHER') normalizedType = WALLET_TYPES.OTHER;
 
         return ALLOWED_METHODS[normalizedType] || [];

@@ -220,6 +220,70 @@ describe('StatementImportService', () => {
     jest.useRealTimers();
   });
 
+  it('keeps incomplete AI drafts visible while checking complete rows for duplicates', async () => {
+    mockPrismaService.wallet.findUnique.mockResolvedValueOnce({
+      id: 1,
+      user_id: 1,
+      name: 'Conta',
+    });
+    mockPrismaService.transaction.findMany.mockResolvedValueOnce([
+      {
+        id: 99,
+        description: 'Mercado',
+        transaction_date: new Date('2026-10-23T12:00:00Z'),
+        value: 85.9,
+        transaction_type: 'EXPENSE',
+      },
+    ]);
+    const result = await service.previewExtractedRows(
+      1,
+      1,
+      [
+        {
+          source_id: 'ai-0',
+          transaction_date: null,
+          value: null,
+          transaction_type: null,
+          description: 'Sem detalhes',
+          needs_review: true,
+        },
+        {
+          source_id: 'ai-1',
+          transaction_date: '2026-10-23',
+          value: 85.9,
+          transaction_type: 'EXPENSE',
+          description: 'Mercado',
+        },
+      ],
+      'Texto',
+      'TEXT',
+    );
+    expect(result.rows[0]).toMatchObject({ value: null, duplicateMatches: [] });
+    expect(result.rows[1].duplicateMatches).toHaveLength(1);
+    expect(result.summary).toMatchObject({ totalRows: 2, duplicateRows: 1 });
+    expect(prisma.transaction.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects inconsistent installments before writing or changing balances', async () => {
+    mockPrismaService.wallet.findUnique.mockResolvedValueOnce({
+      id: 1,
+      user_id: 1,
+      type: 'BANK',
+    });
+    const result = await service.confirmStatementImport(1, 1, [
+      {
+        transaction_date: '2026-10-23T12:00:00Z',
+        value: 10,
+        transaction_type: 'EXPENSE',
+        installment_number: 4,
+        installment_total: 3,
+      },
+    ]);
+    expect(result.failedCount).toBe(1);
+    expect(prisma.transaction.create).not.toHaveBeenCalled();
+    expect(walletsService.addExpense).not.toHaveBeenCalled();
+  });
+
   it('should import card statement rows as credit card transactions', async () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-03-20T12:00:00.000Z'));
 

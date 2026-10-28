@@ -4,7 +4,7 @@ import { queryKeys } from "@/lib/queryClient";
 import type {
   StatementImportConfirmResponse,
   StatementImportPreview,
-  StatementImportPreviewRow,
+  StatementImportConfirmRow,
   Transaction,
 } from "@/types/Transaction";
 
@@ -29,7 +29,6 @@ export function useCreateTransaction() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
       queryClient.invalidateQueries({ queryKey: queryKeys.wallets });
-      queryClient.invalidateQueries({ queryKey: queryKeys.investmentPortfolio });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
       queryClient.invalidateQueries({ queryKey: queryKeys.budgetStatus });
     },
@@ -53,7 +52,6 @@ export function useUpdateTransaction() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
       queryClient.invalidateQueries({ queryKey: queryKeys.wallets });
-      queryClient.invalidateQueries({ queryKey: queryKeys.investmentPortfolio });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
       queryClient.invalidateQueries({ queryKey: queryKeys.budgetStatus });
     },
@@ -70,7 +68,6 @@ export function useDeleteTransaction() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
       queryClient.invalidateQueries({ queryKey: queryKeys.wallets });
-      queryClient.invalidateQueries({ queryKey: queryKeys.investmentPortfolio });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
       queryClient.invalidateQueries({ queryKey: queryKeys.budgetStatus });
     },
@@ -119,18 +116,7 @@ export function useConfirmStatementImport() {
     }: {
       walletId: number;
       cardId?: number;
-      rows: Array<
-        Pick<
-          StatementImportPreviewRow,
-          | "transaction_date"
-          | "value"
-          | "transaction_type"
-          | "description"
-          | "is_recurring"
-          | "installment_total"
-          | "installment_number"
-        > & { category_id?: number | null }
-      >;
+      rows: StatementImportConfirmRow[];
     }) => {
       const res = await api.post<StatementImportConfirmResponse>(
         `/transactions/import/${walletId}/confirm`,
@@ -141,9 +127,40 @@ export function useConfirmStatementImport() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
       queryClient.invalidateQueries({ queryKey: queryKeys.wallets });
-      queryClient.invalidateQueries({ queryKey: queryKeys.investmentPortfolio });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
       queryClient.invalidateQueries({ queryKey: queryKeys.budgetStatus });
+    },
+  });
+}
+
+export function useAnalyzeStatementImport() {
+  return useMutation({
+    mutationFn: async ({
+      walletId,
+      cardId,
+      file,
+      message,
+      clarification,
+      mode,
+    }: {
+      walletId: number;
+      cardId?: number;
+      file?: File;
+      message?: string;
+      clarification?: string;
+      mode: "assisted" | "automatic";
+    }) => {
+      const body = new FormData();
+      if (file) body.append("file", file);
+      if (message) body.append("message", message);
+      if (clarification) body.append("clarification", clarification);
+      body.append("mode", mode);
+      const result = await api.post<StatementImportPreview>(
+        `/transactions/import/${walletId}/analyze`,
+        body,
+        { params: cardId ? { cardId } : undefined, timeout: 130000 },
+      );
+      return result.data;
     },
   });
 }

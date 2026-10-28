@@ -5,7 +5,5 @@ export * from './useCategories';
 export * from './useSubscriptions';
 export * from './useBudgets';
 export * from './useDashboard';
-export * from './useWishlists';
 export * from './useCards';
 export * from './useChat';
-export * from './useInvestments';

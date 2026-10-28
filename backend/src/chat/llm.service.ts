@@ -1,4 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+  BadGatewayException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 /**
@@ -25,10 +30,20 @@ export class LlmService {
     this.model =
       this.configService.get<string>('OLLAMA_MODEL') ?? 'gpt-oss:20b';
 
-    this.configured = Boolean(this.apiKey || this.baseUrl.includes('localhost'));
+    // Explicit self-hosted endpoints may use Docker DNS or a LAN address.
+    let isSelfHosted = false;
+    try {
+      const url = new URL(this.baseUrl);
+      isSelfHosted =
+        ['http:', 'https:'].includes(url.protocol) &&
+        !['ollama.com', 'www.ollama.com'].includes(url.hostname);
+    } catch {
+      /* Report missing/invalid configuration when the feature is used. */
+    }
+    this.configured = Boolean(this.apiKey || isSelfHosted);
     if (!this.configured) {
       this.logger.warn(
-        'OLLAMA_API_KEY not set and base URL is not localhost — chat module will fail until you set one of them',
+        'Configure OLLAMA_API_KEY or a valid self-hosted OLLAMA_BASE_URL to enable AI features',
       );
     }
   }
@@ -47,6 +62,54 @@ export class LlmService {
     };
     if (this.apiKey) headers.Authorization = `Bearer ${this.apiKey}`;
     return headers;
+  }
+
+  async generateJsonResponse(
+    systemPrompt: string,
+    userMessage: string,
+  ): Promise<unknown> {
+    try {
+      this.ensureConfigured();
+    } catch {
+      throw new ServiceUnavailableException(
+        'Análise por IA indisponível. Configure OLLAMA_API_KEY ou OLLAMA_BASE_URL no backend. A importação convencional continua disponível.',
+      );
+    }
+
+    try {
+      const res = await fetch(`${this.baseUrl}/api/chat`, {
+        method: 'POST',
+        headers: this.buildHeaders(),
+        signal: AbortSignal.timeout(120_000),
+        body: JSON.stringify({
+          model: this.model,
+          messages: this.buildMessages(systemPrompt, [], userMessage),
+          stream: false,
+          // Ollama Cloud does not support constrained structured outputs.
+          ...(new URL(this.baseUrl).hostname === 'ollama.com'
+            ? {}
+            : { format: 'json' }),
+          options: { temperature: 0, num_ctx: 65536, num_predict: 16000 },
+        }),
+      });
+      if (!res.ok) throw new Error('Provider request failed');
+      const data = (await res.json()) as {
+        message?: { content?: string };
+        done_reason?: string;
+      };
+      if (data.done_reason === 'length') throw new Error('Truncated response');
+      const content = data.message?.content
+        ?.trim()
+        .replace(/^```(?:json)?\s*/i, '')
+        .replace(/\s*```$/, '');
+      if (!content) throw new Error('Empty response');
+      return JSON.parse(content) as unknown;
+    } catch {
+      // Never expose provider bodies, credentials, or financial content in errors.
+      throw new BadGatewayException(
+        'Não foi possível concluir a análise por IA. Tente novamente ou divida o documento em arquivos menores.',
+      );
+    }
   }
 
   private buildMessages(
@@ -76,7 +139,11 @@ export class LlmService {
       headers: this.buildHeaders(),
       body: JSON.stringify({
         model: this.model,
-        messages: this.buildMessages(systemPrompt, conversationHistory, userMessage),
+        messages: this.buildMessages(
+          systemPrompt,
+          conversationHistory,
+          userMessage,
+        ),
         stream: false,
       }),
     });
@@ -99,7 +166,11 @@ export class LlmService {
       headers: this.buildHeaders(),
       body: JSON.stringify({
         model: this.model,
-        messages: this.buildMessages(systemPrompt, conversationHistory, userMessage),
+        messages: this.buildMessages(
+          systemPrompt,
+          conversationHistory,
+          userMessage,
+        ),
         stream: true,
       }),
     });
