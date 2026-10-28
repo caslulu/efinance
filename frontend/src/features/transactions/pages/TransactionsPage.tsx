@@ -133,13 +133,13 @@ export const TransactionsPage = () => {
       }
     });
 
-    // 4. Convert to array and sort ASCENDING
+    // 4. Sort months and transactions from newest to oldest
     const sortedGroups = Object.values(groups)
-      .sort((a, b) => a.orderKey - b.orderKey)
+      .sort((a, b) => b.orderKey - a.orderKey)
       .map(group => ({
         ...group,
         transactions: group.transactions.sort((a, b) =>
-          new Date(a.transaction_date).getTime() - new Date(b.transaction_date).getTime()
+          new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime()
         )
       }));
 
