@@ -1,4 +1,9 @@
 node_modules/
+*.key
+*.pem
+.env.prod
+.deploy/
+backups/
 */node_modules/
 
 .claude/
